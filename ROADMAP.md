@@ -495,7 +495,7 @@ Then the interface and a playing check:
   plays); Distaff always draws it, as ScummVM does by default. Restoring the CD after loading a
   save is phase 16's.
 
-### Phase 16: saves and the whole game (in progress)
+### Phase 16: saves and the whole game (done)
 
 - Saves for version 4, and walkthrough tests that play the VGA CD release from the opening to
   the ending.
@@ -522,6 +522,31 @@ Then the interface and a playing check:
   shows the same screen on the next step and plays the opening draft on the egg as the game
   did; a save made while the proficiency screen speaks plays the line on from where the timer
   stood. Not yet loaded in ScummVM.
+- `actor.cpp` for version 4: the VGA CD's actors are ScummVM's `Actor`, and walked as version
+  3's `Actor_v3` until now. They walk by `Actor::walkActor` (a box that cannot be reached becomes
+  the one the actor is in), `findPathTowards` (the point on the edge two boxes share),
+  `calcMovementFactor` (a 16.16 step at the actor's speed, across or down, whichever is steeper)
+  and `actorWalkStep` (moving by that step at the actor's scale). `setBox` now sets the scale
+  from the box, full size for version 3 (`Actor_v3::setupActorScale`) and the box's or its scale
+  slot's for version 4 (`Actor::setupActorScale`), which is full size everywhere in Loom. One
+  pinned screen moved: Bobbin by the egg with the distaff stands where the version 4 walk leaves
+  him.
+- `VgaWalkthroughTests` play the VGA CD release from the proficiency screen to "The End" in the
+  EGA's ten sections, each from the save the last made, with the CD's object numbers (75 lower
+  than the EGA's up to the woods' shepherds, 74 from the pasture, 68 from room 62), its variables
+  (50 higher, but the dragon's, 251 for 202) and its lines. Where the CD plays differently: the
+  sky takes a third click to point at; in Crystalgard the glassmakers walk a box of their own
+  that joins no other, so a click beside the tower moves nobody, and the walkway along the front
+  leads west instead; and the hole to the shepherds opens on a room of the CD's own, 93, with
+  their scene told anew. Each section checks lines said, where it ends, the notes known, the
+  drafts learned and used, and the void's holes closed.
+- Left for phase 17: saving in the window, through the original interpreter's menu.
+
+### Phase 17: the VGA CD's menu
+
+- The original interpreter's own menu, which the VGA CD opens on F5 and saves and loads from,
+  as ScummVM rebuilds it (`showMainMenu` and the rest of `gfx_gui.cpp` for Loom's version 4):
+  Save, Load, Play and Quit, the list of slots, a name typed in, and the banners.
 
 ## FM Towns
 

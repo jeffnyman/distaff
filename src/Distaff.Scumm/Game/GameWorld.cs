@@ -447,6 +447,16 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         return _boxFlags[box == _boxFlags.Length ? box - 1 : box];
     }
 
+    public int BoxScale(int box, int x, int y)
+    {
+        if (_loader.Version == 3 || Boxes is not { Count: > 0 } boxes || box < 0 || box == WalkBoxes.InvalidBox || box > boxes.Count)
+        {
+            return 0xFF;
+        }
+
+        return WalkBoxes.Scale(boxes.Box(box), x, y, slot => CurrentRoom!.ScaleSlots[slot]);
+    }
+
     /// <summary>Changes a box's flags for as long as the room is on screen (<c>setBoxFlags</c>).</summary>
     public void SetBoxFlags(int box, int flags)
     {

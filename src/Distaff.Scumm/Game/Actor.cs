@@ -15,6 +15,9 @@ public interface IActorWorld
     /// <summary>A box's flags as the scripts have left them, or 0 for no box (<c>getBoxFlags</c>).</summary>
     int BoxFlags(int box);
 
+    /// <summary>The scale of an actor in a box at a point: full size in version 3, and for no box (<c>getScale</c>).</summary>
+    int BoxScale(int box, int x, int y);
+
     /// <summary>Whether an object or actor has a class (<c>getClass</c>).</summary>
     bool GetClass(int obj, int cls);
 
@@ -27,12 +30,14 @@ public interface IActorWorld
 
 /// <summary>
 /// An actor: where it is, its costume and animation, and its walking. Mirrors ScummVM's
-/// <c>Actor</c> and <c>Actor_v3</c> for version 3: <c>initActor</c>, <c>putActor</c>,
+/// <c>Actor</c> and <c>Actor_v3</c> for version 3, and <c>Actor</c> alone for version 4:
+/// <c>initActor</c>, <c>putActor</c>,
 /// <c>showActor</c>, <c>hideActor</c>, <c>setActorCostume</c>, <c>startAnimActor</c>,
 /// <c>animateActor</c>, <c>animateCostume</c>, <c>setDirection</c>, <c>turnToDirection</c>,
 /// <c>updateActorDirection</c>, <c>remapDirection</c>, <c>adjustXYToBeInBox</c>,
 /// <c>adjustActorPos</c>, <c>startWalkActor</c>, <c>walkActor</c>, <c>calcMovementFactor</c>,
-/// <c>actorWalkStep</c> and <c>findPathTowardsOld</c>.
+/// <c>actorWalkStep</c>, <c>findPathTowardsOld</c> for version 3, <c>findPathTowards</c> for
+/// version 4, and <c>setBox</c> with <c>setupActorScale</c>.
 /// </summary>
 public sealed class Actor(int number, IActorWorld world)
 {
@@ -564,7 +569,7 @@ public sealed class Actor(int number, IActorWorld world)
         X = x;
         Y = y;
         _destBox = box;
-        WalkBox = box;
+        SetBox(box);
         _dest = new(-1, _dest.Y);
         StopMoving();
         Cost.SoundCounter = 0;
@@ -634,11 +639,36 @@ public sealed class Actor(int number, IActorWorld world)
     }
 
     /// <summary>
+    /// Puts the actor in a box, and takes its scale from there. Mirrors <c>setBox</c> with
+    /// <c>Actor_v3::setupActorScale</c> (full size) for version 3 and <c>Actor::setupActorScale</c>
+    /// for version 4, which leaves an actor that ignores boxes at its scale.
+    /// </summary>
+    private void SetBox(int box)
+    {
+        WalkBox = box;
+        if (_world.Version == 3)
+        {
+            ScaleX = ScaleY = 0xFF;
+        }
+        else if (!IgnoreBoxes)
+        {
+            ScaleX = ScaleY = _world.BoxScale(box, X, Y);
+        }
+    }
+
+    /// <summary>
     /// One step of walking: along the leg, through the boxes towards the destination box and
-    /// into it, then standing and facing as asked. Mirrors <c>Actor_v3::walkActor</c>.
+    /// into it, then standing and facing as asked. Mirrors <c>Actor_v3::walkActor</c> for version
+    /// 3, and <c>Actor::walkActor</c> for version 4.
     /// </summary>
     public void Walk()
     {
+        if (_world.Version == 4)
+        {
+            WalkV4();
+            return;
+        }
+
         if (Moving == 0)
         {
             return;
@@ -689,7 +719,7 @@ public sealed class Actor(int number, IActorWorld world)
                 _point3 = new(NoPoint, 0);
             }
 
-            WalkBox = _curBox;
+            SetBox(_curBox);
             Moving &= InLeg;
         }
 
@@ -698,7 +728,7 @@ public sealed class Actor(int number, IActorWorld world)
         {
             if (WalkBox == WalkBoxes.InvalidBox)
             {
-                WalkBox = _destBox;
+                SetBox(_destBox);
                 _curBox = _destBox;
                 break;
             }
@@ -733,7 +763,7 @@ public sealed class Actor(int number, IActorWorld world)
                 return;
             }
 
-            WalkBox = _curBox;
+            SetBox(_curBox);
         }
 
         Moving |= LastLeg;
@@ -766,12 +796,392 @@ public sealed class Actor(int number, IActorWorld world)
     }
 
     /// <summary>
+    /// One step of walking in version 4: as version 3's, but each leg is found by
+    /// <see cref="FindPathTowards"/>, with no third point, and a destination box that cannot be
+    /// reached becomes the box the actor is in. Mirrors <c>Actor::walkActor</c>.
+    /// </summary>
+    private void WalkV4()
+    {
+        if (Moving == 0)
+        {
+            return;
+        }
+
+        if ((Moving & NewLeg) == 0)
+        {
+            if ((Moving & InLeg) != 0 && WalkStep() != 0)
+            {
+                return;
+            }
+
+            if ((Moving & LastLeg) != 0)
+            {
+                Moving = 0;
+                SetBox(_destBox);
+                StartAnim(StandFrame);
+                if (_targetFacing != _destDir)
+                {
+                    TurnToDirection(_destDir);
+                }
+
+                return;
+            }
+
+            if ((Moving & Turn) != 0)
+            {
+                int newDir = UpdateDirection(false);
+                if (Facing != newDir)
+                {
+                    SetDirection(newDir);
+                }
+                else
+                {
+                    Moving = 0;
+                }
+
+                return;
+            }
+
+            SetBox(_curBox);
+            Moving &= InLeg;
+        }
+
+        Moving &= ~NewLeg;
+        while (true)
+        {
+            if (WalkBox == WalkBoxes.InvalidBox)
+            {
+                SetBox(_destBox);
+                _curBox = _destBox;
+                break;
+            }
+
+            if (WalkBox == _destBox)
+            {
+                break;
+            }
+
+            int nextBox = _world.Boxes?.NextBox(WalkBox, _destBox) ?? -1;
+            if (nextBox < 0)
+            {
+                _destBox = WalkBox;
+                Moving |= LastLeg;
+                return;
+            }
+
+            _curBox = nextBox;
+            if (FindPathTowards(WalkBox, nextBox, _destBox, out var foundPath))
+            {
+                break;
+            }
+
+            if (CalcMovementFactor(foundPath) != 0)
+            {
+                return;
+            }
+
+            SetBox(_curBox);
+        }
+
+        Moving |= LastLeg;
+        CalcMovementFactor(_dest);
+    }
+
+    /// <summary>
+    /// Where to walk to get from one box into the next, where an edge of the one lies along an
+    /// edge of the other: the point of their shared stretch nearest the actor, or, into the last
+    /// box, where the straight line to the destination meets it. Returns true when that line
+    /// already passes through and no point is needed; the point is (0, 0) when no edges meet, as
+    /// ScummVM leaves it. Mirrors <c>Actor::findPathTowards</c>.
+    /// </summary>
+    private bool FindPathTowards(int box1Number, int box2Number, int box3Number, out Point foundPath)
+    {
+        foundPath = new(0, 0);
+        var boxes = _world.Boxes!;
+        Point[] box1 = Corners(boxes.Box(box1Number)), box2 = Corners(boxes.Box(box2Number));
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                // the upper left and upper right corners, 0 and 1, along one vertical line
+                if (box1[0].X == box1[1].X && box1[0].X == box2[0].X && box1[0].X == box2[1].X)
+                {
+                    int flag = 0;
+                    if (box1[0].Y > box1[1].Y)
+                    {
+                        (box1[0], box1[1]) = (box1[0] with { Y = box1[1].Y }, box1[1] with { Y = box1[0].Y });
+                        flag |= 1;
+                    }
+
+                    if (box2[0].Y > box2[1].Y)
+                    {
+                        (box2[0], box2[1]) = (box2[0] with { Y = box2[1].Y }, box2[1] with { Y = box2[0].Y });
+                        flag |= 2;
+                    }
+
+                    if (box1[0].Y > box2[1].Y || box2[0].Y > box1[1].Y
+                        || ((box1[1].Y == box2[0].Y || box2[1].Y == box1[0].Y) && box1[0].Y != box1[1].Y && box2[0].Y != box2[1].Y))
+                    {
+                        if ((flag & 1) != 0)
+                        {
+                            (box1[0], box1[1]) = (box1[0] with { Y = box1[1].Y }, box1[1] with { Y = box1[0].Y });
+                        }
+
+                        if ((flag & 2) != 0)
+                        {
+                            (box2[0], box2[1]) = (box2[0] with { Y = box2[1].Y }, box2[1] with { Y = box2[0].Y });
+                        }
+                    }
+                    else
+                    {
+                        int pos = Y;
+                        if (box2Number == box3Number)
+                        {
+                            int diffX = _dest.X - X;
+                            int diffY = _dest.Y - Y;
+                            int boxDiffX = box1[0].X - X;
+                            if (diffX != 0)
+                            {
+                                diffY *= boxDiffX;
+                                int t = diffY / diffX;
+                                if (t == 0 && (diffY <= 0 || diffX <= 0) && (diffY >= 0 || diffX >= 0))
+                                {
+                                    t = -1;
+                                }
+
+                                pos = Y + t;
+                            }
+                        }
+
+                        int q = Clamp(pos, box2[0].Y, box2[1].Y, box1[0].Y, box1[1].Y);
+                        if (q == pos && box2Number == box3Number)
+                        {
+                            return true;
+                        }
+
+                        foundPath = new(box1[0].X, q);
+                        return false;
+                    }
+                }
+
+                // or along one horizontal line
+                if (box1[0].Y == box1[1].Y && box1[0].Y == box2[0].Y && box1[0].Y == box2[1].Y)
+                {
+                    int flag = 0;
+                    if (box1[0].X > box1[1].X)
+                    {
+                        (box1[0], box1[1]) = (box1[0] with { X = box1[1].X }, box1[1] with { X = box1[0].X });
+                        flag |= 1;
+                    }
+
+                    if (box2[0].X > box2[1].X)
+                    {
+                        (box2[0], box2[1]) = (box2[0] with { X = box2[1].X }, box2[1] with { X = box2[0].X });
+                        flag |= 2;
+                    }
+
+                    if (box1[0].X > box2[1].X || box2[0].X > box1[1].X
+                        || ((box1[1].X == box2[0].X || box2[1].X == box1[0].X) && box1[0].X != box1[1].X && box2[0].X != box2[1].X))
+                    {
+                        if ((flag & 1) != 0)
+                        {
+                            (box1[0], box1[1]) = (box1[0] with { X = box1[1].X }, box1[1] with { X = box1[0].X });
+                        }
+
+                        if ((flag & 2) != 0)
+                        {
+                            (box2[0], box2[1]) = (box2[0] with { X = box2[1].X }, box2[1] with { X = box2[0].X });
+                        }
+                    }
+                    else
+                    {
+                        int pos = X;
+                        if (box2Number == box3Number)
+                        {
+                            int diffX = _dest.X - X;
+                            int diffY = _dest.Y - Y;
+                            int boxDiffY = box1[0].Y - Y;
+                            if (diffY != 0)
+                            {
+                                pos += diffX * boxDiffY / diffY;
+                            }
+                        }
+
+                        int q = Clamp(pos, box2[0].X, box2[1].X, box1[0].X, box1[1].X);
+                        if (q == pos && box2Number == box3Number)
+                        {
+                            return true;
+                        }
+
+                        foundPath = new(q, box1[0].Y);
+                        return false;
+                    }
+                }
+
+                Rotate(box1);
+            }
+
+            Rotate(box2);
+        }
+
+        return false;
+
+        static Point[] Corners(WalkBox b) =>
+            [new(b.UpperLeftX, b.UpperLeftY), new(b.UpperRightX, b.UpperRightY), new(b.LowerRightX, b.LowerRightY), new(b.LowerLeftX, b.LowerLeftY)];
+
+        // the corners turn by one: the upper left takes the upper right's place, and so on round
+        static void Rotate(Point[] c) => (c[0], c[1], c[2], c[3]) = (c[1], c[2], c[3], c[0]);
+
+        // held within the second box's stretch, then the first's, in that order
+        static int Clamp(int value, int low2, int high2, int low1, int high1)
+        {
+            int q = value;
+            if (q < low2)
+            {
+                q = low2;
+            }
+
+            if (q > high2)
+            {
+                q = high2;
+            }
+
+            if (q < low1)
+            {
+                q = low1;
+            }
+
+            if (q > high1)
+            {
+                q = high1;
+            }
+
+            return q;
+        }
+    }
+
+    /// <summary>
+    /// Sets up a leg to a point in version 4: the step down, or across where the leg is shallow,
+    /// as a 16.16 fraction a step at the actor's speed, and the way to face; then takes its first
+    /// step. Returns 0 when there is no leg to walk. Mirrors <c>Actor::calcMovementFactor</c>.
+    /// </summary>
+    private int CalcMovementFactorV4(Point next)
+    {
+        if (X == next.X && Y == next.Y)
+        {
+            return 0;
+        }
+
+        int diffX = next.X - X;
+        int diffY = next.Y - Y;
+        int deltaYFactor = SpeedY << 16;
+        if (diffY < 0)
+        {
+            deltaYFactor = -deltaYFactor;
+        }
+
+        int deltaXFactor = deltaYFactor * diffX;
+        if (diffY != 0)
+        {
+            deltaXFactor /= diffY;
+        }
+        else
+        {
+            deltaYFactor = 0;
+        }
+
+        if ((uint)Math.Abs(deltaXFactor / 0x10000) > SpeedX)
+        {
+            deltaXFactor = SpeedX << 16;
+            if (diffX < 0)
+            {
+                deltaXFactor = -deltaXFactor;
+            }
+
+            deltaYFactor = deltaXFactor * diffY;
+            if (diffX != 0)
+            {
+                deltaYFactor /= diffX;
+            }
+            else
+            {
+                deltaXFactor = 0;
+            }
+        }
+
+        _xFrac = _yFrac = 0;
+        _walkCur = new(X, Y);
+        _next = next;
+        _deltaXFactor = deltaXFactor;
+        _deltaYFactor = deltaYFactor;
+        _targetFacing = Math.Abs(diffY) * 3 > Math.Abs(diffX) ? (deltaYFactor > 0 ? 180 : 0) : (deltaXFactor > 0 ? 90 : 270);
+        return WalkStepV4();
+    }
+
+    /// <summary>
+    /// One step along a leg in version 4: the walk starts or turns as needed, then the actor moves
+    /// by the fractions at its scale, held at the leg's end. Returns 0 at the end of the leg.
+    /// Mirrors <c>Actor::actorWalkStep</c>.
+    /// </summary>
+    private int WalkStepV4()
+    {
+        int nextFacing = UpdateDirection(true);
+        if ((WalkFrame != Frame && (Moving & InLeg) == 0) || Facing != nextFacing)
+        {
+            StartWalkAnim(nextFacing);
+        }
+
+        Moving |= InLeg;
+        if (WalkBox != _curBox && _world.Boxes is { } boxes && boxes.Contains(_curBox, X, Y))
+        {
+            SetBox(_curBox);
+        }
+
+        int distX = Math.Abs(_next.X - _walkCur.X);
+        int distY = Math.Abs(_next.Y - _walkCur.Y);
+        if (Math.Abs(X - _walkCur.X) >= distX && Math.Abs(Y - _walkCur.Y) >= distY)
+        {
+            Moving &= ~InLeg;
+            return 0;
+        }
+
+        int tmpX = X * 0x10000 + _xFrac + (_deltaXFactor >> 8) * ScaleX;
+        _xFrac = (ushort)tmpX;
+        X = tmpX >> 16;
+        int tmpY = Y * 0x10000 + _yFrac + (_deltaYFactor >> 8) * ScaleY;
+        _yFrac = (ushort)tmpY;
+        Y = tmpY >> 16;
+        if (Math.Abs(X - _walkCur.X) > distX)
+        {
+            X = _next.X;
+        }
+
+        if (Math.Abs(Y - _walkCur.Y) > distY)
+        {
+            Y = _next.Y;
+        }
+
+        if (X == _next.X && Y == _next.Y)
+        {
+            Moving &= ~InLeg;
+            return 0;
+        }
+
+        return 1;
+    }
+
+    /// <summary>
     /// Sets up a leg to a point: the step across (the speed, or one more than the step down when the
     /// leg is steep), the fractions, and the way to face; then takes its first step. Returns 0 when
     /// there is no leg to walk. Mirrors <c>Actor_v3::calcMovementFactor</c> for version 3.
     /// </summary>
     private int CalcMovementFactor(Point next)
     {
+        if (_world.Version == 4)
+        {
+            return CalcMovementFactorV4(next);
+        }
+
         if (X == next.X && Y == next.Y)
         {
             return 0;
@@ -808,6 +1218,11 @@ public sealed class Actor(int number, IActorWorld world)
     /// </summary>
     private int WalkStep()
     {
+        if (_world.Version == 4)
+        {
+            return WalkStepV4();
+        }
+
         int nextFacing = UpdateDirection(true);
         if ((Moving & InLeg) == 0 || Facing != nextFacing)
         {
@@ -832,7 +1247,7 @@ public sealed class Actor(int number, IActorWorld world)
 
         if (WalkBox != _curBox && _world.Boxes is { } boxes && boxes.Contains(_curBox, X, Y))
         {
-            WalkBox = _curBox;
+            SetBox(_curBox);
         }
 
         if (X == _next.X && Y == _next.Y)
