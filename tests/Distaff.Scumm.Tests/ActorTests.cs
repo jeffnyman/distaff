@@ -61,7 +61,7 @@ public class ActorTests
                     var state = new CostumeState();
                     state.Decode(costume, frame, direction);
                     var target = new MaskedImage(new Surface8(320, 200), new Surface8(320, 200));
-                    CostumeRenderer.Draw(costume, state, direction, CostumeRenderer.Palette(costume, IdentityPalette), target, 160, 150, masked: false);
+                    CostumeRenderer.Draw(costume, state, direction, CostumeRenderer.Palette(costume, IdentityPalette), target, 160, 150, zPlane: 0);
                     state.Increase(costume);
                     frames++;
                 }
@@ -143,7 +143,7 @@ public class ActorTests
 
     private const int CostumeFrames = 5360;
 
-    private const string BobbinOnTheCliff = "3c1a99027a2415ba";
+    private const string BobbinOnTheCliff = "561adcb5e8972081";
 
     private static readonly byte[] IdentityPalette = [.. Enumerable.Range(0, 16).Select(i => (byte)i)];
 

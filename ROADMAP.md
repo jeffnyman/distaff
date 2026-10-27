@@ -362,10 +362,31 @@ the EGA engine, as the EGA's built on each other.
   and the split tree in place. The complex codec and the transparent forms, which Loom's own
   pictures do not use, are checked on strips built by hand. Not compared with ScummVM's output.
 
-### Phase 13: costumes and actors
+### Phase 13: costumes and actors (done)
 
-- The costumes' 256-colour palettes and version 4's actor scaling: box scales, scale slots
-  (`SA`, `setScaleSlot`, `getScale`), and `matrixOps`.
+- `costume.cpp` (`Costume.ParseV4`): a VGA CD costume has the EGA's layout 2 bytes further on,
+  a palette of 16 colours (format `0x58`) or 32 (`0x59`) of room colour numbers where the EGA has
+  its colour byte, and in its animations a word for each limb's first command, `0xFFFF` hiding
+  it, where the EGA has a byte (`costumeDecodeData` for version 4).
+- `CostumeRenderer` is now a port of the whole of `paintCelByleRLE`, `paintCelByleRLECommon`,
+  `skipCelLines` and `byleRLEDecode`, for both releases: scaling by `smallCostumeScaleTable`,
+  clipping the columns off the picture's edge, 32-colour costumes' 5-bit colours, the mask plane
+  an actor is behind (`_zbuf`, a bit of the mask), and colour 13 from the shadow table. The
+  VGA CD's cels count from the feet, the EGA's from 72 left and 100 above them (`drawCostume`).
+  `setPalette` for version 4: an actor's colour 255 takes the costume's own.
+- A figure facing left is drawn from its right edge leftwards, as ScummVM does: one pixel to
+  the right of where the EGA's port drew it. Two EGA screenshots with Bobbin facing left were
+  pinned again (58 pixels in a 7-column strip of his figure differ, the old picture moved right).
+- `getScale` and `getScaleFromSlot` (`WalkBoxes.Scale`, `ScaleSlot`): a box's scale, or with its
+  top bit set a slot's, which follows y (and x) between two points; the room's `SA` block sets
+  slots 1 to 4 (`resetRoomSubBlocks`).
+- Checked against the VGA CD release: all 165 costumes parse, all with 16 colours, and all 6188
+  frames draw at full size and at half. A seated figure (costume 6) is pinned facing right and
+  left at full size (36 by 30) and half (19 by 16), its feet in place. No room scales actors:
+  every box is full size and every `SA` block is empty, so any scaling is the scripts' (the
+  game loop's, in phase 14). Not compared with ScummVM's output.
+- Left for phase 14, with the game loop: actors' version 4 setup (colours 255, the scale from
+  their box, walking at their scale, `_zbuf` from the box mask) and `matrixOps`.
 
 ### Phase 14: scripts, text and the interface
 

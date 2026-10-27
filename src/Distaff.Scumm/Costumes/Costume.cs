@@ -20,22 +20,25 @@ public readonly record struct LimbAnimation(int Limb, int? Start, int Length, bo
 public readonly record struct CostumeCel(int Width, int Height, int RelX, int RelY, int MoveX, int MoveY, int DataOffset);
 
 /// <summary>
-/// A costume of the EGA release: a character's animations. Mirrors ScummVM's
-/// <c>ClassicCostumeLoader::loadCostume</c> and <c>costumeDecodeData</c> for <c>GF_OLD_BUNDLE</c>,
-/// and the cel headers read in <c>ClassicCostumeRenderer::drawLimb</c>. Ported by way of Maniacal,
-/// whose version 2 costumes have the same layout.
+/// A costume: a character's animations. Mirrors ScummVM's <c>ClassicCostumeLoader::loadCostume</c>
+/// and <c>costumeDecodeData</c> for <c>GF_OLD_BUNDLE</c> and <c>GF_SMALL_HEADER</c>, and the cel
+/// headers read in <c>ClassicCostumeRenderer::drawLimb</c>. Ported by way of Maniacal, whose
+/// version 2 costumes have the EGA's layout.
 /// </summary>
 /// <remarks>
 /// <para>From the size word: the number of animations less one at 4 and the format at 5
 /// (<c>0x58</c> or <c>0x59</c>; bit 7: the costume has its own left-facing pictures and is never
 /// mirrored), and one colour byte at 6. Then the offset of the command bytes, one frame-table
 /// offset for each of the 16 limbs, and one offset per animation; offsets count from the size
-/// word. Animation <c>frame * 4 + direction</c> lists the limbs it changes. Each command picks a
-/// cel from the limb's frame table; commands <see cref="Hide"/>, <see cref="Stop"/> and
-/// <see cref="Start"/> are not cels.</para>
+/// word. The VGA CD's costumes start with a 32-bit size and the tag <c>CO</c>, have every field 2
+/// bytes further on, and a palette of 16 colours (format <c>0x58</c>) or 32 (<c>0x59</c>) where the
+/// EGA has its colour byte. Animation <c>frame * 4 + direction</c> lists the limbs it changes: for
+/// each, the index of its first command (a byte, or for the VGA CD a word) and how many follow.
+/// Each command picks a cel from the limb's frame table; commands <see cref="Hide"/>,
+/// <see cref="Stop"/> and <see cref="Start"/> are not cels.</para>
 /// <para>A cel: width, height, the offsets of its corner and of the next limb, as six words, then
 /// its pixels: columns top to bottom, a byte being a colour in its high 4 bits and a run length in
-/// its low 4 (0: the length is the next byte).</para>
+/// its low 4 (0: the length is the next byte), or with 32 colours in its high 5 and low 3.</para>
 /// </remarks>
 public sealed class Costume
 {
@@ -56,40 +59,54 @@ public sealed class Costume
     /// <summary>Counts an animation step; passed over when stepping. Mirrors the <c>0x7C</c> check in <c>increaseAnim</c>.</summary>
     public const byte Counter = 0x7C;
 
-    private const int FrameOffsets = 9, AnimationOffsets = 41;
-
     private readonly int _commands;
+    private readonly int _frameOffsets;
+    private readonly int _animationOffsets;
 
-    private Costume(int number, ReadOnlyMemory<byte> data)
+    private Costume(int number, ReadOnlyMemory<byte> data, bool smallHeader)
     {
         var span = data.Span;
-        if (span.Length < AnimationOffsets)
+        int shift = smallHeader ? 2 : 0;
+        if (span.Length < shift + 8)
         {
             throw new InvalidDataException($"Costume {number} is too short ({span.Length} bytes).");
         }
 
         Number = number;
         Data = data;
-        AnimationCount = span[4] + 1;
-        Format = span[5] & 0x7F;
-        HasOwnLeftPictures = (span[5] & 0x80) != 0;
+        Version = smallHeader ? 4 : 3;
+        AnimationCount = span[shift + 4] + 1;
+        Format = span[shift + 5] & 0x7F;
+        HasOwnLeftPictures = (span[shift + 5] & 0x80) != 0;
         if (Format is not (0x58 or 0x59))
         {
             throw new InvalidDataException($"Costume {number} has format 0x{Format:X2}, which is not a classic costume.");
         }
 
-        ColorIndex = span[6];
-        _commands = Word(span, 7);
-        if (AnimationOffsets + 2 * AnimationCount > span.Length || _commands > span.Length)
+        // the EGA's palette is one colour byte (_numColors 1 for GF_OLD_BUNDLE)
+        ColorCount = !smallHeader ? 1 : Format == 0x59 ? 32 : 16;
+        int palette = shift + 6;
+        if (palette + ColorCount + 34 + 2 * AnimationCount > span.Length)
         {
             throw new InvalidDataException($"Costume {number}: its tables run past the end of the costume.");
+        }
+
+        Palette = data.Slice(palette, ColorCount);
+        ColorIndex = span[palette];
+        int commandOffset = palette + ColorCount;
+        _commands = Word(span, commandOffset);
+        _frameOffsets = commandOffset + 2;
+        _animationOffsets = commandOffset + 34;
+        if (_commands > span.Length)
+        {
+            throw new InvalidDataException($"Costume {number}: its commands start past the end of the costume.");
         }
 
         // the command bytes run up to the first limb frame table
         int firstFrameTable = span.Length;
         for (int limb = 0; limb < LimbCount; limb++)
         {
-            int table = Word(span, FrameOffsets + 2 * limb);
+            int table = Word(span, _frameOffsets + 2 * limb);
             if (table >= _commands && table < firstFrameTable)
             {
                 firstFrameTable = table;
@@ -100,6 +117,9 @@ public sealed class Costume
     }
 
     public int Number { get; }
+
+    /// <summary>The SCUMM version of the release the costume is from: 3 for the EGA, 4 for the VGA CD.</summary>
+    public int Version { get; }
 
     /// <summary>The costume resource, from its size word.</summary>
     public ReadOnlyMemory<byte> Data { get; }
@@ -114,10 +134,23 @@ public sealed class Costume
     /// <summary>How many command bytes there are, up to the first limb frame table.</summary>
     public int CommandCount { get; }
 
-    /// <summary>The colour number drawn as the actor's colour 0 instead of itself. Mirrors <c>_palette[_loaded._palette[0]] = _palette[0]</c> in <c>setPalette</c>.</summary>
+    /// <summary>The EGA's colour number drawn as the actor's colour 0 instead of itself. Mirrors <c>_palette[_loaded._palette[0]] = _palette[0]</c> in <c>setPalette</c>.</summary>
     public int ColorIndex { get; }
 
-    public static Costume Parse(int number, ReadOnlyMemory<byte> data) => new(number, data);
+    /// <summary>How many colours the costume has (<c>_numColors</c>): 1 for the EGA's colour byte, 16 or 32 for the VGA CD.</summary>
+    public int ColorCount { get; }
+
+    /// <summary>The costume's colours, as room colour numbers (<c>_loaded._palette</c>); the EGA's is its colour byte.</summary>
+    public ReadOnlyMemory<byte> Palette { get; }
+
+    /// <summary>How far a pixel byte's colour is shifted up; the rest is the run length. Mirrors <c>shr</c> in <c>paintCelByleRLECommon</c>.</summary>
+    public int ColorShift => ColorCount == 32 ? 3 : 4;
+
+    /// <summary>Parses an EGA costume, from its size word.</summary>
+    public static Costume Parse(int number, ReadOnlyMemory<byte> data) => new(number, data, smallHeader: false);
+
+    /// <summary>Parses a VGA CD costume, from its 6-byte header.</summary>
+    public static Costume ParseV4(int number, ReadOnlyMemory<byte> data) => new(number, data, smallHeader: true);
 
     /// <summary>The command byte at an index; the low 7 bits pick a cel.</summary>
     public byte Command(int index)
@@ -140,7 +173,7 @@ public sealed class Costume
             return [];
         }
 
-        int position = Word(span, AnimationOffsets + 2 * index);
+        int position = Word(span, _animationOffsets + 2 * index);
         if (position == 0)
         {
             return [];
@@ -156,8 +189,10 @@ public sealed class Costume
                 continue;
             }
 
-            byte start = span[position++];
-            if (start == 0xFF)
+            // version 4 gives the first command as a word, with 0xFFFF for none
+            int start = Version == 4 ? Word(span, position) : span[position];
+            position += Version == 4 ? 2 : 1;
+            if (start == (Version == 4 ? 0xFFFF : 0xFF))
             {
                 limbs.Add(new LimbAnimation(limb, null, 0, false));
                 continue;
@@ -174,7 +209,7 @@ public sealed class Costume
     public CostumeCel Cel(int limb, int code)
     {
         var span = Data.Span;
-        int frames = Word(span, FrameOffsets + 2 * limb);
+        int frames = Word(span, _frameOffsets + 2 * limb);
         int cel = Word(span, frames + 2 * code);
         if (cel + 12 > span.Length)
         {

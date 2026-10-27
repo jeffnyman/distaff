@@ -139,6 +139,17 @@ public sealed class WalkBoxes
         return dest;
     }
 
+    /// <summary>
+    /// An actor's scale in a box at a point: the box's own scale, or with its top bit set the scale
+    /// of slot <c>(scale &amp; 0x7FFF) + 1</c> there; always full size in version 3, whose boxes have no
+    /// scale. Mirrors <c>getScale</c>.
+    /// </summary>
+    public static int Scale(WalkBox box, int x, int y, Func<int, ScaleSlot> slot)
+    {
+        int scale = box.Scale;
+        return (scale & 0x8000) != 0 ? slot((scale & 0x7FFF) + 1).ScaleAt(x, y) : scale;
+    }
+
     /// <summary>Mirrors <c>compareSlope</c>: whether the point is on the inner side of the edge from 1 to 2.</summary>
     private static bool CompareSlope(int x1, int y1, int x2, int y2, int x3, int y3)
         => (y2 - y1) * (x3 - x1) <= (y3 - y1) * (x2 - x1);

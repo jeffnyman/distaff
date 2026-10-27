@@ -88,7 +88,7 @@ public class TextTests
 
     private const string ProficiencyScreen = "71e98c2a36552048";
 
-    private const string BobbinsLine = "88fe6c75335921e2";
+    private const string BobbinsLine = "1eb356bde59c987d";
 
     /// <summary>A one-pixel-wide glyph drawn at (2, 2) on a small surface, row by row: F the colour, 0 the shadow.</summary>
     private static string[] Drawn(byte[] glyph, ShadowType shadow)

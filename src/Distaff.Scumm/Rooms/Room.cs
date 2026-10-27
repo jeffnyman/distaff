@@ -99,6 +99,9 @@ public sealed class Room
         BoxOffset = single.GetValueOrDefault("BX");
         WalkBoxes = BoxOffset == 0 ? WalkBoxes.Empty
             : WalkBoxes.Parse(data, BoxOffset, BoxOffset - blockHeaderSize + BinaryPrimitives.ReadInt32LittleEndian(span[(BoxOffset - blockHeaderSize)..]), WalkBoxes.BoxSizeV4);
+        ScaleSlots = single.TryGetValue("SA", out int scales)
+            ? ScaleSlot.ReadRoomSlots(span.Slice(scales, BinaryPrimitives.ReadInt32LittleEndian(span[(scales - blockHeaderSize)..]) - blockHeaderSize))
+            : new Dictionary<int, ScaleSlot>();
         ExitScriptOffset = single.GetValueOrDefault("EX");
         EntryScriptOffset = single.GetValueOrDefault("EN");
 
@@ -197,6 +200,9 @@ public sealed class Room
     public int BoxOffset { get; }
 
     public IReadOnlyList<RoomObject> Objects { get; }
+
+    /// <summary>The scale slots a VGA CD room sets as it is entered, by number from 1; none for the EGA.</summary>
+    public IReadOnlyDictionary<int, ScaleSlot> ScaleSlots { get; } = new Dictionary<int, ScaleSlot>();
 
     public WalkBoxes WalkBoxes { get; }
 

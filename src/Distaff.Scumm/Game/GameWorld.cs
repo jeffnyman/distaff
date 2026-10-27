@@ -318,7 +318,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
             if (actor.Visible && LoadCostume(actor.Costume) is { } costume)
             {
                 CostumeRenderer.Draw(costume, actor.Cost, Actor.OldDirection(actor.Facing),
-                    CostumeRenderer.Palette(costume, actor.Palette, actorColors), image, actor.X, actor.Y - actor.Elevation, ClipsActor(actor));
+                    CostumeRenderer.Palette(costume, actor.Palette, actorColors), image, actor.X, actor.Y - actor.Elevation, zPlane: ClipsActor(actor) ? 1 : 0);
             }
         }
 
