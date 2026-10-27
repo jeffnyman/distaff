@@ -172,17 +172,7 @@ public sealed partial class GameWorld
             case 0xC0:
                 return ReadSave(slot) is not null ? 6 : 7;
             case 0x80:
-                {
-                    if (SaveStore is null)
-                    {
-                        return 2;
-                    }
-
-                    var data = SaveFile.Write(Capture(), SaveName(slot), Time, DateTime.Now, SaveVersion);
-                    using var output = SaveStore.OpenWrite(SaveFileName(slot));
-                    output.Write(data);
-                    return 0;
-                }
+                return WriteSave(slot, SaveName(slot)) ? 0 : 2;
 
             case 0x40:
                 {
@@ -294,6 +284,20 @@ public sealed partial class GameWorld
         var text = _strings[CheckString(SaveNameString + slot - 1)] ?? [];
         int end = Array.IndexOf(text, (byte)0);
         return Encoding.Latin1.GetString(text, 0, Math.Min(end < 0 ? text.Length : end, 31));
+    }
+
+    /// <summary>Saves the game to a slot under a name (<c>saveState</c>); false with nowhere to keep saves.</summary>
+    private bool WriteSave(int slot, string name)
+    {
+        if (SaveStore is null)
+        {
+            return false;
+        }
+
+        var data = SaveFile.Write(Capture(), name, Time, DateTime.Now, SaveVersion);
+        using var output = SaveStore.OpenWrite(SaveFileName(slot));
+        output.Write(data);
+        return true;
     }
 
     /// <summary>A slot's save file, or null when it has none.</summary>

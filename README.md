@@ -15,7 +15,7 @@ scripts), global scripts, sounds and the charset are read, and rooms are drawn w
 objects and masks: `distaff <folder> --room N` writes a room as a PNG and lists it. Every script
 decodes; `--script N` and `--room-scripts N` disassemble them. `distaff <folder>` plays the game
 in a window with the mouse and keys: the distaff and its drafts, text, the cursor and dark
-rooms are drawn, and the game's own save screen (F5) saves and loads in ScummVM's save format
+rooms are drawn, and the game's own save screen (F5; the VGA CD's menu) saves and loads in ScummVM's save format
 (`--load file` starts from a save), with sound on the AdLib, the PCjr or the PC speaker. It also runs headless, as the tests
 run it: `distaff <folder> --run 2000 --click 100:160,92 --key 200:esc --screenshot end.png`.
 The walkthrough tests play the whole game, the EGA and the VGA CD releases both, from the
@@ -26,7 +26,7 @@ before it made.
 | Release | SCUMM version | Data | State |
 |---|---|---|---|
 | DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Playable to the end, with saves and sound |
-| DOS VGA CD (1992) | 4 | `000.LFL`, `DISK01.LEC` (XOR 0x69), `90x.LFL`, one CD audio track | Playable to the end, with its voices and music; saves with `--save` and loads with `--load` (the in-game menu is to come) |
+| DOS VGA CD (1992) | 4 | `000.LFL`, `DISK01.LEC` (XOR 0x69), `90x.LFL`, one CD audio track | Playable to the end, with its voices and music, and its own menu (F5) to save and load |
 | FM Towns (1991) | 3, 256 colours (`GF_OLD256`) | `00.LFL` to `99.LFL`, not encoded, 16 CD audio tracks | Identified |
 
 ## Layout

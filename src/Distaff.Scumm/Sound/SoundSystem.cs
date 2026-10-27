@@ -35,10 +35,20 @@ public sealed class SoundSystem : IDisposable
             ? new PlayerAd(sampleRate, new Opl.MameOpl(sampleRate))
             : new PlayerV2(sampleRate, device == SoundDevice.Pcjr);
         Cd = new CdPlayer(cdTracks, sampleRate);
-        Output = new ClockedSource(new AudioMix(Player, Cd), sampleRate);
+        _mix = new AudioMix(Player, Cd);
+        Output = new ClockedSource(_mix, sampleRate);
     }
 
+    private readonly AudioMix _mix;
+
     public SoundDevice Device { get; }
+
+    /// <summary>Whether every sound waits where it is, silent, while the game waits on its menu (<c>pauseSounds</c>).</summary>
+    public bool Paused
+    {
+        get => _mix.Paused;
+        set => _mix.Paused = value;
+    }
 
     /// <summary>The value of the sound card variable for the device. Mirrors <c>setSoundCardVarToCurrentConfig</c>.</summary>
     public int SoundCardValue => Device switch

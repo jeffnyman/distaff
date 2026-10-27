@@ -170,10 +170,18 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// One step of the game. Mirrors <c>scummLoop</c> for version 3: the timers, the script delays
     /// and the message count down by the step's ticks; the message moves on; the engine variables
     /// are brought up to date; every script runs; the click or key goes to the verb script; the
-    /// sentence script runs; the camera moves.
+    /// sentence script runs; the camera moves. While the VGA CD's menu or a banner is up, the game
+    /// waits and the step is theirs.
     /// </summary>
     public void Step()
     {
+        if (InInterface)
+        {
+            InterfaceStep();
+            Steps++;
+            return;
+        }
+
         int delta = StepTicks;
         Time += StepLength;
         Engine.Variables[Vars.Timer] = delta;
@@ -591,13 +599,25 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         Engine.RunScript(Engine.Variables[Vars.EntryScript2]);
     }
 
-    /// <summary>The values the engine variables start with. Mirrors <c>resetScummVars</c> for Loom DOS EGA with the PC speaker.</summary>
+    /// <summary>
+    /// The values the engine variables start with. Mirrors <c>resetScummVars</c> for Loom DOS: the
+    /// EGA's count of sound resources in variable 39, which version 4 keeps for its debug mode
+    /// (off), and version 4's fixed disk (variable 51), so its menu asks for no save disk.
+    /// </summary>
     private void ResetVariables()
     {
         var v = Engine.Variables;
         v[Vars.SoundCard] = Sound.SoundCardValue;
         v[Vars.VideoMode] = 19;
-        v[Vars.SoundResourceCount] = 80;
+        if (_loader.Version == 3)
+        {
+            v[Vars.SoundResourceCount] = 80;
+        }
+        else
+        {
+            v[FixedDisk] = 1;
+        }
+
         v[Vars.HeapSpace] = 1400;
         // LIGHTMODE_actor_use_base_palette, _room_lights_on and _actor_use_colors (ScummEngine_v5::resetScummVars)
         v[Vars.CurrentLights] = 1 | 2 | 8;

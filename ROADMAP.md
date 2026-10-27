@@ -542,11 +542,45 @@ Then the interface and a playing check:
   drafts learned and used, and the void's holes closed.
 - Left for phase 17: saving in the window, through the original interpreter's menu.
 
-### Phase 17: the VGA CD's menu
+### Phase 17: the VGA CD's menu (done)
 
 - The original interpreter's own menu, which the VGA CD opens on F5 and saves and loads from,
   as ScummVM rebuilds it (`showMainMenu` and the rest of `gfx_gui.cpp` for Loom's version 4):
   Save, Load, Play and Quit, the list of slots, a name typed in, and the banners.
+- `gfx_gui.cpp` for Loom version 4 (`GameWorld.Menu`): the controls and their look
+  (`setUpMainMenuControls`, `drawInternalGUIControl` with `drawBox`, `drawLine` and `drawPixel`,
+  the words in charset 1 through text slot 5, `drawGUIText`), the pages (`drawMainMenuControls`,
+  `drawMainMenuTitle`), what each control does (`executeMainMenuOperation`): Save and Load list
+  nine numbered slots with their saves' names (`fillSavegameLabels`), the arrows scroll the list
+  by how far from its middle they are pressed, a chosen slot on the save page takes a typed name
+  (`userWriteLabelRoutine`), OK shows "Saving" or "Loading" a moment and saves or loads, a slot
+  clicked on the load page loads at once, Play closes the menu, Quit quits. The words are the
+  game's own strings 4 to 20, which its boot script loads, with ScummVM's English where one is
+  unset. The screen is kept and put back around the menu (`saveSurfacesPreGUI`,
+  `restoreSurfacesPostGUI`), the sound pauses (`pauseSounds`; `AudioMix.Paused`), and the cursor
+  shows. A load from the menu is any load: the verbs are drawn again and variable 66 set.
+- Banners (`showBannerAndPause`, which is what `showOldStyleBannerAndPause` is for Loom VGA):
+  the pause key shows the game's pause line with the cursor off; Quit, with `ConfirmExit` (ScummVM's
+  `confirm_exit`, off by default as there), asks the game's question, its last letter the answer.
+- `processKeyboard` for version 4 with the original interface: the pause key and the menu key
+  (variable 50, which the game sets to 319, F5) are the interface's; everything else goes to the
+  game as before. While the menu or a banner is up, steps are theirs and the game waits; ScummVM's
+  waits inside them (`waitForTimer`) count down in quarter-frames.
+- `resetScummVars` for version 4: variable 39 is the debug mode, off, where the EGA keeps its
+  count of sound resources (80, which the VGA CD had been given); variable 51 says the saves are
+  on a fixed disk, so the menu asks for no save disk.
+- As ScummVM has it: the arrows are set up on the main page but not drawn, so a click there shows
+  them; a line being spoken stays over the menu (Loom VGA's text surface is neither stamped nor
+  cleared first); after a load from the menu the cursor is never put back by a later one, the
+  flag that marks it never being cleared in version 4; a banner over the menu leaves its last two
+  rows, as `clearBanner` puts back the rows from two above it.
+- Left out: the restart key's question, the text speed keys ('+' and '-'), the mouse wheel on the
+  list, and Ctrl+C and Alt+X (the window closes the player). The CD timer stops while the menu is
+  up; ScummVM's stops only once it has counted.
+- Checked against the VGA CD release: the menu over the cliff (its main page pinned), a game
+  saved under a typed name and loaded back from the list in another game, which goes on in the
+  sanctuary with the distaff; the arrows; Quit with and without the question; the pause banner,
+  the game's clock still while it is up. Viewed, not compared with ScummVM's output.
 
 ## FM Towns
 

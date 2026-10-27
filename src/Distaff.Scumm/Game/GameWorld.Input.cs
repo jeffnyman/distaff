@@ -33,6 +33,12 @@ public sealed partial class GameWorld
     public void Click(int x, int y, bool right = false)
     {
         MoveMouse(x, y);
+        if (InInterface)
+        {
+            InterfaceInput((MouseX, MouseY, right), null);
+            return;
+        }
+
         _input = right ? RightClick : LeftClick;
     }
 
@@ -107,10 +113,22 @@ public sealed partial class GameWorld
     /// with the original interface keeps: the pause key pauses, the period ends the line being
     /// shown, Escape skips the cutscene and hands the game its cutscene key, F1 to F9 are 315 on,
     /// Ctrl with a letter is the letter's control code, and any other character goes to the
-    /// game. The restart key's question is not asked.
+    /// game. The restart key's question is not asked. The VGA CD's menu and banners take keys
+    /// first (<see cref="InterfaceKey"/>), and every key while one is up.
     /// </summary>
     public void KeyDown(Input.Key key, Input.KeyModifiers modifiers, char ascii)
     {
+        if (InInterface)
+        {
+            InterfaceInput(null, (key, ascii, modifiers));
+            return;
+        }
+
+        if (_loader.Version == 4 && InterfaceKey(key, modifiers, ascii))
+        {
+            return;
+        }
+
         int pauseKey = Engine.Variables[Vars.PauseKey];
         if (key == Input.Key.Escape)
         {
