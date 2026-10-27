@@ -217,6 +217,7 @@ public class ResourceTests
             return;
         }
 
+        Assert.Null(loader.LoadScript(117));
         var script = loader.LoadScript(1);
         Assert.NotNull(script);
         Assert.Equal(loader.Load(ResourceType.Script, 1)!.Value.Length - ResourceLoader.HeaderSize, script.Value.Length);

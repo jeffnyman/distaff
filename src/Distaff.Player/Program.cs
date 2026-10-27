@@ -2,6 +2,7 @@ using Distaff.Scumm.Detection;
 using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Rooms;
+using Distaff.Scumm.Scripts;
 using Distaff.Scumm.Storage;
 
 namespace Distaff.Player;
@@ -12,6 +13,8 @@ internal static class Program
     {
         string? gamePath = null;
         int? roomNumber = null;
+        int? script = null;
+        int? roomScripts = null;
         string objects = "initial";
         bool mask = false;
         int zoom = 1;
@@ -23,6 +26,14 @@ internal static class Program
             {
                 case "--room" when i + 1 < args.Length && int.TryParse(args[i + 1], out int number):
                     roomNumber = number;
+                    i++;
+                    break;
+                case "--script" when i + 1 < args.Length && int.TryParse(args[i + 1], out int s):
+                    script = s;
+                    i++;
+                    break;
+                case "--room-scripts" when i + 1 < args.Length && int.TryParse(args[i + 1], out int rs):
+                    roomScripts = rs;
                     i++;
                     break;
                 case "--objects" when i + 1 < args.Length && args[i + 1] is "none" or "initial" or "all":
@@ -71,14 +82,24 @@ internal static class Program
 
         Console.WriteLine($"Loom ({release.Variant}), SCUMM version {release.Version}, {release.Layout} layout");
         Console.WriteLine($"language {release.Language ?? "unknown"}, platform {release.Platform ?? "unknown"}, index MD5 {release.Entry.Md5}");
-        if (roomNumber is not { } roomNo)
-        {
-            return 0;
-        }
-
         try
         {
-            return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
+            if (script is { } scriptNo)
+            {
+                return ListScript(ResourceLoader.Open(game), scriptNo);
+            }
+
+            if (roomScripts is { } roomScriptsNo)
+            {
+                return ListRoomScripts(ResourceLoader.Open(game), roomScriptsNo);
+            }
+
+            if (roomNumber is { } roomNo)
+            {
+                return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
+            }
+
+            return 0;
         }
         catch (Exception ex) when (ex is NotSupportedException or InvalidDataException)
         {
@@ -91,7 +112,79 @@ internal static class Program
     {
         Console.Error.WriteLine("usage: distaff <game folder>");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
+        Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
         return 2;
+    }
+
+    /// <summary>Disassembles a global script, from its start along every path execution can take.</summary>
+    private static int ListScript(ResourceLoader loader, int number)
+    {
+        if (loader.LoadScript(number) is not { } code)
+        {
+            Console.Error.WriteLine($"distaff: there is no script {number}");
+            return 1;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"Script {number}: {code.Length} bytes, in room {loader.Index.Locate(ResourceType.Script, number).Room}");
+        Print(new ScriptDecoder().DecodeReachable(code, [0]).Values, code.Length);
+        return 0;
+    }
+
+    /// <summary>Disassembles a room's entry, exit and local scripts and its objects' verb scripts.</summary>
+    private static int ListRoomScripts(ResourceLoader loader, int number)
+    {
+        if (loader.LoadRoom(number) is not { } room)
+        {
+            Console.Error.WriteLine($"distaff: there is no room {number}");
+            return 1;
+        }
+
+        var decoder = new ScriptDecoder();
+        void Room(string title, int offset)
+        {
+            if (offset == 0)
+            {
+                return;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"{title}, at {offset} in room {number}:");
+            Print(decoder.DecodeReachable(room.Data, [offset]).Values, null);
+        }
+
+        Room("Exit script", room.ExitScriptOffset);
+        Room("Entry script", room.EntryScriptOffset);
+        foreach (var (script, offset) in room.LocalScriptOffsets)
+        {
+            Room($"Local script {script}", offset);
+        }
+
+        foreach (var obj in room.Objects.Where(o => o.Verbs.Count > 0))
+        {
+            Console.WriteLine();
+            string verbs = string.Join(", ", obj.Verbs.Select(v => $"{(v.Verb == RoomObject.FallbackVerb ? "*" : v.Verb.ToString())} at {v.Offset:X4}"));
+            Console.WriteLine($"Object {obj.Number} {(obj.Name.Length > 0 ? $"\"{obj.Name}\"" : "")}, verbs {verbs}:");
+            Print(decoder.DecodeReachable(obj.Code, obj.Verbs.Select(v => v.Offset)).Values, null);
+        }
+
+        return 0;
+    }
+
+    private static void Print(IEnumerable<Instruction> instructions, int? length)
+    {
+        int count = 0, covered = 0;
+        foreach (var instruction in instructions)
+        {
+            Console.WriteLine($"  {instruction}");
+            count++;
+            covered += instruction.Length;
+        }
+
+        if (length is { } total && covered < total)
+        {
+            Console.WriteLine($"  ({total - covered} of {total} bytes not reached)");
+        }
     }
 
     /// <summary>Writes a room as a PNG, with its objects as the game starts, none, or all, and lists it.</summary>

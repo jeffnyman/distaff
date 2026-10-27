@@ -86,7 +86,15 @@ public sealed class ResourceLoader
 
     /// <summary>A global script's code: the resource after its header (<c>getScriptBaseAddress</c> with <c>_resourceHeaderSize</c>).</summary>
     public ReadOnlyMemory<byte>? LoadScript(int script)
-        => Load(ResourceType.Script, script) is { } data ? data[HeaderSize..] : null;
+    {
+        // not a conditional expression: its null would become an empty ReadOnlyMemory, by way of byte[]
+        if (Load(ResourceType.Script, script) is not { } data)
+        {
+            return null;
+        }
+
+        return data[HeaderSize..];
+    }
 
     /// <summary>Loads a sound's speaker and AdLib blocks, or returns null when the index has no such sound.</summary>
     public SoundResource? LoadSound(int sound)
