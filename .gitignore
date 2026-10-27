@@ -1,0 +1,20 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+*.swp
+TestResults/
+artifacts/
+
+# Python tooling
+__pycache__/
+
+# game data never goes in the repository
+games/
+*.LFL
+*.LEC
+*.flac
+*.ogg
+*.wav

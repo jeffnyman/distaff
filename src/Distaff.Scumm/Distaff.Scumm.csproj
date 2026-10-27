@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>The SCUMM interpreter for Loom (EGA, VGA CD and FM Towns), ported from ScummVM.</Description>
+    <!-- optimized in Debug too: the per-pixel drawing is slow unoptimized -->
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Distaff.Scumm.Tests" />
+  </ItemGroup>
+</Project>

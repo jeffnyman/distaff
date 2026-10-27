@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Distaff.Player/Distaff.Player.csproj" />
+    <Project Path="src/Distaff.Scumm/Distaff.Scumm.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Distaff.Scumm.Tests/Distaff.Scumm.Tests.csproj" />
+  </Folder>
+</Solution>

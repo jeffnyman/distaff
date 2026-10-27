@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>distaff</AssemblyName>
+    <Description>Command line player for Loom: distaff &lt;game folder&gt;.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Distaff.Scumm\Distaff.Scumm.csproj" />
+  </ItemGroup>
+</Project>
