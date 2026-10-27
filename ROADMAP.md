@@ -337,12 +337,30 @@ the EGA engine, as the EGA's built on each other.
   scripts (18698 instructions) decode straight to their ends.
 - Not yet: the sounds' contents (with the CD audio), costumes' contents (with the actors).
 
-### Phase 12: room graphics
+### Phase 12: room graphics (done)
 
-- `gfx.cpp`: the 256-colour strip codecs (`drawStripComplex`, `drawStripBasicH` and `V`,
-  `unkDecode`), their transparent forms, the z-plane masks of version 4, object images (`OI`) and
-  their states; the room palette (`PA`, `setCurrentPalette`), the shadow palette and colour
-  cycling (`CC`, `initCycl`). `--room N` draws the VGA CD's rooms.
+- `gfx.cpp` (`VgaBitmap`): a picture is a 32-bit offset of its first z-plane and a 32-bit
+  offset per strip (`drawStrip` for `GF_SMALL_HEADER`); each strip's first byte names its codec,
+  whose last digit is the colour width (`decompressBitmap`). Ported: raw (1), the zigzag codecs
+  down the columns (14 to 18) and along the rows (24 to 28) (`drawStripBasicV`, `H`), the
+  major-minor codecs (64 to 68, 104 to 108; `drawStripComplex`, `MajMinCodec`), and the
+  transparent form of each, which leaves colour 255 undrawn (version 4 rooms have no `TRNS`).
+  The FM Towns', 3DO's and HE's codecs are not.
+- Z-planes (`getZPlanes`, `decodeMask`, `decompressMaskImg`): the first follows the strips, each
+  next one is a word further on, and a plane has a word per strip giving where its mask starts,
+  or 0 for nothing masked. A room's picture sets how many there are (`_numZBuffer`, at most 4
+  buffers counting the picture), and its objects use the same count. The mask keeps the planes
+  as bits (bit 0 for plane 1), which leaves the EGA's single plane as it was.
+- Object images (`getObjectImage`): 8 bytes into an object's `OI` block; one image per object,
+  whatever its state. Objects without one have an 8-byte block.
+- The room palette (`setPaletteFromPtr` for `GF_SMALL_HEADER`): a byte count, then 8-bit red,
+  green and blue. `RoomRenderer.PaletteOf` gives it; `--room N` draws the VGA CD's rooms in it.
+- Checked against the VGA CD release: the strips use only codecs 1, 14 to 18 and 24 to 28; every
+  room picture and all 694 object images decode, drawn over their rooms; 26 rooms have no
+  z-plane, 50 one and 2 two. The cliff, its z-plane (the rocks and trees in front of the path)
+  and its palette are pinned, and drawn with all its objects it shows the title's logo, the leaf
+  and the split tree in place. The complex codec and the transparent forms, which Loom's own
+  pictures do not use, are checked on strips built by hand. Not compared with ScummVM's output.
 
 ### Phase 13: costumes and actors
 
@@ -354,7 +372,8 @@ the EGA engine, as the EGA's built on each other.
 - Version 4's script handlers and the game loop (`ScummEngine_v4`, and the version 4 paths of
   `o5_` handlers), the charsets of `90x.LFL` (`CharsetRendererClassic` with version 4's offsets),
   and Loom VGA's own interface: its distaff, verbs and cursor (`gfx_gui.cpp`, `verbs.cpp`). The
-  game plays, silent.
+  palette as the game changes it: colour cycling (`CC`, `initCycl`, `cyclePalette`), the shadow
+  palette, and `roomOps`' palette operations. The game plays, silent.
 
 ### Phase 15: CD audio
 

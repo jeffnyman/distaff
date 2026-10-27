@@ -422,12 +422,6 @@ internal static class Program
 
         var states = loader.Index.ObjectStates;
         int StateOf(int obj) => obj < states.Count ? states[obj] : 0;
-        if (loader.Version != 3)
-        {
-            Console.Error.WriteLine("distaff: this release's rooms are not drawn yet");
-            ListRoom(room, StateOf);
-            return 0;
-        }
 
         var image = objects switch
         {
@@ -438,7 +432,7 @@ internal static class Program
 
         // the mask shows white where it hides actors
         var surface = mask ? MaskPicture(image.Mask) : image.Pixels;
-        File.WriteAllBytes(output, PngWriter.Encode(surface, Palettes.Ega, zoom, zoom));
+        File.WriteAllBytes(output, PngWriter.Encode(surface, mask ? Palettes.Ega : RoomRenderer.PaletteOf(room), zoom, zoom));
         Console.WriteLine($"wrote {output}");
 
         ListRoom(room, StateOf);

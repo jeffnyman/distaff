@@ -1,10 +1,20 @@
+using System.Buffers.Binary;
 using Distaff.Scumm.Rooms;
 
 namespace Distaff.Scumm.Graphics;
 
-/// <summary>Draws rooms and their objects, in the 16 colour numbers of <see cref="Palettes.Ega"/>.</summary>
+/// <summary>
+/// Draws rooms and their objects: the EGA's in the 16 colour numbers of <see cref="Palettes.Ega"/>,
+/// the VGA CD's in the 256 of their own palette (<see cref="PaletteOf"/>).
+/// </summary>
 public static class RoomRenderer
 {
+    /// <summary>
+    /// Where an object's image starts in its VGA CD image block: after the block's header and the
+    /// object's number. Mirrors <c>getObjectImage</c> for <c>GF_SMALL_HEADER</c>.
+    /// </summary>
+    private const int ObjectImageHeader = 8;
+
     /// <summary>The bits of an object's state that make it draw its image. Mirrors the mask in <c>drawRoomObjects</c> for version 3.</summary>
     public const int ImageStates = 0x0F;
 
@@ -12,8 +22,48 @@ public static class RoomRenderer
     public static MaskedImage DrawBackground(Room room, byte[]? colorMap = null)
     {
         var image = new MaskedImage(new Surface8(room.Width, room.Height), new Surface8(room.Width, room.Height));
-        EgaBitmap.Draw(room.Data.Span[room.ImageOffset..], 0, room.Width / 8, room.Height, image, 0, 0, colorMap);
+        if (room.Version == 4)
+        {
+            VgaBitmap.Draw(room.Data.Span[room.ImageOffset..], 0, room.Width / 8, room.Height, image, 0, 0, ZBuffers(room), colorMap);
+        }
+        else
+        {
+            EgaBitmap.Draw(room.Data.Span[room.ImageOffset..], 0, room.Width / 8, room.Height, image, 0, 0, colorMap);
+        }
+
         return image;
+    }
+
+    /// <summary>
+    /// How many buffers a VGA CD room draws its pictures and masks into, which its own picture
+    /// sets; the EGA's always have 2, the picture and one mask (<c>_numZBuffer</c>).
+    /// </summary>
+    public static int ZBuffers(Room room)
+        => room.Version == 4 ? VgaBitmap.ZBufferCount(room.Data.Span[room.ImageOffset..]) : 2;
+
+    /// <summary>
+    /// The colours a room is drawn in: the EGA's 16, or the 256 of a VGA CD room's palette block,
+    /// a byte count and then red, green and blue bytes. Mirrors <c>setPaletteFromPtr</c> for
+    /// <c>GF_SMALL_HEADER</c>.
+    /// </summary>
+    public static Rgb[] PaletteOf(Room room)
+    {
+        if (room.Version != 4)
+        {
+            return Palettes.Ega;
+        }
+
+        var span = room.Data.Span;
+        int at = room.BlockOffsets["PA"];
+        int count = BinaryPrimitives.ReadUInt16LittleEndian(span[at..]) / 3;
+        var palette = new Rgb[256];
+        for (int i = 0; i < count && i < palette.Length; i++)
+        {
+            int c = at + 2 + i * 3;
+            palette[i] = new Rgb(span[c], span[c + 1], span[c + 2]);
+        }
+
+        return palette;
     }
 
     /// <summary>
@@ -22,8 +72,9 @@ public static class RoomRenderer
     /// that code block.
     /// </summary>
     public static bool HasImage(Room room, RoomObject obj)
-        => obj.Width > 0 && obj.Height > 0 && obj.ImageOffset > room.ImageOffset
-            && obj.ImageOffset < room.Objects.Min(o => o.CodeOffset);
+        => obj.Width > 0 && obj.Height > 0 && (room.Version == 4
+            ? obj.ImageOffset > 0 && BinaryPrimitives.ReadInt32LittleEndian(room.Data.Span[obj.ImageOffset..]) > ObjectImageHeader
+            : obj.ImageOffset > room.ImageOffset && obj.ImageOffset < room.Objects.Min(o => o.CodeOffset));
 
     /// <summary>
     /// Whether the object's image is its own: one with as many strips as the object is wide.
@@ -32,7 +83,7 @@ public static class RoomRenderer
     /// regardless of state.
     /// </summary>
     public static bool OwnsImage(Room room, RoomObject obj)
-        => HasImage(room, obj) && EgaBitmap.StripCount(room.Data.Span[obj.ImageOffset..]) == obj.Width / 8;
+        => HasImage(room, obj) && (room.Version == 4 || EgaBitmap.StripCount(room.Data.Span[obj.ImageOffset..]) == obj.Width / 8);
 
     /// <summary>
     /// Draws the room with the objects whose state, given by global object number, makes them
@@ -92,7 +143,14 @@ public static class RoomRenderer
         if (HasImage(room, obj))
         {
             var (x, y) = at ?? (obj.X, obj.Y);
-            EgaBitmap.Draw(room.Data.Span[obj.ImageOffset..], 0, obj.Width / 8, obj.Height, target, x, y, colorMap);
+            if (room.Version == 4)
+            {
+                VgaBitmap.Draw(room.Data.Span[(obj.ImageOffset + ObjectImageHeader)..], 0, obj.Width / 8, obj.Height, target, x, y, ZBuffers(room), colorMap);
+            }
+            else
+            {
+                EgaBitmap.Draw(room.Data.Span[obj.ImageOffset..], 0, obj.Width / 8, obj.Height, target, x, y, colorMap);
+            }
         }
     }
 

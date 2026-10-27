@@ -40,6 +40,7 @@ public sealed class Room
         var span = data.Span;
         Number = number;
         Data = data;
+        Version = 4;
         var single = new Dictionary<string, int>();
         var codes = new List<int>();
         var images = new Dictionary<int, int>();
@@ -168,6 +169,9 @@ public sealed class Room
     }
 
     public int Number { get; }
+
+    /// <summary>The SCUMM version of the release the room is from: 3 for the EGA, 4 for the VGA CD.</summary>
+    public int Version { get; } = 3;
 
     /// <summary>
     /// Where each block a VGA CD room has one of starts, by tag, after its header: <c>HD</c>,
