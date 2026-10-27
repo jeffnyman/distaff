@@ -49,7 +49,7 @@ public class ResourceTests
             while (offset + 2 <= file.Length)
             {
                 int size = file[offset] | (file[offset + 1] << 8);
-                Assert.True(size >= ResourceLoader.HeaderSize, $"room {room}: size {size} at {offset}");
+                Assert.True(size >= ResourceLoader.OldHeaderSize, $"room {room}: size {size} at {offset}");
                 offset += size;
             }
 
@@ -220,7 +220,7 @@ public class ResourceTests
         Assert.Null(loader.LoadScript(117));
         var script = loader.LoadScript(1);
         Assert.NotNull(script);
-        Assert.Equal(loader.Load(ResourceType.Script, 1)!.Value.Length - ResourceLoader.HeaderSize, script.Value.Length);
+        Assert.Equal(loader.Load(ResourceType.Script, 1)!.Value.Length - ResourceLoader.OldHeaderSize, script.Value.Length);
 
         var charset = loader.LoadCharset(0);
         Assert.NotNull(charset);
@@ -229,9 +229,9 @@ public class ResourceTests
     }
 
     [Fact]
-    public void Other_releases_are_not_read_yet()
+    public void The_fm_towns_release_is_not_read_yet()
     {
-        if (GameFolders.Find(GameFolders.Vga) is not { } path)
+        if (GameFolders.Find(GameFolders.FmTowns) is not { } path)
         {
             return;
         }

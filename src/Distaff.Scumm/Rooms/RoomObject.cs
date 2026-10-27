@@ -8,15 +8,17 @@ public readonly record struct VerbEntry(byte Verb, int Offset);
 
 /// <summary>
 /// An object as its room defines it: the object code block (OBCD). Positions and sizes are in
-/// pixels, as ScummVM's <c>ObjectData</c> keeps them. Mirrors the <c>GF_OLD_BUNDLE</c> branches
-/// of <c>ScummEngine_v4::resetRoomObject</c>, <c>getObjOrActorName</c> and <c>getVerbEntrypoint</c>
-/// for version 3.
+/// pixels, as ScummVM's <c>ObjectData</c> keeps them. Mirrors <c>ScummEngine_v4::resetRoomObject</c>
+/// and the small-header branches of <c>getObjOrActorName</c> and <c>getVerbEntrypoint</c>, for
+/// versions 3 and 4.
 /// </summary>
 /// <remarks>
-/// The code block starts with its size word. Bytes 4 and 5 hold the object number, 7 to 10 the
+/// The EGA's code block starts with its size word. Bytes 4 and 5 hold the object number, 7 to 10 the
 /// position, width and parent (in 8-pixel units), 11 to 14 the walk-to point (two words, in
 /// pixels), 15 the actor's direction and the height, 16 the offset of the name, and from 17 the
-/// verb table: a verb and a word offset each, ended by a 0 verb.
+/// verb table: a verb and a word offset each, ended by a 0 verb. The VGA CD's block starts with a
+/// 32-bit size and the tag <c>OC</c>, and has the same fields 2 bytes further on. Offsets in the
+/// block count from its start in both.
 /// </remarks>
 public sealed class RoomObject
 {
@@ -25,24 +27,27 @@ public sealed class RoomObject
 
     private const int VerbTable = 17;
 
-    private RoomObject(ReadOnlyMemory<byte> code, int imageOffset, int codeOffset)
+    /// <summary>How much further on the VGA CD's fields are than the EGA's: its header is 2 bytes longer.</summary>
+    private const int SmallHeaderShift = 2;
+
+    private RoomObject(ReadOnlyMemory<byte> code, int imageOffset, int codeOffset, int shift)
     {
         var block = code.Span;
         Code = code;
         ImageOffset = imageOffset;
         CodeOffset = codeOffset;
-        Number = BinaryPrimitives.ReadUInt16LittleEndian(block[4..]);
-        X = block[7] * 8;
-        Y = (block[8] & 0x7F) * 8;
-        ParentState = (block[8] & 0x80) != 0 ? 1 : 0;
-        Width = block[9] * 8;
-        Parent = block[10];
-        WalkX = BinaryPrimitives.ReadInt16LittleEndian(block[11..]);
-        WalkY = BinaryPrimitives.ReadInt16LittleEndian(block[13..]);
-        ActorDir = block[15] & 0x07;
-        Height = block[15] & 0xF8;
-        Name = ReadName(block, block[16]);
-        Verbs = ReadVerbs(block);
+        Number = BinaryPrimitives.ReadUInt16LittleEndian(block[(shift + 4)..]);
+        X = block[shift + 7] * 8;
+        Y = (block[shift + 8] & 0x7F) * 8;
+        ParentState = (block[shift + 8] & 0x80) != 0 ? 1 : 0;
+        Width = block[shift + 9] * 8;
+        Parent = block[shift + 10];
+        WalkX = BinaryPrimitives.ReadInt16LittleEndian(block[(shift + 11)..]);
+        WalkY = BinaryPrimitives.ReadInt16LittleEndian(block[(shift + 13)..]);
+        ActorDir = block[shift + 15] & 0x07;
+        Height = block[shift + 15] & 0xF8;
+        Name = ReadName(block, block[shift + 16]);
+        Verbs = ReadVerbs(block, shift + VerbTable);
     }
 
     /// <summary>The global object number.</summary>
@@ -99,23 +104,25 @@ public sealed class RoomObject
         return null;
     }
 
-    internal static RoomObject Parse(ReadOnlyMemory<byte> room, int imageOffset, int codeOffset)
+    /// <summary>Reads the code block at <paramref name="codeOffset"/>: the EGA's, or with <paramref name="smallHeader"/> the VGA CD's.</summary>
+    internal static RoomObject Parse(ReadOnlyMemory<byte> room, int imageOffset, int codeOffset, bool smallHeader = false)
     {
         // the header up to the verb table, and the 0 that ends it
         var span = room.Span;
-        const int smallest = VerbTable + 1;
+        int shift = smallHeader ? SmallHeaderShift : 0;
+        int smallest = shift + VerbTable + 1;
         if (codeOffset + smallest > span.Length)
         {
             throw new InvalidDataException($"Object code block at {codeOffset} is past the end of the room ({span.Length} bytes).");
         }
 
-        int size = BinaryPrimitives.ReadUInt16LittleEndian(span[codeOffset..]);
+        int size = smallHeader ? BinaryPrimitives.ReadInt32LittleEndian(span[codeOffset..]) : BinaryPrimitives.ReadUInt16LittleEndian(span[codeOffset..]);
         if (size < smallest || codeOffset + size > span.Length)
         {
             throw new InvalidDataException($"Object code block at {codeOffset} has a bad size {size}.");
         }
 
-        return new RoomObject(room.Slice(codeOffset, size), imageOffset, codeOffset);
+        return new RoomObject(room.Slice(codeOffset, size), imageOffset, codeOffset, shift);
     }
 
     private static string ReadName(ReadOnlySpan<byte> block, int offset)
@@ -130,10 +137,10 @@ public sealed class RoomObject
         return Encoding.Latin1.GetString(name);
     }
 
-    private static VerbEntry[] ReadVerbs(ReadOnlySpan<byte> block)
+    private static VerbEntry[] ReadVerbs(ReadOnlySpan<byte> block, int table)
     {
         var verbs = new List<VerbEntry>();
-        for (int i = VerbTable; i + 2 < block.Length && block[i] != 0; i += 3)
+        for (int i = table; i + 2 < block.Length && block[i] != 0; i += 3)
         {
             verbs.Add(new VerbEntry(block[i], BinaryPrimitives.ReadUInt16LittleEndian(block[(i + 1)..])));
         }

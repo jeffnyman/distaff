@@ -351,7 +351,7 @@ internal static class Program
 
         Console.WriteLine();
         Console.WriteLine($"Script {number}: {code.Length} bytes, in room {loader.Index.Locate(ResourceType.Script, number).Room}");
-        Print(new ScriptDecoder().DecodeReachable(code, [0]).Values, code.Length);
+        Print(new ScriptDecoder(loader.Version).DecodeReachable(code, [0]).Values, code.Length);
         return 0;
     }
 
@@ -364,7 +364,7 @@ internal static class Program
             return 1;
         }
 
-        var decoder = new ScriptDecoder();
+        var decoder = new ScriptDecoder(loader.Version);
         void Room(string title, int offset)
         {
             if (offset == 0)
@@ -422,6 +422,12 @@ internal static class Program
 
         var states = loader.Index.ObjectStates;
         int StateOf(int obj) => obj < states.Count ? states[obj] : 0;
+        if (loader.Version != 3)
+        {
+            Console.Error.WriteLine("distaff: this release's rooms are not drawn yet");
+            ListRoom(room, StateOf);
+            return 0;
+        }
 
         var image = objects switch
         {

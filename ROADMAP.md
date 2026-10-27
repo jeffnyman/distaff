@@ -302,13 +302,70 @@ In `Distaff.Scumm.Scripts`:
 
 ## VGA CD
 
-- `resource_v4.cpp`: `000.LFL` and the `DISK01.LEC` bundle (XOR 0x69, rooms by offset), the
-  `90x.LFL` files.
-- 256-colour strip codecs and palettes (`gfx.cpp`), v4 opcode changes, Loom VGA's own text and
-  interface paths (`gfx_gui.cpp`, `charset.cpp`).
-- `soundcd.cpp`: the music and sound from the one CD audio track, played by start and length,
-  and the subtitle timing that follows the CD position (`string.cpp`). The track is Ogg Vorbis
-  here; a WAV copy is also available, which would avoid a decoder dependency.
+The VGA CD release is SCUMM version 4 (`ScummEngine_v4`): the same game, with 256 colours, a
+new interface, scaled actors, and the music and voices on one CD audio track. Its phases build on
+the EGA engine, as the EGA's built on each other.
+
+### Phase 11: resources (done)
+
+- `resource_v4.cpp` (`ResourceIndex.ParseV4`): `000.LFL`, not encoded, is blocks of a 32-bit size
+  and a 2-letter tag. `RN` holds the 78 room names (XOR 0xFF), `0R`, `0S`, `0N` and `0C` the
+  directories (a room and a 32-bit offset each; a room's room is its disk), and `0O` the 1000
+  global objects. Every entry has an offset; those for rooms the disk does not hold, and their
+  resources, say room 0.
+- `DiskBundle`: `DISK01.LEC`, XOR 0x69 (`getEncByte`), is an `LE` block whose `FO` block gives
+  each room's offset (`readRoomsOffsets`); there each room's `LF` block holds its number, then
+  the room and the scripts, costumes and sounds stored with it. A resource is 8 bytes past its
+  room's offset and its own (`loadResource`), with a 6-byte header (`_resourceHeaderSize`).
+- `ResourceLoader` reads both layouts. The charsets are `901.LFL` to `904.LFL`, not encoded:
+  the size their first 32 bits give, and 11 bytes more (`ScummEngine_v4::loadCharset`).
+- `Room.ParseV4`: a room is a chain of blocks (`findResourceData` with `newTag2Old`): `HD` (width,
+  height, object count), `BM` (the picture), `PA` (the palette), `SP`, `CC` (colour cycling),
+  `SA` (scale slots), `BX` (20-byte boxes with a scale, then the matrix), `EX`, `EN`, `LS`
+  (local scripts, their number first), `OC` and `OI` for each object, `NL` and `SL` (the sounds
+  and scripts loaded with the room), `LC`. Object code blocks have the EGA's fields 2 bytes
+  further on (`ScummEngine_v4::resetRoomObject`). The VGA CD numbers its objects differently: the
+  cliff's leaf is 79, not 154.
+- `ScriptDecoder` takes a version. Version 4's opcode table (`tools/port_opcodes.py` now emits
+  both) has `matrixOps` where version 3 has `setBoxFlags`, and no `waitForActor` or
+  `waitForSentence`. Its `roomOps` fetches the operands after the sub-operation, and its
+  `print` left-aligns where version 3 reads a height. `--script N` and `--room-scripts N`
+  disassemble the VGA CD; `--room N` lists a room without drawing it.
+- Checked against the VGA CD release: the disk holds 78 rooms, 122 scripts, 166 costumes (the
+  index reaches 165 of them), and 32 sounds (30 `SO` blocks and 2 bare 24-byte blocks); every
+  room parses; all 122 global scripts (10512 instructions) and all 910 room, local and object
+  scripts (18698 instructions) decode straight to their ends.
+- Not yet: the sounds' contents (with the CD audio), costumes' contents (with the actors).
+
+### Phase 12: room graphics
+
+- `gfx.cpp`: the 256-colour strip codecs (`drawStripComplex`, `drawStripBasicH` and `V`,
+  `unkDecode`), their transparent forms, the z-plane masks of version 4, object images (`OI`) and
+  their states; the room palette (`PA`, `setCurrentPalette`), the shadow palette and colour
+  cycling (`CC`, `initCycl`). `--room N` draws the VGA CD's rooms.
+
+### Phase 13: costumes and actors
+
+- The costumes' 256-colour palettes and version 4's actor scaling: box scales, scale slots
+  (`SA`, `setScaleSlot`, `getScale`), and `matrixOps`.
+
+### Phase 14: scripts, text and the interface
+
+- Version 4's script handlers and the game loop (`ScummEngine_v4`, and the version 4 paths of
+  `o5_` handlers), the charsets of `90x.LFL` (`CharsetRendererClassic` with version 4's offsets),
+  and Loom VGA's own interface: its distaff, verbs and cursor (`gfx_gui.cpp`, `verbs.cpp`). The
+  game plays, silent.
+
+### Phase 15: CD audio
+
+- `soundcd.cpp`: the music and voices from the one CD audio track, played by start and length,
+  and the subtitles timed to the CD position (`string.cpp`, `VAR_MUSIC_TIMER`). The track is
+  Ogg Vorbis here; a WAV copy would avoid a decoder.
+
+### Phase 16: saves and the whole game
+
+- Saves for version 4, and walkthrough tests that play the VGA CD release from the opening to
+  the ending.
 
 ## FM Towns
 

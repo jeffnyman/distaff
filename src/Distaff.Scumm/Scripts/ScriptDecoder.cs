@@ -1,10 +1,13 @@
 namespace Distaff.Scumm.Scripts;
 
 /// <summary>
-/// Decodes the EGA release's script instructions: which handler an opcode runs, and the operands
-/// and sub-operations it fetches. The layouts mirror the fetches of ScummVM's <c>o5_</c>,
-/// <c>o4_</c> and <c>o3_</c> handlers as <c>ScummEngine_v3old</c> runs them: a version 3 game with
-/// <c>GF_SMALL_HEADER</c>, not on the PC Engine.
+/// Decodes script instructions: which handler an opcode runs, and the operands and sub-operations
+/// it fetches. The layouts mirror the fetches of ScummVM's <c>o5_</c>, <c>o4_</c> and <c>o3_</c>
+/// handlers as <c>ScummEngine_v3old</c> runs them for the EGA release (version 3, with
+/// <c>GF_SMALL_HEADER</c>, not on the PC Engine) and <c>ScummEngine_v4</c> for the VGA CD. Version 4
+/// has <c>matrixOps</c> where version 3 has <c>setBoxFlags</c>, and no <c>waitForActor</c> or
+/// <c>waitForSentence</c>; its <c>roomOps</c> fetches the operands after the sub-operation, and its
+/// <c>print</c> left-aligns where version 3 sets a height.
 /// </summary>
 /// <remarks>
 /// <para>Operand kinds (<c>ScummEngine_v5::getVar</c>, <c>getVarOrDirectByte</c>,
@@ -21,16 +24,26 @@ namespace Distaff.Scumm.Scripts;
 /// constant 0xFE (when it is a variable, the full layout is assumed), and <c>expression</c>'s
 /// sub-operation 6 runs a whole instruction of its own.</para>
 /// </remarks>
-public sealed class ScriptDecoder
+public sealed class ScriptDecoder(int version = 3)
 {
     private const byte Param1 = 0x80, Param2 = 0x40, Param3 = 0x20;
+
+    private readonly string?[] _handlers = version switch
+    {
+        3 => OpcodeTable.Handlers,
+        4 => OpcodeTable.HandlersV4,
+        _ => throw new ArgumentOutOfRangeException(nameof(version), version, "Only versions 3 and 4 are decoded."),
+    };
+
+    /// <summary>The SCUMM version whose layouts are decoded: 3 or 4.</summary>
+    public int Version { get; } = version;
 
     /// <summary>The sub-operation numbers of <c>actorOps</c> in small-header games. Mirrors <c>convertTable</c> in <c>o5_actorOps</c>.</summary>
     private static readonly byte[] ActorOpsConvertTable = [1, 0, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20];
 
     /// <summary>The ScummVM handler an opcode runs.</summary>
     public string HandlerOf(byte opcode)
-        => OpcodeTable.Handlers[opcode] ?? throw new InvalidDataException($"Opcode 0x{opcode:X2} has no handler.");
+        => _handlers[opcode] ?? throw new InvalidDataException($"Opcode 0x{opcode:X2} has no handler.");
 
     public Instruction Decode(ReadOnlySpan<byte> code, int offset)
     {
@@ -227,6 +240,21 @@ public sealed class ScriptDecoder
                 operands.Add(Operand.Constant(r.Byte()));
                 break;
 
+            case "o5_matrixOps":
+                {
+                    byte sub = r.Byte();
+                    subOps.Add((sub & 0x1F) switch
+                    {
+                        1 => Sub(1, "SET_BOX_FLAGS", VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2)),
+                        2 => Sub(2, "SET_BOX_SCALE", VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2)),
+                        3 => Sub(3, "SET_BOX_SCALE_SLOT", VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2)),
+                        4 => Sub(4, "CREATE_BOX_MATRIX"),
+                        _ => Sub(sub & 0x1F, "NOTHING"),
+                    });
+                }
+
+                break;
+
             case "o5_loadRoomWithEgo":
                 Word1(ref r);
                 Byte2(ref r);
@@ -399,11 +427,11 @@ public sealed class ScriptDecoder
 
             case "o5_print":
                 Byte1(ref r);
-                DecodeParseString(ref r, subOps);
+                DecodeParseString(ref r, subOps, Version);
                 break;
 
             case "o5_printEgo":
-                DecodeParseString(ref r, subOps);
+                DecodeParseString(ref r, subOps, Version);
                 break;
 
             case "o5_expression":
@@ -503,33 +531,38 @@ public sealed class ScriptDecoder
 
             case "o5_roomOps":
                 {
-                    // version 3 fetches the first two operands before the sub-operation, with the opcode's bits
-                    var a = VarOrWord(ref r, opcode, Param1);
-                    var b = VarOrWord(ref r, opcode, Param2);
+                    // version 3 fetches the first two operands before the sub-operation, with the
+                    // opcode's bits; version 4 fetches them after it, with its bits, for the first four
+                    Operand[] ab = Version == 3 ? [VarOrWord(ref r, opcode, Param1), VarOrWord(ref r, opcode, Param2)] : [];
                     byte sub = r.Byte();
+                    if (Version != 3 && (sub & 0x1F) is >= 1 and <= 4)
+                    {
+                        ab = [VarOrWord(ref r, sub, Param1), VarOrWord(ref r, sub, Param2)];
+                    }
+
                     switch (sub & 0x1F)
                     {
                         case 1:
-                            subOps.Add(Sub(1, "ROOM_SCROLL", a, b));
+                            subOps.Add(Sub(1, "ROOM_SCROLL", ab));
                             break;
                         case 2:
-                            subOps.Add(Sub(2, "ROOM_COLOR", a, b));
+                            subOps.Add(Sub(2, "ROOM_COLOR", ab));
                             break;
                         case 3:
-                            subOps.Add(Sub(3, "ROOM_SCREEN", a, b));
+                            subOps.Add(Sub(3, "ROOM_SCREEN", ab));
                             break;
                         case 4:
-                            subOps.Add(Sub(4, "ROOM_PALETTE", a, b));
+                            subOps.Add(Sub(4, "ROOM_PALETTE", ab));
                             break;
                         case 5:
-                            subOps.Add(Sub(5, "ROOM_SHAKE_ON", a, b));
+                            subOps.Add(Sub(5, "ROOM_SHAKE_ON", ab));
                             break;
                         case 6:
-                            subOps.Add(Sub(6, "ROOM_SHAKE_OFF", a, b));
+                            subOps.Add(Sub(6, "ROOM_SHAKE_OFF", ab));
                             break;
                         case 7:
                             {
-                                var values = new List<Operand> { a, b, VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2) };
+                                var values = new List<Operand>(ab) { VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2) };
                                 byte second = r.Byte();
                                 values.Add(VarOrByte(ref r, second, Param1));
                                 values.Add(VarOrByte(ref r, second, Param2));
@@ -540,17 +573,17 @@ public sealed class ScriptDecoder
 
                             break;
                         case 8:
-                            subOps.Add(Sub(8, "ROOM_INTENSITY", a, b, VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2), VarOrByte(ref r, sub, Param3)));
+                            subOps.Add(Sub(8, "ROOM_INTENSITY", [.. ab, VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2), VarOrByte(ref r, sub, Param3)]));
                             break;
                         case 9:
-                            subOps.Add(Sub(9, "ROOM_SAVEGAME", a, b, VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2)));
+                            subOps.Add(Sub(9, "ROOM_SAVEGAME", [.. ab, VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2)]));
                             break;
                         case 10:
-                            subOps.Add(Sub(10, "ROOM_FADE", a, b, VarOrWord(ref r, sub, Param1)));
+                            subOps.Add(Sub(10, "ROOM_FADE", [.. ab, VarOrWord(ref r, sub, Param1)]));
                             break;
                         case 11 or 12:
                             {
-                                var values = new List<Operand> { a, b, VarOrWord(ref r, sub, Param1), VarOrWord(ref r, sub, Param2), VarOrWord(ref r, sub, Param3) };
+                                var values = new List<Operand>(ab) { VarOrWord(ref r, sub, Param1), VarOrWord(ref r, sub, Param2), VarOrWord(ref r, sub, Param3) };
                                 byte second = r.Byte();
                                 values.Add(VarOrByte(ref r, second, Param1));
                                 values.Add(VarOrByte(ref r, second, Param2));
@@ -559,11 +592,11 @@ public sealed class ScriptDecoder
 
                             break;
                         case 13 or 14:
-                            subOps.Add(Sub(sub & 0x1F, (sub & 0x1F) == 13 ? "SAVE_STRING" : "LOAD_STRING", a, b, VarOrByte(ref r, sub, Param1), r.PlainString()));
+                            subOps.Add(Sub(sub & 0x1F, (sub & 0x1F) == 13 ? "SAVE_STRING" : "LOAD_STRING", [.. ab, VarOrByte(ref r, sub, Param1), r.PlainString()]));
                             break;
                         case 15:
                             {
-                                var values = new List<Operand> { a, b, VarOrByte(ref r, sub, Param1) };
+                                var values = new List<Operand>(ab) { VarOrByte(ref r, sub, Param1) };
                                 byte second = r.Byte();
                                 values.Add(VarOrByte(ref r, second, Param1));
                                 values.Add(VarOrByte(ref r, second, Param2));
@@ -574,7 +607,7 @@ public sealed class ScriptDecoder
 
                             break;
                         case 16:
-                            subOps.Add(Sub(16, "CYCLE_SPEED", a, b, VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2)));
+                            subOps.Add(Sub(16, "CYCLE_SPEED", [.. ab, VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2)]));
                             break;
                         default:
                             throw new InvalidDataException($"roomOps sub-operation {sub & 0x1F} at {offset:X4} is not one ScummVM knows.");
@@ -748,10 +781,10 @@ public sealed class ScriptDecoder
 
     /// <summary>
     /// The text sub-operations of <c>print</c> and <c>printEgo</c>, up to 0xFF or to the text,
-    /// which ends them. Mirrors <c>ScummEngine_v5::decodeParseString</c> in version 3, where
+    /// which ends them. Mirrors <c>ScummEngine_v5::decodeParseString</c>; in version 3
     /// sub-operation 6 sets the height instead of left-aligning.
     /// </summary>
-    private static void DecodeParseString(ref Reader r, List<SubOperation> subOps)
+    private static void DecodeParseString(ref Reader r, List<SubOperation> subOps, int version)
     {
         for (byte sub = r.Byte(); sub != 0xFF; sub = r.Byte())
         {
@@ -776,7 +809,7 @@ public sealed class ScriptDecoder
                     subOps.Add(new SubOperation(4, "CENTER", []));
                     break;
                 case 6:
-                    subOps.Add(new SubOperation(6, "HEIGHT", [Word(ref r, Param1)]));
+                    subOps.Add(version == 3 ? new SubOperation(6, "HEIGHT", [Word(ref r, Param1)]) : new SubOperation(6, "LEFT", []));
                     break;
                 case 7:
                     subOps.Add(new SubOperation(7, "OVERHEAD", []));

@@ -3,10 +3,12 @@ using System.Buffers.Binary;
 namespace Distaff.Scumm.Rooms;
 
 /// <summary>
-/// A room of the EGA release: its size, objects, walkboxes, entry, exit and local scripts, and the
-/// global sounds and scripts loaded with it. The graphics are read when the room is drawn. Mirrors
-/// ScummVM's <c>ScummEngine_v3old::setupRoomSubBlocks</c>, <c>resetRoomSubBlocks</c> and
-/// <c>resetRoomObjects</c> for version 3.
+/// A room: its size, objects, walkboxes, entry, exit and local scripts, and the global sounds and
+/// scripts loaded with it. The graphics are read when the room is drawn. Mirrors ScummVM's
+/// <c>ScummEngine_v3old::setupRoomSubBlocks</c>, <c>resetRoomSubBlocks</c> and
+/// <c>resetRoomObjects</c> for the EGA release, and the <c>GF_SMALL_HEADER</c> paths of
+/// <c>ScummEngine::setupRoomSubBlocks</c>, <c>resetRoomSubBlocks</c> and
+/// <c>ScummEngine_v4::resetRoomObjects</c> for the VGA CD (see <see cref="ParseV4"/>).
 /// </summary>
 /// <remarks>
 /// Header, from the room's size word: width and height at 4 and 6 (words, in pixels), the
@@ -19,7 +21,89 @@ public sealed class Room
 {
     private const int HeaderSize = 29;
 
+    /// <summary>The size of a VGA CD block's header: a 32-bit size and a 2-letter tag.</summary>
+    private const int SmallHeaderSize = 6;
+
     private readonly int[] _codeStarts;
+
+    /// <summary>
+    /// Reads a VGA CD room: a chain of blocks, each a 32-bit size and a 2-letter tag, after the
+    /// room's own header. <c>HD</c> gives the width, height and object count; <c>BM</c> is the
+    /// picture; <c>BX</c> the walkboxes and matrix; <c>EX</c> and <c>EN</c> the exit and entry
+    /// scripts; <c>LS</c> a local script, its number first; <c>OC</c> and <c>OI</c> an object's code
+    /// and image; <c>NL</c> and <c>SL</c> the sounds and scripts loaded with the room, a count first.
+    /// Offsets are of each block's data, after its header, as <c>findResourceData</c> gives them; an
+    /// object's are of its blocks' starts.
+    /// </summary>
+    private Room(int number, ReadOnlyMemory<byte> data, int blockHeaderSize)
+    {
+        var span = data.Span;
+        Number = number;
+        Data = data;
+        var single = new Dictionary<string, int>();
+        var codes = new List<int>();
+        var images = new Dictionary<int, int>();
+        var locals = new SortedDictionary<int, int>();
+        var starts = new List<int> { span.Length };
+        for (int at = blockHeaderSize; at < span.Length;)
+        {
+            int size = at + blockHeaderSize <= span.Length ? BinaryPrimitives.ReadInt32LittleEndian(span[at..]) : 0;
+            if (size < blockHeaderSize || at + size > span.Length)
+            {
+                throw new InvalidDataException($"Room {number}: the block at {at} has a bad size {size}.");
+            }
+
+            string tag = $"{(char)span[at + 4]}{(char)span[at + 5]}";
+            int body = at + blockHeaderSize;
+            starts.Add(at);
+            switch (tag)
+            {
+                case "OC":
+                    codes.Add(at);
+                    break;
+                case "OI":
+                    images[BinaryPrimitives.ReadUInt16LittleEndian(span[body..])] = at;
+                    break;
+                case "LS":
+                    locals[span[body]] = body + 1;
+                    break;
+                default:
+                    single.TryAdd(tag, body);
+                    break;
+            }
+
+            at += size;
+        }
+
+        BlockOffsets = single;
+        if (!single.TryGetValue("HD", out int header))
+        {
+            throw new InvalidDataException($"Room {number} has no header block.");
+        }
+
+        Width = Word(span, header);
+        Height = Word(span, header + 2);
+        int objectCount = Word(span, header + 4);
+        if (objectCount != codes.Count)
+        {
+            throw new InvalidDataException($"Room {number}: its header gives {objectCount} objects, but it holds {codes.Count} code blocks.");
+        }
+
+        ImageOffset = single.GetValueOrDefault("BM");
+        Objects = [.. codes.Select(code => RoomObject.Parse(data, images.GetValueOrDefault(Word(data.Span, code + blockHeaderSize)), code, smallHeader: true))];
+        Sounds = single.TryGetValue("NL", out int sounds) ? Numbers(span.Slice(sounds + 1, span[sounds])) : [];
+        Scripts = single.TryGetValue("SL", out int scripts) ? Numbers(span.Slice(scripts + 1, span[scripts])) : [];
+        LocalScriptOffsets = locals;
+
+        BoxOffset = single.GetValueOrDefault("BX");
+        WalkBoxes = BoxOffset == 0 ? WalkBoxes.Empty
+            : WalkBoxes.Parse(data, BoxOffset, BoxOffset - blockHeaderSize + BinaryPrimitives.ReadInt32LittleEndian(span[(BoxOffset - blockHeaderSize)..]), WalkBoxes.BoxSizeV4);
+        ExitScriptOffset = single.GetValueOrDefault("EX");
+        EntryScriptOffset = single.GetValueOrDefault("EN");
+
+        // a script runs to the end of its block
+        _codeStarts = [.. starts.Order()];
+    }
 
     private Room(int number, ReadOnlyMemory<byte> data)
     {
@@ -85,6 +169,14 @@ public sealed class Room
 
     public int Number { get; }
 
+    /// <summary>
+    /// Where each block a VGA CD room has one of starts, by tag, after its header: <c>HD</c>,
+    /// <c>BM</c>, <c>PA</c> (the palette), <c>SP</c>, <c>CC</c> (colour cycling), <c>SA</c> (the
+    /// scale slots), <c>BX</c>, <c>EX</c>, <c>EN</c>, <c>NL</c>, <c>SL</c> and <c>LC</c>. Empty for the EGA
+    /// release.
+    /// </summary>
+    public IReadOnlyDictionary<string, int> BlockOffsets { get; } = new Dictionary<string, int>();
+
     /// <summary>The room resource, from its size word.</summary>
     public ReadOnlyMemory<byte> Data { get; }
 
@@ -133,6 +225,9 @@ public sealed class Room
     public RoomObject? FindObject(int number) => Objects.FirstOrDefault(o => o.Number == number);
 
     public static Room Parse(int number, ReadOnlyMemory<byte> data) => new(number, data);
+
+    /// <summary>Parses a VGA CD room, from its <c>RO</c> block's header.</summary>
+    public static Room ParseV4(int number, ReadOnlyMemory<byte> data) => new(number, data, SmallHeaderSize);
 
     /// <summary>The code from an offset up to where the next piece of the room starts; empty for offset 0.</summary>
     private ReadOnlyMemory<byte> CodeAt(int offset)

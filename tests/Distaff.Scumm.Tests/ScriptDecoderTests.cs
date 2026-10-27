@@ -36,6 +36,65 @@ public class ScriptDecoderTests
         }
     }
 
+    /// <summary>
+    /// Version 4 has a layout for every opcode it has a handler for. Three opcodes have none:
+    /// version 3's <c>waitForActor</c> and <c>waitForSentence</c>, which version 4 leaves out.
+    /// </summary>
+    [Fact]
+    public void Every_version_4_opcode_with_a_handler_has_a_layout()
+    {
+        var v4 = new ScriptDecoder(4);
+        var none = new List<int>();
+        for (int opcode = 0; opcode < 256; opcode++)
+        {
+            string handler;
+            try
+            {
+                handler = v4.HandlerOf((byte)opcode);
+            }
+            catch (InvalidDataException)
+            {
+                none.Add(opcode);
+                continue;
+            }
+
+            var code = new byte[64];
+            code[0] = (byte)opcode;
+            code[63] = 0xFF;
+            try
+            {
+                v4.Decode(code, 0);
+            }
+            catch (InvalidDataException)
+            {
+            }
+            catch (InvalidOperationException ex)
+            {
+                Assert.Fail($"0x{opcode:X2} {handler}: {ex.Message}");
+            }
+        }
+
+        Assert.Equal([0x3B, 0x4C, 0xBB], none);
+    }
+
+    /// <summary>
+    /// Version 4's <c>matrixOps</c> sets box flags with a sub-operation where version 3's
+    /// <c>setBoxFlags</c> has none; its <c>roomOps</c> fetches the operands after the sub-operation,
+    /// and its <c>print</c> left-aligns with sub-operation 6, where version 3 reads a height.
+    /// </summary>
+    [Fact]
+    public void Version_4_layouts_differ_from_version_3()
+    {
+        var v4 = new ScriptDecoder(4);
+        Assert.Equal("setBoxFlags(5, 128)", _decoder.Decode([0x30, 0x05, 0x80], 0).Text);
+        Assert.Equal("matrixOps([SET_BOX_FLAGS(5, 128)])", v4.Decode([0x30, 0x01, 0x05, 0x80], 0).Text);
+        Assert.Equal("roomOps([ROOM_SCREEN(0, 144)])", _decoder.Decode([0x33, 0x00, 0x00, 0x90, 0x00, 0x03], 0).Text);
+        Assert.Equal("roomOps([ROOM_SCREEN(0, 144)])", v4.Decode([0x33, 0x03, 0x00, 0x00, 0x90, 0x00], 0).Text);
+        Assert.Equal("roomOps([ROOM_SHAKE_ON])", v4.Decode([0x33, 0x05], 0).Text);
+        Assert.Equal("print(1, [HEIGHT(5), TEXTSTRING(\"\")])", _decoder.Decode([0x14, 0x01, 0x06, 0x05, 0x00, 0x0F, 0x00], 0).Text);
+        Assert.Equal("print(1, [LEFT, TEXTSTRING(\"\")])", v4.Decode([0x14, 0x01, 0x06, 0x0F, 0x00], 0).Text);
+    }
+
     [Fact]
     public void Variables_carry_their_kind_and_index()
     {
