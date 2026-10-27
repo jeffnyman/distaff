@@ -219,6 +219,15 @@ public sealed partial class GameWorld
             case "o3_setBoxFlags":
                 SetBoxFlags(Arg(0), Arg(1));
                 return 0;
+            case "o5_matrixOps":
+                // version 4: Loom's scripts only set box flags; box scales and rebuilding the matrix are left out
+                if (instruction.SubOps[0].Code != 1)
+                {
+                    throw new NotSupportedException($"matrixOps sub-operation {instruction.SubOps[0].Code} is not ported; Loom does not use it.");
+                }
+
+                SetBoxFlags(subArguments[0][0], subArguments[0][1]);
+                return 0;
             case "o3_waitForActor":
                 return 0;
 

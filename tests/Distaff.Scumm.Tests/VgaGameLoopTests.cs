@@ -82,6 +82,45 @@ public class VgaGameLoopTests
         Assert.Equal(1 << 2, v4.BitVariables[3]);
     }
 
+    /// <summary>
+    /// A colour cycle turns one step a frame through the shadow palette, its colours mapped from
+    /// its counter down, wrapping; a room built by hand with one cycle over colours 10 to 13. No
+    /// room of Loom's own has a cycle that runs: each is unused (0x0AAA), empty, or starts at colour
+    /// 0, which leaves its counter at 0, as in ScummVM.
+    /// </summary>
+    [Fact]
+    public void A_colour_cycle_turns_through_the_shadow_palette()
+    {
+        if (Open() is not { } world)
+        {
+            return;
+        }
+
+        var cycles = new byte[64];
+        cycles[0] = 0x00;
+        cycles[1] = 0x10;
+        cycles[2] = 10;
+        cycles[3] = 13;
+        byte[] room =
+        [
+            .. Block("RO", []),
+            .. Block("HD", [0x40, 0x01, 0x90, 0x00, 0, 0]),
+            .. Block("CC", cycles),
+        ];
+        BitConverter.GetBytes(room.Length).CopyTo(room, 0);
+        world.InitCycles(Rooms.Room.ParseV4(99, room));
+        var seen = new List<int[]>();
+        for (int i = 0; i < 3; i++)
+        {
+            world.CyclePalette();
+            seen.Add(world.ShadowPalette[10..14].Select(c => (int)c).ToArray());
+        }
+
+        Assert.Equal([[11, 10, 13, 12], [12, 11, 10, 13], [13, 12, 11, 10]], seen);
+    }
+
+    private static byte[] Block(string tag, byte[] body) => [.. BitConverter.GetBytes(6 + body.Length), (byte)tag[0], (byte)tag[1], .. body];
+
     /// <summary>A script host with no scripts, for working the engine's variables alone.</summary>
     private sealed class NullHost : IScriptHost
     {

@@ -232,6 +232,12 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         Camera.LastX = Camera.X;
         PlayActorSounds();
 
+        // scummLoop_handleEffects: colour cycling, from version 4 on
+        if (_loader.Version == 4)
+        {
+            CyclePalette();
+        }
+
         // scummLoop_handleSound: the sounds asked for go to the player
         Sound.ProcessQueue();
         Sound.Update(Time);
@@ -320,7 +326,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
             if (actor.Visible && LoadCostume(actor.Costume) is { } costume)
             {
                 CostumeRenderer.Draw(costume, actor.Cost, Actor.OldDirection(actor.Facing),
-                    CostumeRenderer.Palette(costume, actor.Palette, actorColors), image, actor.X, actor.Y - actor.Elevation, zPlane: ClipsActor(actor) ? 1 : 0);
+                    CostumeRenderer.Palette(costume, actor.Palette, actorColors), image, actor.X, actor.Y - actor.Elevation, zPlane: ZPlaneOf(actor));
             }
         }
 
@@ -387,6 +393,33 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         }
 
         return actor.WalkBox == WalkBoxes.InvalidBox || (CurrentRoom is { } room && actor.WalkBox <= room.WalkBoxes.Count && room.WalkBoxes.Count > 0 && room.WalkBoxes.Box(actor.WalkBox).Mask != 0);
+    }
+
+    /// <summary>
+    /// The mask plane that hides an actor, 0 for none. The EGA's one plane, when
+    /// <see cref="ClipsActor"/> says so. For the VGA CD: the plane it is forced behind, none when it
+    /// is never clipped, or its box's mask, at most the room's last plane. Mirrors the <c>_zbuf</c>
+    /// of <c>prepareDrawActorCostume</c>.
+    /// </summary>
+    private int ZPlaneOf(Actor actor)
+    {
+        if (_loader.Version == 3)
+        {
+            return ClipsActor(actor) ? 1 : 0;
+        }
+
+        if (actor.ForceClip != 0)
+        {
+            return actor.ForceClip;
+        }
+
+        if (GetClass(actor.Number, Actor.ClassNeverClip) || CurrentRoom is not { } room
+            || actor.WalkBox == WalkBoxes.InvalidBox || actor.WalkBox > room.WalkBoxes.Count || room.WalkBoxes.Count == 0)
+        {
+            return 0;
+        }
+
+        return Math.Min(room.WalkBoxes.Box(actor.WalkBox).Mask, RoomRenderer.ZBuffers(room) - 1);
     }
 
     // IActorWorld
@@ -490,6 +523,12 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         if (CurrentRoom.BlockOffsets.ContainsKey("PA"))
         {
             CurrentPalette = RoomRenderer.PaletteOf(CurrentRoom);
+        }
+
+        // version 4 rooms' colour cycles (initCycl in resetRoomSubBlocks)
+        if (_loader.Version == 4)
+        {
+            InitCycles(CurrentRoom);
         }
         Engine.Variables[Vars.CameraMinX] = Camera.ScreenWidth / 2;
         Engine.Variables[Vars.CameraMaxX] = CurrentRoom.Width - Camera.ScreenWidth / 2;

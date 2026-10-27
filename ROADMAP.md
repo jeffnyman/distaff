@@ -419,13 +419,26 @@ Done so far: the VGA CD boots and plays its opening, silent, to Bobbin on the cl
   PRACTICE plays the opening (rooms 69, 2, 53, 2, the first line spoken from frame 22 for 185)
   to Bobbin on the cliff with the player in control, the screen pinned.
 
+Then:
+
+- Colour cycling (`GameWorld.Palette`): a room's `CC` block gives 16 cycles, each a big-endian
+  delay and a first and last colour; one whose delay is neither 0 nor 0x0AAA runs from its first
+  colour, and each frame, after the actors, its counter moves on and the shadow palette maps its
+  colours from the counter down (`initCycl`, `cyclePalette` for `GF_SMALL_HEADER`, where the
+  delay only says whether it runs). No room of Loom's own has a cycle that runs: each is unused,
+  empty, or starts at colour 0, which leaves its counter at 0, as in ScummVM. Checked on a room
+  built by hand.
+- `matrixOps`: Loom's scripts use only its box flags (142 times); its box scales and rebuilding
+  the matrix are left out, and refuse to run.
+- The plane that hides an actor (`_zbuf` in `prepareDrawActorCostume` for versions 4 to 6): the
+  plane it is forced behind, none when it is never clipped, or its box's mask, at most the room's
+  last plane.
+- Scaling is not needed: no box, scale slot, `actorOps` or `roomOps` of Loom's scales anything.
+
 Still to do:
 
 - Loom VGA's own interface: its distaff, verbs and cursor (`gfx_gui.cpp`, `verbs.cpp`).
-- The palette as the game changes it: colour cycling (`CC`, `initCycl`, `cyclePalette`), and
-  `roomOps`' palette operations.
-- Actors' version 4 setup: the scale from their box, walking at that scale, `_zbuf` from the box
-  mask, and `matrixOps`.
+- `roomOps`' palette operations (`darkenPalette` and the like) as the scripts use them.
 - The CD sounds the scripts start and stop by number (`playCDTrackFromSoundID`), and a playing
   check of the game beyond the cliff.
 
