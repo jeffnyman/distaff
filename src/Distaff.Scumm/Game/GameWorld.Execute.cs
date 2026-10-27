@@ -1,6 +1,8 @@
 using Distaff.Scumm.Graphics;
+using Distaff.Scumm.Resources;
 using Distaff.Scumm.Rooms;
 using Distaff.Scumm.Scripts;
+using Distaff.Scumm.Sound;
 using Distaff.Scumm.View;
 
 namespace Distaff.Scumm.Game;
@@ -265,14 +267,22 @@ public sealed partial class GameWorld
                 return 0;
 
             // sound, for the sound system to come
-            case "o5_startSound" or "o5_startMusic":
-                SoundsStarted.Add(Arg(0));
-                Engine.Variables[Vars.LastSound] = Arg(0);
+            // o5_startSound restarts the music timer; both note the sound (Sound::startSound)
+            case "o5_startSound":
+                Engine.Variables[Vars.MusicTimer] = 0;
+                StartSound(Arg(0));
                 return 0;
-            case "o5_stopSound" or "o5_stopMusic":
+            case "o5_startMusic":
+                StartSound(Arg(0));
+                return 0;
+            case "o5_stopSound":
+                Sound.Stop(Arg(0));
+                return 0;
+            case "o5_stopMusic":
+                Sound.StopAll();
                 return 0;
             case "o5_isSoundRunning":
-                return 0;
+                return Arg(0) != 0 && Sound.IsRunning(Arg(0)) ? 1 : 0;
 
             // resources are loaded on demand here
             case "o5_resourceRoutines":
@@ -296,6 +306,62 @@ public sealed partial class GameWorld
                 _unhandled.Add($"script {engine.CurrentScriptNumber} [{instruction.Offset:X4}] {instruction.Text}");
                 return 0;
         }
+    }
+
+    /// <summary>Mirrors <c>Sound::startSound</c>: the sound is the last asked for, and waits in the queue until the step's end.</summary>
+    private void StartSound(int sound)
+    {
+        SoundsStarted.Add(sound);
+        Engine.Variables[Vars.LastSound] = sound;
+        Sound.Start(sound);
+    }
+
+    /// <summary>
+    /// The first actor in the room whose costume reached a sound cue starts its sound, and every
+    /// actor's cue count goes. Mirrors <c>playActorSounds</c>.
+    /// </summary>
+    private void PlayActorSounds()
+    {
+        foreach (var actor in Actors.Skip(1))
+        {
+            if (actor.Cost.SoundCounter != 0 && actor.IsInCurrentRoom)
+            {
+                Engine.BreakHere();
+                StartSound(actor.Sound);
+                foreach (var other in Actors.Skip(1))
+                {
+                    other.Cost.SoundCounter = 0;
+                }
+
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// A sound's data as the device plays it: the speaker and PCjr block, or the AdLib block after
+    /// its 4-byte header (<c>readSoundResourceSmallHeader</c>). Some index entries point past their
+    /// room file, and the Roland Upgrade's sounds are single blocks; these play nothing.
+    /// </summary>
+    private byte[]? LoadSound(int number)
+    {
+        if (!_sounds.TryGetValue(number, out var data))
+        {
+            try
+            {
+                data = _loader.Index.Locate(ResourceType.Sound, number).IsPresent && _loader.LoadSound(number) is { } resource
+                    ? Sound.Device == SoundDevice.AdLib ? resource.AdLib[4..].ToArray() : resource.Speaker.ToArray()
+                    : null;
+            }
+            catch (InvalidDataException)
+            {
+                data = null;
+            }
+
+            _sounds[number] = data;
+        }
+
+        return data;
     }
 
     /// <summary>Mirrors <c>setOwnerOf</c>: an owner of 0 also takes the object out of the inventory.</summary>

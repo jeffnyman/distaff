@@ -444,6 +444,7 @@ public sealed partial class GameWorld
     /// </summary>
     public void Restore(ScummState s)
     {
+        Sound.StopAll();
         foreach (var slot in Engine.Slots)
         {
             slot.Kill();

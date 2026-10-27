@@ -4,6 +4,7 @@ using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Rooms;
 using Distaff.Scumm.Scripts;
+using Distaff.Scumm.Sound;
 using Distaff.Scumm.View;
 
 namespace Distaff.Scumm.Game;
@@ -61,7 +62,12 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     // the flashlight's size in strips (ScummEngine_v5's _flashlight.xStrips and yStrips)
     private (int X, int Y) _flashlightStrips = (7, 7);
 
-    public GameWorld(ResourceLoader loader, int seed = 1)
+    /// <summary>The rate sound is made at unless a host asks for another.</summary>
+    public const int DefaultSampleRate = 44100;
+
+    private readonly Dictionary<int, byte[]?> _sounds = [];
+
+    public GameWorld(ResourceLoader loader, int seed = 1, SoundDevice sound = SoundDevice.Speaker, int sampleRate = DefaultSampleRate)
     {
         _loader = loader;
         var index = loader.Index;
@@ -69,6 +75,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         _states = [.. index.ObjectStates];
         _classes = [.. index.ObjectClasses];
         Engine = new ScriptEngine(this, seed);
+        Sound = new SoundSystem(sound, LoadSound, sampleRate);
         Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i, this))];
         Verbs = [.. Enumerable.Range(0, VerbCount).Select(_ => new VerbSlot())];
         _font = loader.LoadCharset(0) is { } font ? Charset.Parse(font) : null;
@@ -140,6 +147,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <summary>The sounds the scripts started, in order, for the sound system to come.</summary>
     public List<int> SoundsStarted { get; } = [];
 
+    /// <summary>The sounds the scripts start, stop and ask after, and the player that plays them.</summary>
+    public SoundSystem Sound { get; }
+
     /// <summary>Whether the game's copy protection is kept. Set before <see cref="Boot"/>.</summary>
     public bool CopyProtection
     {
@@ -176,6 +186,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         Engine.Variables[Vars.HaveMessage] = _haveMsg;
         UpdateMouseVariables();
         HandleSaveLoad();
+
+        // updateMusicTimer: the player's timer, in quarter-frames of 240 a second
+        Engine.Variables[Vars.MusicTimer] = (int)(Sound.Player.MusicTimer * TimerFrequency / 240.0);
 
         Engine.RunAllScripts();
         CheckExecVerbs();
@@ -215,6 +228,11 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         }
 
         Camera.LastX = Camera.X;
+        PlayActorSounds();
+
+        // scummLoop_handleSound: the sounds asked for go to the player
+        Sound.ProcessQueue();
+        Sound.Update(Time);
         AnimateCursor();
         Steps++;
     }
@@ -495,7 +513,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     private void ResetVariables()
     {
         var v = Engine.Variables;
-        v[Vars.SoundCard] = 0;
+        v[Vars.SoundCard] = Sound.SoundCardValue;
         v[Vars.VideoMode] = 19;
         v[Vars.SoundResourceCount] = 80;
         v[Vars.HeapSpace] = 1400;

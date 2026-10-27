@@ -247,12 +247,36 @@ In `Distaff.Scumm.Scripts`:
 - Not yet: no save has been loaded in ScummVM, nor a ScummVM save here; no sounds are listed
   in a save, so ScummVM reloads them as they start; the locked resources are not saved.
 
-### Phase 9: sound
+### Phase 9: sound (done)
 
-- PC speaker and PCjr first, with `Player_V2` (`players/player_v2.cpp`, the v3 path).
-- AdLib next, with `Player_AD` (`players/player_ad.cpp`) and an OPL2 emulator.
-- MT-32 (iMUSE, and the Roland Upgrade's sounds in `82.LFL` to `85.LFL`) is out of scope.
-- Check: the sound output of known scenes against recordings.
+- `sound.cpp` (`SoundSystem`, by way of Maniacal): the queue a step's sounds wait in
+  (`startSound`, `processSoundQueues`), `stopSound`, `stopAllSounds`, `isSoundRunning`, the
+  music timer the scripts read (`updateMusicTimer`), and `playActorSounds`. The opcodes
+  (`o5_startSound`, which restarts the music timer, `o5_startMusic`, `o5_stopSound`,
+  `o5_stopMusic`, `o5_isSoundRunning`) now use it, and the sound card variable names the
+  device (0 speaker, 1 PCjr, 3 AdLib, `setSoundCardVarToCurrentConfig`). A load stops the sounds.
+- `players/player_v2base.cpp`, `player_v2.cpp` (`PlayerV2`, Maniacal's port): the PC speaker
+  and PCjr play each sound's first block, with version 3's own music timer (`_isV3Game`: the
+  tempo field starts it, every 125 ticks). Its tables come from
+  `tools/port_sound_tables.py`, which regenerates them unchanged from this checkout.
+- `players/player_ad.cpp` (`PlayerAd`): the AdLib plays each sound's second block after its
+  header: music (Loom's timer limit and tempo meta event, rhythm instruments) and up to three
+  effects with their envelopes, the timer called 472 times a second between samples as
+  `EmulatedChip::readBuffer` calls it. The volumes it scales operators by are the full 255;
+  the host's master volume applies instead. Seeking the music back after a load is not ported.
+- `audio/softsynth/opl/mame.cpp` (`Opl.MameOpl`): MAME's OPL2, which ScummVM picks for an OPL2
+  by default. It matches ScummVM's own build sample for sample: `tools/opl-reference` compiles
+  ScummVM's `mame.cpp` with MSVC against small stand-in headers, and `OplTests` checks a
+  register script covering voices, envelopes, waveforms, vibrato and tremolo, and the rhythm
+  section (3.4 seconds) against its output. The drums' noise seed is a parameter (ScummVM
+  seeds it from the clock).
+- The player: `--sound speaker|pcjr|adlib` (AdLib by default, as ScummVM's automatic choice
+  picks for this release), and `--wav file.wav` writes a headless run's sound.
+- Checked against the EGA release: the proficiency screen is silent; the title's music
+  (sound 25) starts with PRACTICE and plays through the opening on each device, its first
+  seconds pinned for each; the AdLib's music is tonal, its strongest notes chords (B flat, D, F
+  at 12 seconds). Not compared with recordings or with ScummVM's output.
+- Out of scope: MT-32 and the Roland Upgrade's sounds; CMS.
 
 ### Phase 10: the whole game
 
