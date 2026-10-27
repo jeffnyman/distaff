@@ -50,6 +50,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     private readonly List<string> _unhandled = [];
     private readonly Dictionary<int, Costumes.Costume?> _costumes = [];
     private int[] _boxFlags = [];
+    private readonly Charset? _font;
 
     public GameWorld(ResourceLoader loader, int seed = 1)
     {
@@ -61,6 +62,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         Engine = new ScriptEngine(this, seed);
         Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i, this))];
         Verbs = [.. Enumerable.Range(0, VerbCount).Select(_ => new VerbSlot())];
+        _font = loader.LoadCharset(0) is { } font ? Charset.Parse(font) : null;
         for (int i = 0; i < RoomPalette.Length; i++)
         {
             RoomPalette[i] = (byte)i;
@@ -89,10 +91,13 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <summary>The room number on screen (<c>_currentRoom</c>); the resource can differ for pseudo-rooms.</summary>
     public int CurrentRoomNumber { get; private set; }
 
-    /// <summary>Where the room's view starts on the screen and how tall it is (<c>initScreens</c>): the text above it, the verbs below.</summary>
-    public int ViewTop { get; private set; } = 16;
+    /// <summary>The screen's bands: text, the room, verbs.</summary>
+    public VirtScreens Screens { get; } = new();
 
-    public int ViewHeight { get; private set; } = 128;
+    /// <summary>Where the room's view starts on the screen and how tall it is (<c>initScreens</c>): the text above it, the verbs below.</summary>
+    public int ViewTop => Screens.Main.Top;
+
+    public int ViewHeight => Screens.Main.Height;
 
     /// <summary>What the room's colours are drawn as (<c>_roomPalette</c>), which <c>roomOps</c> changes.</summary>
     public byte[] RoomPalette { get; } = new byte[256];
@@ -179,9 +184,22 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
         if (CurrentRoomNumber != 0)
         {
-            // processActors draws each actor and then moves its animation on
+            RedrawForCamera();
+
+            // processActors draws each actor and then moves its animation on; what was drawn over
+            // the room where it stands goes (resetActorBgs)
             foreach (var actor in SortedActors())
             {
+                if (actor.Visible && LoadCostume(actor.Costume) is { } costume)
+                {
+                    var bounds = CostumeRenderer.Bounds(costume, actor.Cost, Actor.OldDirection(actor.Facing), actor.X, actor.Y - actor.Elevation);
+                    if (!bounds.IsEmpty)
+                    {
+                        int left = bounds.Left & ~7;
+                        Screens.RestoreMain(Rect.FromBounds(left, bounds.Top, (bounds.Right + 7) & ~7, bounds.Bottom));
+                    }
+                }
+
                 actor.AnimateCostume();
             }
         }
@@ -192,20 +210,29 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
     /// <summary>
     /// The screen as the game shows it: the room's view, with the objects the states show and the
-    /// actors, in the view's place. Text and verbs are not drawn yet.
+    /// actors, in the view's place, what was drawn over it, the bands above and below, and the text.
+    /// Verbs are not drawn yet.
     /// </summary>
     public Surface8 Screen()
-    {
-        var screen = new Surface8(ScreenWidth, ScreenHeight);
-        if (CurrentRoom is not { } room)
-        {
-            return screen;
-        }
+        => Screens.Compose(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, Camera.Left, Math.Min(ViewHeight, CurrentRoom?.Height ?? 0));
 
-        var picture = RoomPicture(room);
-        int height = Math.Min(ViewHeight, room.Height);
-        screen.Blit(picture.Pixels, new Rect(Camera.Left, 0, Camera.ScreenWidth, height), 0, ViewTop);
-        return screen;
+    /// <summary>
+    /// What was drawn over the room goes where the room is drawn again: everything when the camera
+    /// jumps, and the columns that scroll out of view when it moves a strip. Mirrors
+    /// <c>redrawBGAreas</c> for versions before 7.
+    /// </summary>
+    private void RedrawForCamera()
+    {
+        int diff = Camera.X - Camera.LastX;
+        if (diff is 8 or -8)
+        {
+            Screens.RedrawMain(0, Camera.Left);
+            Screens.RedrawMain(Camera.Left + Camera.ScreenWidth);
+        }
+        else if (diff != 0)
+        {
+            Screens.RedrawMain();
+        }
     }
 
     /// <summary>The whole room with its objects as their states and moves show them, and its actors, in the room's colours.</summary>
@@ -349,6 +376,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         }
 
         CurrentRoom = _loader.LoadRoom(resource) ?? throw new InvalidOperationException($"Room {resource} does not exist.");
+        Screens.NewRoom(CurrentRoom.Width);
         _boxFlags = [.. CurrentRoom.WalkBoxes.Boxes.Select(b => (int)b.Flags)];
         Engine.Variables[Vars.CameraMinX] = Camera.ScreenWidth / 2;
         Engine.Variables[Vars.CameraMaxX] = CurrentRoom.Width - Camera.ScreenWidth / 2;

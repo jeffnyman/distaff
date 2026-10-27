@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text;
+using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Scripts;
+using Distaff.Scumm.View;
 
 namespace Distaff.Scumm.Game;
 
@@ -33,13 +35,22 @@ public sealed class TextSlot
 
     /// <summary>Mirrors <c>StringTab::saveDefault</c>.</summary>
     public void SaveDefault() => _default = (X, Y, Right, Height, Color, Center, Overhead, Charset);
+
+    /// <summary>
+    /// Keeps the position, line height and colour as the defaults, but not the rest: versions 1 to 3
+    /// have no defaults, so the text's place carries on to the next (the end of <c>decodeParseStringTextString</c>).
+    /// </summary>
+    public void KeepPlace() => _default = _default with { X = X, Y = Y, Height = Height, Color = Color };
 }
 
 /// <summary>
-/// Messages: what actors and the narrator say, and how long it stays. Mirrors ScummVM's
-/// <c>printString</c>, <c>actorTalk</c>, <c>stopTalk</c>, <c>displayDialog</c>,
-/// <c>handleNextCharsetCode</c> and <c>convertMessageToString</c> for version 3, without the
-/// drawing: each character keeps the message up <c>VAR_CHARINC</c> ticks longer, on top of 60.
+/// Messages: what actors and the narrator say, how long it stays, and the text drawn on screen.
+/// Mirrors ScummVM's <c>printString</c>, <c>actorTalk</c>, <c>stopTalk</c>, <c>displayDialog</c>,
+/// <c>newLine</c>, <c>drawString</c>, <c>restoreCharsetBg</c>, <c>handleNextCharsetCode</c> and
+/// <c>convertMessageToString</c> for version 3, and <c>CharsetRendererV3</c>'s <c>printChar</c>
+/// and <c>setColor</c>: each character keeps the message up <c>VAR_CHARINC</c> ticks longer, on
+/// top of 60. Speech over the room goes into the text surface; speech in another band, and text
+/// <c>print</c> draws in slot 1, goes into the band itself.
 /// </summary>
 public sealed partial class GameWorld
 {
@@ -51,6 +62,26 @@ public sealed partial class GameWorld
     private byte[] _charsetBuffer = [];
     private int _charsetBufPos;
     private readonly StringBuilder _shown = new();
+
+    // what the message draws next, and the colour actorTalk chose (_nextLeft, _nextTop, _charsetColor)
+    private int _nextLeft;
+    private int _nextTop;
+    private int _charsetColor;
+
+    // the charset renderer's pen (_top, _left, _startLeft, _right, _center, _color, _shadowType, _firstChar)
+    private int _textTop;
+    private int _textLeft;
+    private int _startLeft;
+    private int _textRight;
+    private bool _textCenter;
+    private byte _textColor;
+    private ShadowType _shadow;
+    private bool _firstChar;
+
+    // the rectangle drawn since the first character (_str), and where speech was drawn (_hasMask, _textScreenID)
+    private Rect _str;
+    private bool _hasMask;
+    private VirtScreenNumber _textScreen;
 
     /// <summary>The four text slots: actors' speech, then the three system slots (<c>_string</c>).</summary>
     public TextSlot[] TextSlots { get; } = [new(), new(), new(), new()];
@@ -87,6 +118,7 @@ public sealed partial class GameWorld
                 break;
             case 1:
                 MessageLog.Add(Plain(ConvertMessage(message)));
+                DrawString(1, message);
                 break;
             default:
                 _unhandled.Add($"printString({slot}, \"{Plain(message)}\")");
@@ -130,6 +162,7 @@ public sealed partial class GameWorld
             }
         }
 
+        _charsetColor = TalkingActor > 0x7F ? TextSlots[0].Color : Actors[TalkingActor].TalkColor;
         _charsetBufPos = 0;
         _talkDelay = 0;
         _haveMsg = 0xFF;
@@ -161,16 +194,31 @@ public sealed partial class GameWorld
             MessageLog.Add(_shown.ToString());
             _shown.Clear();
         }
+
+        RestoreCharsetBg();
     }
 
     /// <summary>
-    /// Moves the message on: when its time is up, the next piece shows, up to a wait code or
-    /// its end, and the time it stays is 60 ticks and <c>VAR_CHARINC</c> more for each character.
-    /// Mirrors the timing of <c>displayDialog</c> for version 3.
+    /// Moves the message on: when its time is up, the text before goes unless it is kept, the next
+    /// piece draws, up to a wait code or its end, each line centred when the slot is, and the time
+    /// it stays is 60 ticks and <c>VAR_CHARINC</c> more for each character. Mirrors
+    /// <c>displayDialog</c> for version 3. Loom's scripts never print over an actor's head, so the
+    /// overhead position is left out.
     /// </summary>
     private void DisplayDialog()
     {
-        if (_haveMsg == 0 || _talkDelay != 0)
+        if (_haveMsg == 0)
+        {
+            return;
+        }
+
+        var slot = TextSlots[0];
+        _textTop = slot.Y;
+        _startLeft = _textLeft = slot.X;
+        _textRight = slot.Right;
+        _textCenter = slot.Center;
+        SetColor(_charsetColor);
+        if (_talkDelay != 0)
         {
             return;
         }
@@ -197,8 +245,15 @@ public sealed partial class GameWorld
             }
 
             _shown.Clear();
+            RestoreCharsetBg();
         }
 
+        if (_textCenter)
+        {
+            _nextLeft = Math.Max(0, _nextLeft - StringWidth(0, _charsetBuffer.AsSpan(_charsetBufPos)) / 2);
+        }
+
+        _firstChar = !_keepText;
         while (true)
         {
             int c = NextCharsetCode(talker, out bool goOn);
@@ -217,13 +272,233 @@ public sealed partial class GameWorld
             if (c == 13)
             {
                 _shown.Append(' ');
+                NewLine();
                 continue;
             }
+
+            // a line running past the screen's edge stops drawing there
+            _nextLeft = Math.Min(_nextLeft, ScreenWidth);
+            _textLeft = _nextLeft;
+            _textTop = _nextTop;
+            PrintChar(c, ignoreCharsetMask: false);
+            _nextLeft = _textLeft;
+            _nextTop = _textTop;
 
             _shown.Append((char)c);
             _talkDelay += Engine.Variables[Vars.CharInc];
         }
     }
+
+    /// <summary>Mirrors <c>newLine</c> for version 3: back to the slot's left, centred again, down the slot's line height or the font's.</summary>
+    private void NewLine()
+    {
+        _nextLeft = TextSlots[0].X;
+        if (_textCenter)
+        {
+            _nextLeft = Math.Max(0, _nextLeft - StringWidth(0, _charsetBuffer.AsSpan(_charsetBufPos)) / 2);
+        }
+
+        _nextTop += TextSlots[0].Height != 0 ? TextSlots[0].Height : _font?.Height ?? 8;
+    }
+
+    /// <summary>
+    /// Draws a message at once, into the band it falls in. Mirrors <c>drawString</c> for version
+    /// 3: centred on the slot's position, code 1 or 8 starting a line, code 12 changing the colour;
+    /// the slot's position moves to where the text ends.
+    /// </summary>
+    private void DrawString(int a, ReadOnlySpan<byte> message)
+    {
+        byte[] buf = ConvertMessage(message);
+        var slot = TextSlots[a];
+        _textTop = slot.Y;
+        _startLeft = _textLeft = slot.X;
+        _textRight = slot.Right;
+        _textCenter = slot.Center;
+        SetColor(slot.Color);
+        _firstChar = true;
+
+        bool shadowModeFlag = Screens.Find(_textTop)?.Number == VirtScreenNumber.Main;
+        int fontHeight = _font?.Height ?? 8;
+        if (_textCenter)
+        {
+            _textLeft -= StringWidth(a, buf) / 2;
+        }
+
+        if (buf.Length == 0)
+        {
+            _str = new Rect(_textLeft, _textTop, 0, 0);
+        }
+
+        int i = 0;
+        int Next() => i < buf.Length ? buf[i++] : 0;
+        while (true)
+        {
+            int c = Next();
+            if (c == 0)
+            {
+                break;
+            }
+
+            if (c is not (0xFF or 0xFE))
+            {
+                PrintChar(c, ignoreCharsetMask: true);
+                continue;
+            }
+
+            switch (Next())
+            {
+                case 9 or 10 or 13 or 14:
+                    i += 2;
+                    break;
+                case 1 or 8:
+                    // as ScummVM has it: a centred line starts its whole width left, and a slot 0
+                    // line height moves the message's next line, not this text
+                    _textLeft = _textCenter ? _startLeft - StringWidth(a, buf.AsSpan(Math.Min(i, buf.Length))) : _startLeft;
+                    if (TextSlots[0].Height != 0)
+                    {
+                        _nextTop += TextSlots[0].Height;
+                    }
+                    else
+                    {
+                        _textTop += fontHeight;
+                    }
+
+                    break;
+                case 12:
+                    {
+                        int color = Next() | (Next() << 8);
+                        SetColor(color == 0xFF ? slot.Color : color, shadowModeFlag);
+                    }
+
+                    break;
+            }
+        }
+
+        if (a == 0)
+        {
+            _nextLeft = _textLeft;
+            _nextTop = _textTop;
+        }
+
+        slot.X = _str.Right;
+    }
+
+    /// <summary>
+    /// Mirrors <c>CharsetRendererV3::setColor</c> for Loom version 3: bit 6 asks for an outline
+    /// (none when <paramref name="shadowModeSpecialFlag"/>), bit 7 for a shadow, and the low four
+    /// bits are the colour.
+    /// </summary>
+    private void SetColor(int color, bool shadowModeSpecialFlag = false)
+    {
+        _shadow = (color & 0x40) != 0 ? (shadowModeSpecialFlag ? ShadowType.None : ShadowType.Outline)
+            : (color & 0x80) != 0 ? ShadowType.Normal : ShadowType.None;
+        _textColor = (byte)(color & 0x0F);
+    }
+
+    /// <summary>
+    /// Draws a character at the pen and moves it on. Mirrors <c>CharsetRendererV3::printChar</c>:
+    /// nothing past the slot's right edge; speech over the room goes into the text surface, other
+    /// text into the band; the drawn rectangle grows by the character and its shadow.
+    /// </summary>
+    private void PrintChar(int chr, bool ignoreCharsetMask)
+    {
+        if (_font is null || Screens.Find(_textTop) is not { Front: { } front } vs || chr == '@')
+        {
+            return;
+        }
+
+        int origWidth = _font.CharWidth(chr);
+        int height = 8;
+        if (_textLeft + origWidth > _textRight + 1)
+        {
+            return;
+        }
+
+        if (_shadow == ShadowType.Normal)
+        {
+            height++;
+        }
+        else if (_shadow == ShadowType.Outline)
+        {
+            height += 2;
+        }
+
+        if (_firstChar)
+        {
+            _str = new Rect(_textLeft, _textTop, 0, 0);
+            _firstChar = false;
+        }
+
+        if (!ignoreCharsetMask)
+        {
+            _hasMask = true;
+            _textScreen = vs.Number;
+        }
+
+        if (ignoreCharsetMask || !vs.HasTwoBuffers)
+        {
+            int xstart = vs.Number == VirtScreenNumber.Main ? Camera.Left : 0;
+            Charset.DrawBits1(front, _textLeft + xstart, _textTop - vs.Top, _font.Glyph(chr), origWidth, 8, _textColor, _shadow);
+        }
+        else
+        {
+            Charset.DrawBits1(Screens.TextSurface, _textLeft, _textTop, _font.Glyph(chr), origWidth, 8, _textColor, _shadow);
+        }
+
+        int left = Math.Min(_str.Left, _textLeft);
+        _textLeft += origWidth;
+        int right = _str.Right;
+        if (right < _textLeft)
+        {
+            right = _textLeft + (_shadow != ShadowType.None ? 1 : 0);
+        }
+
+        _str = Rect.FromBounds(left, _str.Top, right, Math.Max(_str.Bottom, _textTop + height));
+    }
+
+    /// <summary>
+    /// Takes the speech off the screen. Mirrors <c>restoreCharsetBg</c>: the next message starts at
+    /// slot 0's position; speech over a lit room only leaves the text surface, and a band without
+    /// a room under it is cleared to black.
+    /// </summary>
+    private void RestoreCharsetBg()
+    {
+        _nextLeft = TextSlots[0].X;
+        _nextTop = TextSlots[0].Y;
+        if (!_hasMask)
+        {
+            return;
+        }
+
+        _hasMask = false;
+        _textLeft = -1;
+        _str = Rect.FromBounds(-1, _str.Top, _str.Right, _str.Bottom);
+
+        var vs = _textScreen switch
+        {
+            VirtScreenNumber.Main => Screens.Main,
+            VirtScreenNumber.Text => Screens.Text,
+            _ => Screens.Verb,
+        };
+
+        if (vs.Front is not { } front)
+        {
+            return;
+        }
+
+        bool lightsOn = (Engine.Variables[Vars.CurrentLights] & 2) != 0;
+        if (!(vs.HasTwoBuffers && CurrentRoomNumber != 0 && lightsOn))
+        {
+            front.Fill(0);
+        }
+
+        if (vs.HasTwoBuffers)
+        {
+            Screens.ClearTextSurface();
+        }
+    }
+
+    private int StringWidth(int arg, ReadOnlySpan<byte> text) => _font?.StringWidth(arg, text) ?? 0;
 
     /// <summary>
     /// The next character of the message, carrying out the codes before it. Mirrors

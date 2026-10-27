@@ -133,8 +133,9 @@ In `Distaff.Scumm.Scripts`:
   clicked, the Lucasfilm Games title (room 1), the opening (rooms 2, 1, 2, 53) and Bobbin on the
   cliff in room 2 ("Rise, son of Cygna." ... "Better get down to the village."); with the copy
   protection kept, the Book of Patterns question.
-- Not yet: text, verbs, boxes drawn by `drawBox` and the cursor are not drawn; sounds are
-  recorded but not played, and none is ever running; room fades and shaking.
+- Not yet: text, verbs, boxes drawn by `drawBox` and the cursor are not drawn (text and boxes
+  came in phase 6); sounds are recorded but not played, and none is ever running; room fades
+  and shaking.
 
 ### Phase 5: actors and costumes (done)
 
@@ -158,11 +159,27 @@ In `Distaff.Scumm.Scripts`:
   it. His drop from the rock's edge to the path, between boxes 3 and 5, is quick, as the
   nymph's drop in local script 201 is scripted; not yet compared with ScummVM.
 
-### Phase 6: text
+### Phase 6: text (done)
 
-- `charset.cpp`, `string.cpp`: the v3 charset renderer, messages and talking (Loom's talk without
-  animation for empty lines).
-- Check: the opening dialogue as screenshots.
+- `charset.cpp`: the v3 font in `99.LFL` (`Charset`: `setCurID`'s count, height and width
+  table, `getCharWidth`, `getStringWidth`, `drawBits1` with its normal and outline shadows),
+  and `CharsetRendererV3`'s `setColor` (bit 6 an outline, bit 7 a shadow) and `printChar`.
+- `gfx.cpp`: the screen's bands (`VirtScreens`: `initScreens`, `findVirtScreen`, the text
+  surface and the composition of `drawStripToScreen`), `restoreCharsetBg` and `drawBox`. The
+  room is drawn afresh each frame, so the main band keeps only what is drawn over it, and that
+  goes where ScummVM would draw the room again: everything on a new room or a camera jump, the
+  columns scrolled out of view, the strips of an object whose state changes
+  (`markObjectRectAsDirty`), an object drawn, and where an actor is drawn (`resetActorBgs`).
+- `string.cpp`: `displayDialog` (the pen, centring each line, the text going unless kept),
+  `newLine`, `drawString` for `print` in slot 1, and `actorTalk`'s colour. Version 3 keeps a
+  text's place, line height and colour as the slot's defaults after it prints
+  (`decodeParseStringTextString`); without that Bobbin's lines go to the top left.
+- Checked against the EGA release: the proficiency screen's levels and narration (the ™ is the
+  font's `]^`), PRACTICE lighting up when clicked and the screen blacked out by `drawBox`, the
+  nymph's lines over the room and Bobbin's below it, each gone when its time is up. Shadows and
+  outlines are checked on a one-pixel glyph; the opening has none.
+- Not yet: the overhead position of speech, which Loom's scripts never ask for; text is not
+  compared with ScummVM screenshots.
 
 ### Phase 7: the distaff and input
 

@@ -46,6 +46,30 @@ public static class CostumeRenderer
     public static void Draw(Costume costume, CostumeState state, int direction, byte[] palette, MaskedImage target, int x, int y, bool masked)
     {
         bool toRight = direction != Left || costume.HasOwnLeftPictures;
+        foreach (var (cel, left, top) in Cels(costume, state, direction, x, y))
+        {
+            DrawCel(costume.Data.Span, cel, palette, target, left, top, !toRight, masked);
+        }
+    }
+
+    /// <summary>The rectangle the figure covers, or an empty one when no cel shows (the actor's <c>_left</c> to <c>_bottom</c>).</summary>
+    public static Rect Bounds(Costume costume, CostumeState state, int direction, int x, int y)
+    {
+        Rect bounds = default;
+        foreach (var (cel, left, top) in Cels(costume, state, direction, x, y))
+        {
+            var rect = new Rect(left, top, cel.Width, cel.Height);
+            bounds = bounds.IsEmpty ? rect : Rect.FromBounds(Math.Min(bounds.Left, rect.Left), Math.Min(bounds.Top, rect.Top),
+                Math.Max(bounds.Right, rect.Right), Math.Max(bounds.Bottom, rect.Bottom));
+        }
+
+        return bounds;
+    }
+
+    /// <summary>The cels the state shows and where each goes, in limb order.</summary>
+    private static IEnumerable<(CostumeCel Cel, int Left, int Top)> Cels(Costume costume, CostumeState state, int direction, int x, int y)
+    {
+        bool toRight = direction != Left || costume.HasOwnLeftPictures;
         int moveX = -72;
         int moveY = -100;
         for (int limb = 0; limb < Costume.LimbCount; limb++)
@@ -68,8 +92,7 @@ public static class CostumeRenderer
             moveX += cel.MoveX;
             moveY -= cel.MoveY;
 
-            int left = toRight ? x + celX : x - celX - cel.Width;
-            DrawCel(costume.Data.Span, cel, palette, target, left, y + celY, !toRight, masked);
+            yield return (cel, toRight ? x + celX : x - celX - cel.Width, y + celY);
         }
     }
 

@@ -17,6 +17,7 @@ public sealed partial class GameWorld
             // objects
             case "o5_setState":
                 PutState(Arg(0), Arg(1));
+                MarkObjectRectAsDirty(Arg(0));
                 return 0;
             case "o4_ifState":
                 return GetState(Arg(0)) == Arg(1) ? 1 : 0;
@@ -238,6 +239,9 @@ public sealed partial class GameWorld
             case "o5_stringOps":
                 StringOps(instruction.SubOps[0], subArguments[0]);
                 return 0;
+            case "o5_drawBox":
+                DrawBox(Arg(0), Arg(1), Arg(2), Arg(3), Arg(4));
+                return 0;
 
             // verbs and the cursor
             case "o5_verbOps":
@@ -335,6 +339,7 @@ public sealed partial class GameWorld
 
         _inventory[slot] = obj;
         _inventoryCode[obj] = o.Code.ToArray();
+        MarkObjectRectAsDirty(obj);
         PutOwner(obj, Engine.Variables[Vars.Ego]);
         PutClass(obj, 32, true);
         PutState(obj, 1);
@@ -392,6 +397,68 @@ public sealed partial class GameWorld
         }
 
         PutState(obj, 1);
+
+        // the object is drawn over whatever was drawn there (drawObject from the draw queue)
+        var (x0, y0) = PositionOf(o);
+        Screens.RestoreMain(new Rect(x0, y0, o.Width, o.Height));
+    }
+
+    /// <summary>
+    /// The room is drawn again in the strips of an object of the room on screen. Mirrors
+    /// <c>markObjectRectAsDirty</c>.
+    /// </summary>
+    private void MarkObjectRectAsDirty(int obj)
+    {
+        if (CurrentRoom?.FindObject(obj) is not { Width: not 0 } o)
+        {
+            return;
+        }
+
+        int left = Math.Max(Camera.StartStrip, PositionOf(o).X / 8);
+        int right = Math.Min(Camera.EndStrip + 1, PositionOf(o).X / 8 + o.Width / 8);
+        if (right > left)
+        {
+            Screens.RedrawMain(left * 8, (right - left) * 8);
+        }
+    }
+
+    /// <summary>
+    /// Fills a rectangle of the band its top is in, corners included, clipped to the band. Mirrors
+    /// <c>drawBox</c> for version 3, which draws over what the band shows.
+    /// </summary>
+    private void DrawBox(int x, int y, int x2, int y2, int color)
+    {
+        if (Screens.Find(y) is not { Front: { } front } vs)
+        {
+            return;
+        }
+
+        if (x > x2)
+        {
+            (x, x2) = (x2, x);
+        }
+
+        if (y > y2)
+        {
+            (y, y2) = (y2, y);
+        }
+
+        x2++;
+        y2++;
+        y -= vs.Top;
+        y2 -= vs.Top;
+        int width = vs.Number == VirtScreenNumber.Main ? Camera.ScreenWidth : front.Width;
+        if (x >= width || x2 < 0 || y > vs.Height || y2 < 0)
+        {
+            return;
+        }
+
+        x = Math.Max(x, 0);
+        x2 = Math.Min(x2, width);
+        y = Math.Max(y, 0);
+        y2 = Math.Min(y2, vs.Height);
+        int xstart = vs.Number == VirtScreenNumber.Main ? Camera.Left : 0;
+        front.FillRect(Rect.FromBounds(x + xstart, y, x2 + xstart, y2), (byte)color);
     }
 
     /// <summary>
@@ -657,8 +724,7 @@ public sealed partial class GameWorld
                 RoomPalette[a[1] & 0xFF] = (byte)a[0];
                 break;
             case 3:
-                ViewTop = a[0];
-                ViewHeight = a[1] - a[0];
+                Screens.Init(a[0], a[1], CurrentRoom?.Width ?? Camera.ScreenWidth);
                 break;
             case 4:
                 ShadowPalette[a[1] & 0xFF] = (byte)a[0];
@@ -691,7 +757,7 @@ public sealed partial class GameWorld
 
     /// <summary>
     /// Mirrors <c>decodeParseString</c>: the text slot by who prints, its defaults, the
-    /// sub-operations, and the text, which prints without saving the defaults back.
+    /// sub-operations, and the text, after which only its place and colour become the defaults.
     /// </summary>
     private void DecodeParseString(IReadOnlyList<SubOperation> subOps, IReadOnlyList<int[]> args)
     {
@@ -726,6 +792,7 @@ public sealed partial class GameWorld
                     break;
                 case 15:
                     PrintString(slot, subOps[i].Operands[0].Text!);
+                    text.KeepPlace();
                     return;
             }
         }
