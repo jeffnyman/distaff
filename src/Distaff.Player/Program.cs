@@ -32,7 +32,7 @@ internal static class Program
         string? load = null;
         var saves = new List<(int Step, string Path)>();
         string savesDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Distaff", "saves");
-        string target = "loom";
+        string? target = null;
         var sound = SoundDevice.AdLib;
         string? wav = null;
         int? traceActor = null;
@@ -155,6 +155,7 @@ internal static class Program
 
         Console.WriteLine($"Loom ({release.Variant}), SCUMM version {release.Version}, {release.Layout} layout");
         Console.WriteLine($"language {release.Language ?? "unknown"}, platform {release.Platform ?? "unknown"}, index MD5 {release.Entry.Md5}");
+        target ??= release.PreferredTarget;
         try
         {
             if (run is { } runSteps)
@@ -199,7 +200,7 @@ internal static class Program
     /// <summary>
     /// Plays the game in a window: the mouse and keys go to the game, which draws its own cursor.
     /// Alt+Enter or F11 switches to full screen. The game's save screen (F5) keeps its saves in
-    /// ScummVM's format in the saves folder, named after the target (<c>loom.s01</c>); a save
+    /// ScummVM's format in the saves folder, named after the target, ScummVM's name for the release unless given (<c>loom-vga.s01</c>); a save
     /// given starts the game as ScummVM's launcher does. The VGA CD's audio plays from its track
     /// file in the game's folder.
     /// </summary>

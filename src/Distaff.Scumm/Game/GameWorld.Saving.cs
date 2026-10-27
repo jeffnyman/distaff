@@ -36,8 +36,11 @@ public sealed partial class GameWorld
     /// <summary>Where the game's save screen keeps its saves; with none, saving fails and no save exists.</summary>
     public ISaveStore? SaveStore { get; set; }
 
-    /// <summary>The name save files start with, as ScummVM names them after the game's target (<c>loom.s01</c>).</summary>
-    public string SaveTarget { get; set; } = "loom";
+    /// <summary>
+    /// The name save files start with, as ScummVM names them after the game's target: by default
+    /// the release's own (<c>loom-ega.s01</c>, <c>loom-vga.s01</c>), or "loom" for one not identified.
+    /// </summary>
+    public string SaveTarget { get; set; }
 
     /// <summary>The save version the save screen writes: 108, ScummVM 2.7's, which every ScummVM since reads.</summary>
     public int SaveVersion { get; set; } = SaveFile.CompatibleVersion;

@@ -33,9 +33,51 @@ public enum ResourceLayout
 /// <param name="Version">The SCUMM version: 3, or 4 for the VGA CD release.</param>
 /// <param name="Layout">How the resource files are laid out.</param>
 /// <param name="IsDemo">True for the demo releases.</param>
-public sealed record ScummGame(Md5Entry Entry, int Version, ResourceLayout Layout, bool IsDemo)
+/// <param name="Tag">The tag ScummVM names the release's target with, or null (<c>preferredTag</c>).</param>
+public sealed record ScummGame(Md5Entry Entry, int Version, ResourceLayout Layout, bool IsDemo, string? Tag = null)
 {
+    // ScummVM's short names for the platforms Loom came out on (getPlatformAbbrev)
+    private static readonly Dictionary<string, string> PlatformAbbreviations = new()
+    {
+        ["amiga"] = "amiga", ["atari"] = "st", ["fmtowns"] = "fm", ["mac"] = "mac", ["macintosh"] = "mac", ["pce"] = "pce", ["windows"] = "win",
+    };
+
     public string Variant => Entry.Variant;
+
+    /// <summary>
+    /// The name ScummVM gives the release's target, which its saves are named after: the game,
+    /// the release's tag, "demo" for a demo, the platform unless DOS, the language unless English
+    /// or unknown; "loom-ega" for the EGA release, "loom-vga" for the VGA CD. Mirrors
+    /// <c>generatePreferredTarget</c>.
+    /// </summary>
+    public string PreferredTarget
+    {
+        get
+        {
+            string target = Entry.GameId;
+            if (Tag is not null)
+            {
+                target += "-" + Tag;
+            }
+
+            if (IsDemo)
+            {
+                target += "-demo";
+            }
+
+            if (Platform is { } platform && platform != "dos" && PlatformAbbreviations.TryGetValue(platform, out var abbreviation))
+            {
+                target += "-" + abbreviation;
+            }
+
+            if (Language is { } language && language != "en")
+            {
+                target += "-" + language;
+            }
+
+            return target;
+        }
+    }
 
     public string? Language => Entry.Language;
 
@@ -55,17 +97,17 @@ public static class ScummDetector
     private static readonly string[] IndexFiles = ["00.LFL", "000.LFL"];
 
     /// <summary>
-    /// The SCUMM version, layout and demo flag of each Loom row of <c>detection_tables.h</c>.
+    /// The SCUMM version, layout, demo flag and target tag of each Loom row of <c>detection_tables.h</c>.
     /// </summary>
-    private static readonly Dictionary<string, (int Version, ResourceLayout Layout, bool Demo)> Variants = new()
+    private static readonly Dictionary<string, (int Version, ResourceLayout Layout, bool Demo, string? Tag)> Variants = new()
     {
-        ["EGA"] = (3, ResourceLayout.V3Old, false),
-        ["No AdLib"] = (3, ResourceLayout.V3Old, false),
-        ["Mac"] = (3, ResourceLayout.V3Old, false),
-        ["Demo"] = (3, ResourceLayout.V3Old, true),
-        ["FM-TOWNS"] = (3, ResourceLayout.V3Old256, false),
-        ["PC-Engine"] = (3, ResourceLayout.V3Old256, false),
-        ["VGA"] = (4, ResourceLayout.V4, false),
+        ["EGA"] = (3, ResourceLayout.V3Old, false, "ega"),
+        ["No AdLib"] = (3, ResourceLayout.V3Old, false, "ega"),
+        ["Mac"] = (3, ResourceLayout.V3Old, false, "ega"),
+        ["Demo"] = (3, ResourceLayout.V3Old, true, "ega"),
+        ["FM-TOWNS"] = (3, ResourceLayout.V3Old256, false, null),
+        ["PC-Engine"] = (3, ResourceLayout.V3Old256, false, null),
+        ["VGA"] = (4, ResourceLayout.V4, false, "vga"),
     };
 
     /// <summary>The MD5 of the index file ScummVM detects a release by, as the bytes ScummVM keeps in its saves (<c>_gameMD5</c>).</summary>
@@ -81,7 +123,7 @@ public static class ScummDetector
 
         if (ScummMd5Table.Find(Md5.ComputeHex(buffer)) is { } entry && Variants.TryGetValue(entry.Variant, out var variant))
         {
-            return new ScummGame(entry, variant.Version, variant.Layout, variant.Demo);
+            return new ScummGame(entry, variant.Version, variant.Layout, variant.Demo, variant.Tag);
         }
 
         return null;

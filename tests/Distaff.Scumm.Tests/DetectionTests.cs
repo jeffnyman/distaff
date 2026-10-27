@@ -31,6 +31,27 @@ public class DetectionTests
         Assert.False(game.IsDemo);
     }
 
+    /// <summary>
+    /// Each release is named as ScummVM names its target, which its saves are named after
+    /// (<c>generatePreferredTarget</c>): the tag, then the platform unless DOS, then the language
+    /// unless English; a German Amiga EGA release, from the table alone, shows the last two.
+    /// </summary>
+    [Theory]
+    [InlineData(GameFolders.Ega, "loom-ega")]
+    [InlineData(GameFolders.Vga, "loom-vga")]
+    [InlineData(GameFolders.FmTowns, "loom-fm")]
+    public void Each_release_has_scummvms_target_name(string folder, string target)
+    {
+        var amiga = new ScummGame(ScummMd5Table.Find("2fe369ad70f52a8cf7ad6077ee64f81a")!, 3, ResourceLayout.V3Old, false, "ega");
+        Assert.Equal("loom-ega-amiga-de", amiga.PreferredTarget);
+        if (GameFolders.Find(folder) is not { } path)
+        {
+            return;
+        }
+
+        Assert.Equal(target, ScummDetector.Identify(new DirectoryGameContainer(path))!.PreferredTarget);
+    }
+
     [Fact]
     public void An_unknown_index_file_is_not_identified()
     {

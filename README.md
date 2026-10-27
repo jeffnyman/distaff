@@ -15,7 +15,7 @@ scripts), global scripts, sounds and the charset are read, and rooms are drawn w
 objects and masks: `distaff <folder> --room N` writes a room as a PNG and lists it. Every script
 decodes; `--script N` and `--room-scripts N` disassemble them. `distaff <folder>` plays the game
 in a window with the mouse and keys: the distaff and its drafts, text, the cursor and dark
-rooms are drawn, and the game's own save screen (F5; the VGA CD's menu) saves and loads in ScummVM's save format
+rooms are drawn, and the game's own save screen (F5; the VGA CD's menu) saves and loads in ScummVM's save format, named as ScummVM names each release's saves (`loom-ega.s01`, `loom-vga.s01`)
 (`--load file` starts from a save), with sound on the AdLib, the PCjr or the PC speaker. It also runs headless, as the tests
 run it: `distaff <folder> --run 2000 --click 100:160,92 --key 200:esc --screenshot end.png`.
 The walkthrough tests play the whole game, the EGA and the VGA CD releases both, from the

@@ -73,7 +73,7 @@ public class VgaMenuTests
         Run(world, 20);
         Assert.False(world.MenuActive);
 
-        using var input = store.OpenRead("loom.s01")!;
+        using var input = store.OpenRead("loom-vga.s01")!;
         using var copy = new MemoryStream();
         input.CopyTo(copy);
         Assert.Equal("On the clif", SaveFile.ReadInfo(copy.ToArray()).Name);
@@ -94,7 +94,7 @@ public class VgaMenuTests
         var store = new MemorySaveStore();
         var saved = new GameWorld(loader) { SaveStore = store };
         ToTheDistaff(Skip(saved));
-        using (var output = store.OpenWrite("loom.s01"))
+        using (var output = store.OpenWrite("loom-vga.s01"))
         {
             output.Write(saved.Save("Sanctuary", new DateTime(2026, 10, 27)));
         }

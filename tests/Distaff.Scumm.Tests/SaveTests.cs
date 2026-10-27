@@ -90,7 +90,7 @@ public class SaveTests
         Play(world, [(7600, 262, 96)], 7700);
 
         Assert.Contains("The game was saved.", world.MessageLog);
-        var file = ReadAll(store, "loom.s01");
+        var file = ReadAll(store, "loom-ega.s01");
         Assert.Equal("dist", SaveFile.ReadInfo(file).Name);
 
         var other = OnTheCliff(loader, store);

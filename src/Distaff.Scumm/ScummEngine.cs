@@ -27,8 +27,8 @@ public sealed class ScummEngine : Engine
     /// <summary>A save to start from instead of the boot script, as ScummVM's launcher loads one. Set before <see cref="Initialize"/>.</summary>
     public byte[]? StartingSave { get; set; }
 
-    /// <summary>The name save files start with (<c>loom.s01</c>). Set before <see cref="Initialize"/>.</summary>
-    public string SaveTarget { get; set; } = "loom";
+    /// <summary>The name save files start with (<c>loom-vga.s01</c>), or null for the release's own, as ScummVM names it. Set before <see cref="Initialize"/>.</summary>
+    public string? SaveTarget { get; set; }
 
     /// <summary>The device the sounds play on. Set before <see cref="Initialize"/>.</summary>
     public SoundDevice SoundDevice { get; set; } = SoundDevice.AdLib;
@@ -45,8 +45,12 @@ public sealed class ScummEngine : Engine
         {
             CopyProtection = CopyProtection,
             SaveStore = Host.Saves,
-            SaveTarget = SaveTarget,
         };
+        if (SaveTarget is not null)
+        {
+            _world.SaveTarget = SaveTarget;
+        }
+
         Host.Graphics.SetMode(GameWorld.ScreenWidth, GameWorld.ScreenHeight);
         Host.Graphics.SetTitle($"Distaff - {Detected.Title}");
         Host.Graphics.SetPalette(Palettes.Ega);

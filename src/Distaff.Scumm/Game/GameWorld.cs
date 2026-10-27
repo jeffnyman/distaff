@@ -1,5 +1,6 @@
 using System.Text;
 using Distaff.Scumm.Costumes;
+using Distaff.Scumm.Detection;
 using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Rooms;
@@ -75,6 +76,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     public GameWorld(ResourceLoader loader, int seed = 1, SoundDevice sound = SoundDevice.Speaker, int sampleRate = DefaultSampleRate, Func<int, ICdTrack?>? cdTracks = null)
     {
         _loader = loader;
+        SaveTarget = ScummDetector.Identify(loader.Game)?.PreferredTarget ?? "loom";
         var index = loader.Index;
         _owners = [.. index.ObjectOwners];
         _states = [.. index.ObjectStates];

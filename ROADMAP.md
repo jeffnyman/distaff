@@ -574,6 +574,10 @@ Then the interface and a playing check:
   cleared first); after a load from the menu the cursor is never put back by a later one, the
   flag that marks it never being cleared in version 4; a banner over the menu leaves its last two
   rows, as `clearBanner` puts back the rows from two above it.
+- Saves are named after ScummVM's target for the release (`generatePreferredTarget`),
+  `loom-ega.sNN` and `loom-vga.sNN`, so the two releases keep apart, where both had been
+  `loom.sNN`: a save is only ever loaded into the release that made it. `--target loom` still
+  finds saves made before.
 - Left out: the restart key's question, the text speed keys ('+' and '-'), the mouse wheel on the
   list, and Ctrl+C and Alt+X (the window closes the player). The CD timer stops while the menu is
   up; ScummVM's stops only once it has counted.
