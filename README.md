@@ -9,12 +9,14 @@ Distaff is not a ScummVM fork and does not aim to run any other SCUMM game.
 
 ## Status
 
-Just started. Releases are identified by ScummVM's MD5 table, and `distaff <folder>` reports which
-one a folder holds. Nothing is drawn or played yet. [ROADMAP.md](ROADMAP.md) gives the order of work.
+Early. Releases are identified by ScummVM's MD5 table, and `distaff <folder>` reports which one a
+folder holds. For the EGA release the index, rooms (objects, walkboxes, entry, exit and local
+scripts), global scripts, sounds and the charset are read; `distaff <folder> --room N` lists a
+room. Nothing is drawn or played yet. [ROADMAP.md](ROADMAP.md) gives the order of work.
 
 | Release | SCUMM version | Data | State |
 |---|---|---|---|
-| DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Identified |
+| DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Resources read |
 | DOS VGA CD (1992) | 4 | `000.LFL`, `DISK01.LEC` (XOR 0x69), `90x.LFL`, one CD audio track | Identified |
 | FM Towns (1991) | 3, 256 colours (`GF_OLD256`) | `00.LFL` to `99.LFL`, not encoded, 16 CD audio tracks | Identified |
 
@@ -22,7 +24,7 @@ one a folder holds. Nothing is drawn or played yet. [ROADMAP.md](ROADMAP.md) giv
 
 | Path | What it is |
 |---|---|
-| `src/Distaff.Scumm` | The interpreter. For now: the host contract and detection. |
+| `src/Distaff.Scumm` | The interpreter. For now: the host contract, detection, resources and rooms. |
 | `src/Distaff.Player` | The `distaff` command line player. |
 | `tests/Distaff.Scumm.Tests` | Unit tests, and tests that run against the real game data when it is present. |
 | `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`). |

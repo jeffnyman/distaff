@@ -41,15 +41,28 @@ clicks that reaches a known state.
 
 ## EGA
 
-### Phase 1: resources
+### Phase 1: resources (done)
 
-- `file.cpp`, `resource.cpp` (`getEncByte`), `resource_v3.cpp`: the XOR-0xFF `.LFL` files, the
-  index (`ScummEngine_v3old::readIndexFile`: magic 0x0100, global objects, the room, costume,
-  script and sound directories), and loading a resource by its old-bundle header.
-- `room.cpp`, `object.cpp`, `boxes.cpp` (reading): the room header, objects, walkboxes and box
-  matrix, entry and exit scripts, local scripts.
-- Check: every room file is a chain of resources, and the index entries that point at real
-  resources are counted and pinned in the tests.
+In `Distaff.Scumm.Resources` and `Rooms`:
+
+- `file.cpp`, `resource.cpp` (`getEncByte`, `loadResource`), `resource_v3.cpp`,
+  `resource_v4.cpp` (`readGlobalObjects`): the XOR-0xFF `.LFL` files (`LflFile`), the index
+  (`ResourceIndex`: magic 0x0100, 1000 global objects with their classes, owners and states, and
+  the room, costume, script and sound directories), and loading a resource by the size word of
+  its 4-byte header (`ResourceLoader`). Global scripts' code starts after the header.
+- `room.cpp`, `object.cpp`, `boxes.cpp`, `script.cpp` (reading): the room header (`Room`), the
+  object code blocks with their names and verb tables (`RoomObject`), the walkboxes and the box
+  matrix as stored (`WalkBoxes`), the entry and exit scripts and the local scripts.
+- `sound.cpp` (`readSoundResourceSmallHeader`): each sound's speaker and AdLib blocks
+  (`SoundResource`).
+- `resource_v3.cpp` (`loadCharset`): the charset in `99.LFL`, which is not encoded.
+- Player: `--room N` lists a room's header, scripts, walkboxes and objects.
+- Checked against the EGA release: every room file is an exact chain of resources; all 76 rooms
+  parse. The index entries that point at no real resource are counted and pinned: 11 rooms whose
+  files are not on the disks, 2 costumes stored in them, and 11 costumes, 2 scripts and sound 24
+  whose offsets run past their files or into another resource.
+- The release carries the Roland Upgrade: `82.LFL` to `85.LFL` hold sounds 33 to 64, single
+  blocks for the MT-32, which ScummVM reads only when the sound card is set to Roland.
 
 ### Phase 2: room graphics
 
@@ -107,7 +120,7 @@ clicks that reaches a known state.
 
 - PC speaker and PCjr first, with `Player_V2` (`players/player_v2.cpp`, the v3 path).
 - AdLib next, with `Player_AD` (`players/player_ad.cpp`) and an OPL2 emulator.
-- MT-32 (iMUSE and the extra `8x.LFL` files) is out of scope.
+- MT-32 (iMUSE, and the Roland Upgrade's sounds in `82.LFL` to `85.LFL`) is out of scope.
 - Check: the sound output of known scenes against recordings.
 
 ### Phase 10: the whole game
