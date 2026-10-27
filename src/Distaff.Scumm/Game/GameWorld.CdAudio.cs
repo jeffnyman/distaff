@@ -1,4 +1,5 @@
 using Distaff.Scumm.Scripts;
+using Distaff.Scumm.Sound;
 
 namespace Distaff.Scumm.Game;
 
@@ -7,7 +8,7 @@ namespace Distaff.Scumm.Game;
 /// counts while it does, which the scripts wait on to keep text and pictures with the voice and
 /// music. Mirrors ScummVM's <c>SoundCD::playCDTrack</c>, <c>startCDTimer</c>, <c>cdTimerHandler</c>
 /// and <c>getCDMusicTimer</c>, and Loom's <c>SO_SAY_VOICE</c> in <c>decodeParseString</c>. The
-/// sound itself is not played yet.
+/// sound is played from the track's file by <see cref="SoundSystem.Cd"/>.
 /// </summary>
 public sealed partial class GameWorld
 {
@@ -34,15 +35,17 @@ public sealed partial class GameWorld
         {
             Engine.Variables[Vars.MusicTimer] = 0;
             CdTrack = null;
+            Sound.Cd.Stop();
             return;
         }
 
-        PlayCdTrack(1, (int)(offset * 7.5 - CdLeadIn), (int)(length * 7.5 + 5));
+        PlayCdTrack(1, (int)(offset * 7.5 - CdLeadIn), (int)(length * 7.5 + 5), 1);
     }
 
     /// <summary>Starts part of a track, zeroing the music timer and starting it counting (<c>playCDTrack</c>, <c>startCDTimer</c>).</summary>
-    private void PlayCdTrack(int track, int start, int duration)
+    private void PlayCdTrack(int track, int start, int duration, int numLoops)
     {
+        Sound.Cd.Play(track, start, duration, numLoops);
         Engine.Variables[Vars.MusicTimer] = 0;
         _cdMusicTimerMod = 0;
         _cdMusicTimer = 0;

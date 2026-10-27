@@ -67,7 +67,12 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
     private readonly Dictionary<int, byte[]?> _sounds = [];
 
-    public GameWorld(ResourceLoader loader, int seed = 1, SoundDevice sound = SoundDevice.Speaker, int sampleRate = DefaultSampleRate)
+    /// <param name="loader">The game's resources.</param>
+    /// <param name="seed">The random number generator's seed.</param>
+    /// <param name="sound">The device the sounds play on.</param>
+    /// <param name="sampleRate">The rate sound is made at.</param>
+    /// <param name="cdTracks">Opens a track of the VGA CD's audio from the game's folder; without it the CD is silent.</param>
+    public GameWorld(ResourceLoader loader, int seed = 1, SoundDevice sound = SoundDevice.Speaker, int sampleRate = DefaultSampleRate, Func<int, ICdTrack?>? cdTracks = null)
     {
         _loader = loader;
         var index = loader.Index;
@@ -75,7 +80,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         _states = [.. index.ObjectStates];
         _classes = [.. index.ObjectClasses];
         Engine = new ScriptEngine(this, seed, loader.Version);
-        Sound = new SoundSystem(sound, LoadSound, sampleRate);
+        Sound = new SoundSystem(sound, LoadSound, sampleRate, cdTracks);
         Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i, this))];
         Verbs = [.. Enumerable.Range(0, VerbCount).Select(_ => new VerbSlot())];
         // version 4 has no charset 0; its scripts pick one before any text (initCharset)

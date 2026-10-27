@@ -16,8 +16,9 @@ public enum SoundDevice
 /// <c>isSoundRunning</c>). The PC speaker and the PCjr play the sounds' first block with
 /// <see cref="PlayerV2"/>, the AdLib their second with <see cref="PlayerAd"/> on an emulated
 /// OPL2, MAME's, as ScummVM picks by default (<c>setupMusic</c>). Ported by way of Maniacal.
+/// The VGA CD's voices and music come from its CD track instead (<see cref="Cd"/>), mixed in.
 /// </summary>
-public sealed class SoundSystem
+public sealed class SoundSystem : IDisposable
 {
     private readonly Func<int, byte[]?> _load;
     private readonly List<int> _queue = [];
@@ -25,14 +26,16 @@ public sealed class SoundSystem
     /// <param name="device">The device the sounds play on.</param>
     /// <param name="load">A sound's data as the device plays it, or null when there is none.</param>
     /// <param name="sampleRate">The output's rate.</param>
-    public SoundSystem(SoundDevice device, Func<int, byte[]?> load, int sampleRate)
+    /// <param name="cdTracks">Opens a track of the CD from the game's folder, or gives null; none leaves the CD silent.</param>
+    public SoundSystem(SoundDevice device, Func<int, byte[]?> load, int sampleRate, Func<int, ICdTrack?>? cdTracks = null)
     {
         _load = load;
         Device = device;
         Player = device == SoundDevice.AdLib
             ? new PlayerAd(sampleRate, new Opl.MameOpl(sampleRate))
             : new PlayerV2(sampleRate, device == SoundDevice.Pcjr);
-        Output = new ClockedSource(Player, sampleRate);
+        Cd = new CdPlayer(cdTracks, sampleRate);
+        Output = new ClockedSource(new AudioMix(Player, Cd), sampleRate);
     }
 
     public SoundDevice Device { get; }
@@ -46,6 +49,9 @@ public sealed class SoundSystem
     };
 
     public MusicPlayer Player { get; }
+
+    /// <summary>The CD's audio, played from a track file.</summary>
+    public CdPlayer Cd { get; }
 
     /// <summary>What a host plays; it renders the sound itself in step with the game when the host reads none.</summary>
     public ClockedSource Output { get; }
@@ -98,4 +104,6 @@ public sealed class SoundSystem
 
     /// <summary>Keeps the sound going in step with the game when the host plays none. Called once a step.</summary>
     public void Update(TimeSpan gameTime) => Output.Update(gameTime);
+
+    public void Dispose() => Cd.Dispose();
 }

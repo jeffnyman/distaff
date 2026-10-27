@@ -25,7 +25,7 @@ time, each section starting from the save the one before it made.
 | Release | SCUMM version | Data | State |
 |---|---|---|---|
 | DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Playable to the end, with saves and sound |
-| DOS VGA CD (1992) | 4 | `000.LFL`, `DISK01.LEC` (XOR 0x69), `90x.LFL`, one CD audio track | Boots and plays its opening and the island, silent |
+| DOS VGA CD (1992) | 4 | `000.LFL`, `DISK01.LEC` (XOR 0x69), `90x.LFL`, one CD audio track | Boots and plays its opening and the island, with its voices and music |
 | FM Towns (1991) | 3, 256 colours (`GF_OLD256`) | `00.LFL` to `99.LFL`, not encoded, 16 CD audio tracks | Identified |
 
 ## Layout
@@ -33,6 +33,7 @@ time, each section starting from the save the one before it made.
 | Path | What it is |
 |---|---|
 | `src/Distaff.Scumm` | The interpreter: the host contract, detection, resources, rooms and drawing them, the script decoder and engine, the game loop, costumes and walking actors, the font and text, verbs and the cursor, ScummVM-compatible saves, sound (PC speaker, PCjr, AdLib on an emulated OPL2). |
+| `src/Distaff.Audio` | Decoders for CD audio tracks kept as files: Ogg Vorbis, on [NVorbis](https://github.com/NVorbis/NVorbis). The interpreter takes tracks through an interface (`ICdTrack`) and carries no decoder of its own. |
 | `src/Distaff.Player` | The `distaff` player: an SDL window (`Sdl`, from Maniacal), and the headless tools. |
 | `tests/Distaff.Scumm.Tests` | Unit tests, and tests that run against the real game data when it is present. |
 | `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`, `port_sound_tables.py`), and `opl-reference`, which builds ScummVM's OPL2 emulator to check the port against. |
@@ -70,4 +71,5 @@ files out of the repository. A test whose folder is absent passes without checki
 
 ## License
 
-GPL-3.0-or-later, as ScummVM is. See [LICENSE](LICENSE).
+GPL-3.0-or-later, as ScummVM is. See [LICENSE](LICENSE). NVorbis, which `Distaff.Audio` uses, is
+under the MIT license.

@@ -467,11 +467,33 @@ Then the interface and a playing check:
   Not compared with ScummVM's output; screen transitions (`dissolveEffect`) are not ported, on
   the EGA either.
 
-### Phase 15: CD audio
+### Phase 15: CD audio (done)
 
-- `soundcd.cpp`: the music and voices from the one CD audio track, played by start and length,
-  and the subtitles timed to the CD position (`string.cpp`, `VAR_MUSIC_TIMER`). The track is
-  Ogg Vorbis here; a WAV copy would avoid a decoder.
+- The interpreter takes CD tracks through `ICdTrack` (a sample rate, channels, a length, seeking
+  and reading decoded samples), opened by number by whoever hosts it, and keeps no decoder of
+  its own. `Distaff.Audio` decodes Ogg Vorbis with NVorbis (MIT) and finds a track's file as
+  ScummVM does: `track1`, `track01`, `track_1`, `track_01`, any case (`fillPotentialTrackNames`).
+  FLAC is left for the FM Towns release.
+- `CdPlayer` plays part of a track as ScummVM's `DefaultAudioCDManager::play` does with a track
+  file: from a start to an end in CD frames, converted to the stream's samples to the nearest
+  (`convertTimeToStreamPos`), to the end of the track for a length of 0, 0 or 1 times as once and
+  -1 for ever, done with its last sample (`makeLoopingAudioStream`, `SubSeekableAudioStream`);
+  nothing plays from frame 0 no times. Samples are rounded and clipped to 16 bits as `ov_read`
+  does, mono goes to both channels, and another rate is converted linearly
+  (`LinearRateConverter`). `AudioMix` adds it to the sound devices' output, clipping
+  (`clampedAdd`); the host's volume applies to the whole.
+- `SO_SAY_VOICE` plays its part of track 1 once, and 0 and 0 stop it (`stopCD`). The music
+  timer the scripts time text and pictures by was already the CD timer (phase 14).
+- The player opens tracks from the game's folder; `--run` with `--wav` records the CD too, in
+  stereo now.
+- Checked against the VGA CD release: the track is 44100 Hz stereo; the proficiency screen's
+  first line (frame 22 for 185) plays sample for sample as the track decodes there and stops at
+  its end; a recording of the opening has the three spoken lines of the proficiency screen with
+  silence between, then the narration and music from PRACTICE to Bobbin on the cliff. Not yet
+  listened to against ScummVM.
+- Left out: ScummVM's subtitles setting (with it off, Loom's text is not drawn while the CD
+  plays); Distaff always draws it, as ScummVM does by default. Restoring the CD after loading a
+  save is phase 16's.
 
 ### Phase 16: saves and the whole game
 

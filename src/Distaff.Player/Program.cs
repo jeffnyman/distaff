@@ -1,3 +1,4 @@
+using Distaff.Audio;
 using Distaff.Player.Sdl;
 using Distaff.Scumm;
 using Distaff.Scumm.Detection;
@@ -159,7 +160,7 @@ internal static class Program
             if (run is { } runSteps)
             {
                 var store = new FileSaveStore(savesDirectory);
-                return Run(ResourceLoader.Open(game), runSteps, copyProtection, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, wav);
+                return Run(ResourceLoader.Open(game), runSteps, copyProtection, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, wav, CdTrackFiles.In(gamePath));
             }
 
             if (script is { } scriptNo)
@@ -177,7 +178,7 @@ internal static class Program
                 return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
             }
 
-            return Play(game, release, copyProtection, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound);
+            return Play(game, release, copyProtection, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, CdTrackFiles.In(gamePath));
         }
         catch (Exception ex) when (ex is NotSupportedException or InvalidDataException)
         {
@@ -199,13 +200,15 @@ internal static class Program
     /// Plays the game in a window: the mouse and keys go to the game, which draws its own cursor.
     /// Alt+Enter or F11 switches to full screen. The game's save screen (F5) keeps its saves in
     /// ScummVM's format in the saves folder, named after the target (<c>loom.s01</c>); a save
-    /// given starts the game as ScummVM's launcher does.
+    /// given starts the game as ScummVM's launcher does. The VGA CD's audio plays from its track
+    /// file in the game's folder.
     /// </summary>
-    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound)
+    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound,
+        Func<int, ICdTrack?> cdTracks)
     {
         using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen, Saves = new FileSaveStore(savesDirectory) });
         var detected = new DetectedGame("scumm", "loom", "Loom", release.Variant, release.Language, release.Platform);
-        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, StartingSave = load, SaveTarget = target, SoundDevice = sound };
+        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, StartingSave = load, SaveTarget = target, SoundDevice = sound, CdTracks = cdTracks };
         SDL.SDL3.SDL_HideCursor();
         host.Run(engine);
         return 0;
@@ -244,12 +247,13 @@ internal static class Program
     /// <summary>
     /// Runs the game headless from boot, or from a save, for some steps, with clicks and keys at
     /// given steps, saving at others as ScummVM's menu saves, and reports where it got to. With a
-    /// WAV file, the sound is read as a host would, a step's worth after each step, and written.
+    /// WAV file, the sound is read as a host would, a step's worth after each step, and written in
+    /// stereo, the VGA CD's track mixed in.
     /// </summary>
     private static int Run(ResourceLoader loader, int steps, bool copyProtection, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor,
-        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, string? wav)
+        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, string? wav, Func<int, ICdTrack?> cdTracks)
     {
-        var world = new GameWorld(loader, sound: sound) { CopyProtection = copyProtection, SaveStore = store, SaveTarget = target };
+        var world = new GameWorld(loader, sound: sound, cdTracks: wav is null ? null : cdTracks) { CopyProtection = copyProtection, SaveStore = store, SaveTarget = target };
         var audio = new List<short>();
         long framesRead = 0;
         void ReadAudio()
@@ -262,10 +266,7 @@ internal static class Program
 
             var buffer = new short[(due - framesRead) * 2];
             world.Sound.Output.Read(buffer);
-            for (int i = 0; i < buffer.Length; i += 2)
-            {
-                audio.Add(buffer[i]);
-            }
+            audio.AddRange(buffer);
 
             framesRead = due;
         }
@@ -327,8 +328,8 @@ internal static class Program
 
         if (wav is not null)
         {
-            File.WriteAllBytes(wav, WavWriter.Encode(audio.ToArray(), GameWorld.DefaultSampleRate, 1));
-            Console.WriteLine($"wrote {wav}: {audio.Count / (double)GameWorld.DefaultSampleRate:F1} seconds, peak {audio.DefaultIfEmpty().Max(s => Math.Abs((int)s))}");
+            File.WriteAllBytes(wav, WavWriter.Encode(audio.ToArray(), GameWorld.DefaultSampleRate, 2));
+            Console.WriteLine($"wrote {wav}: {audio.Count / 2.0 / GameWorld.DefaultSampleRate:F1} seconds, peak {audio.DefaultIfEmpty().Max(s => Math.Abs((int)s))}");
         }
 
         if (screenshot is not null)

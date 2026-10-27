@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Distaff.Audio/Distaff.Audio.csproj" />
     <Project Path="src/Distaff.Player/Distaff.Player.csproj" />
     <Project Path="src/Distaff.Scumm/Distaff.Scumm.csproj" />
   </Folder>

@@ -15,6 +15,7 @@
   </Target>
   <ItemGroup>
     <ProjectReference Include="..\Distaff.Scumm\Distaff.Scumm.csproj" />
+    <ProjectReference Include="..\Distaff.Audio\Distaff.Audio.csproj" />
     <PackageReference Include="ppy.SDL3-CS" />
   </ItemGroup>
 </Project>

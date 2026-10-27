@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\..\src\Distaff.Scumm\Distaff.Scumm.csproj" />
+    <ProjectReference Include="..\..\src\Distaff.Audio\Distaff.Audio.csproj" />
   </ItemGroup>
 </Project>

@@ -33,12 +33,15 @@ public sealed class ScummEngine : Engine
     /// <summary>The device the sounds play on. Set before <see cref="Initialize"/>.</summary>
     public SoundDevice SoundDevice { get; set; } = SoundDevice.AdLib;
 
+    /// <summary>Opens a track of the CD's audio from the game's folder, for the VGA CD. Set before <see cref="Initialize"/>; without it the CD is silent.</summary>
+    public Func<int, ICdTrack?>? CdTracks { get; set; }
+
     /// <summary>The world being played, from <see cref="Initialize"/> on.</summary>
     public GameWorld World => _world ?? throw new InvalidOperationException("The engine is not initialized.");
 
     public override void Initialize()
     {
-        _world = new GameWorld(ResourceLoader.Open(Game), Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate)
+        _world = new GameWorld(ResourceLoader.Open(Game), Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate, CdTracks)
         {
             CopyProtection = CopyProtection,
             SaveStore = Host.Saves,
@@ -61,6 +64,7 @@ public sealed class ScummEngine : Engine
     public override void Dispose()
     {
         Host.Audio.Stop();
+        _world?.Sound.Dispose();
         base.Dispose();
     }
 
