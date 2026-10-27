@@ -36,6 +36,9 @@ public sealed class VerbSlot
 
     public int Key { get; set; }
 
+    /// <summary>The charset a text verb is drawn in, text slot 0's default when the verb was made, 1 before (<c>charset_nr</c>).</summary>
+    public int Charset { get; set; } = 1;
+
     public bool Center { get; set; }
 
     /// <summary>Non-zero while saved by <c>saveRestoreVerbs</c> (<c>saveid</c>).</summary>
@@ -156,9 +159,10 @@ public sealed partial class GameWorld
                     vs = Verbs[slot];
                     vs.VerbId = verb;
                     vs.Color = 2;
-                    vs.HiColor = 14;
+                    vs.HiColor = _loader.Version == 3 ? 14 : 0;
                     vs.DimColor = 8;
                     vs.Type = 0;
+                    vs.Charset = TextSlots[0].DefaultCharset;
                     vs.Mode = 0;
                     vs.SaveId = 0;
                     vs.Key = 0;
@@ -232,6 +236,19 @@ public sealed partial class GameWorld
                     KillVerb(VerbSlotOf(verb, a[2]));
                     break;
             }
+        }
+    }
+
+    /// <summary>
+    /// Draws every verb again, in slot order. Mirrors <c>redrawVerbs</c>, but for the verb under
+    /// the cursor, which ScummVM draws highlighted when it has a highlight colour: a verb made in
+    /// version 4 has none.
+    /// </summary>
+    private void RedrawVerbs()
+    {
+        for (int i = 0; i < VerbCount; i++)
+        {
+            DrawVerb(i);
         }
     }
 

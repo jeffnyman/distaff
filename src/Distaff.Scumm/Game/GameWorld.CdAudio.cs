@@ -54,6 +54,29 @@ public sealed partial class GameWorld
     }
 
     /// <summary>
+    /// After a load, plays again the part the save says was playing. Mirrors
+    /// <c>SoundCD::restoreCDAudioAfterLoad</c> for a game that starts no CD sound by number: a part
+    /// played once goes on from 1.25 CD frames for each count of the music timer the save holds,
+    /// and is as many frames shorter as the timer has counted. The timer is not saved: it goes on
+    /// counting, or not, as before the load.
+    /// </summary>
+    private void RestoreCdAfterLoad(int track, int start, int duration, int numLoops)
+    {
+        if (numLoops == 1)
+        {
+            int musicTimer = Engine.Variables[Vars.MusicTimer];
+            start += (int)(musicTimer * 1.25);
+            if (duration != 0)
+            {
+                duration -= musicTimer;
+            }
+        }
+
+        Sound.Cd.Play(track, start, duration, numLoops);
+        CdTrack = (track, start, duration);
+    }
+
+    /// <summary>
     /// Runs the CD timer for some quarter-frames: it counts one for every four, from when a track
     /// first starts, at the DOS timer's rate (<c>cdTimerHandler</c>).
     /// </summary>

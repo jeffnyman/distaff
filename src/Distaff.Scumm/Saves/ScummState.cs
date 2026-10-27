@@ -1,12 +1,13 @@
 namespace Distaff.Scumm.Saves;
 
 /// <summary>
-/// The engine state a ScummVM save holds for Loom version 3, field for field and in ScummVM's
-/// order, so a save made here loads in ScummVM and one made there loads here. Mirrors
+/// The engine state a ScummVM save holds for Loom, versions 3 and 4, field for field and in
+/// ScummVM's order, so a save made here loads in ScummVM and one made there loads here. Mirrors
 /// <c>ScummEngine::saveLoadWithSerializer</c> and <c>ScummEngine_v5::saveLoadWithSerializer</c>
-/// with the structures they sync (<c>Actor</c>, <c>Actor_v3</c>, <c>ScriptSlot</c>,
-/// <c>ObjectData</c>, <c>VerbSlot</c>, <c>NestedScript</c>, <c>SentenceTab</c>, <c>StringTab</c>,
-/// <c>ColorCycle</c>), for the branches the DOS release takes. Ported by way of Maniacal.
+/// with the structures they sync (<c>Actor</c>, <c>Actor_v3</c> for version 3 only,
+/// <c>ScriptSlot</c>, <c>ObjectData</c>, <c>VerbSlot</c>, <c>NestedScript</c>,
+/// <c>SentenceTab</c>, <c>StringTab</c>, <c>ColorCycle</c>), for the branches the DOS releases
+/// take. Ported by way of Maniacal.
 /// </summary>
 /// <remarks>
 /// Versions are ScummVM's save versions: 108 is what ScummVM 2.7 writes, 124 what it writes now.
@@ -28,9 +29,11 @@ public sealed class ScummState
     public static readonly int[] SavedTypes = [TypeSound, TypeInventory, TypeString, TypeVerb, TypeActorName, TypeScaleTable, TypeFlObject, TypeMatrix, TypeBox, TypeObjectName, TypeSpoolBuffer];
 
     /// <param name="globalObjects">How many objects the game has.</param>
-    public ScummState(int globalObjects)
+    /// <param name="gameVersion">The game's SCUMM version, 3 or 4: version 3's actors save four more fields.</param>
+    public ScummState(int globalObjects, int gameVersion = 3)
     {
         GlobalObjects = globalObjects;
+        GameVersion = gameVersion;
         ObjectOwners = new byte[globalObjects];
         ObjectStates = new byte[globalObjects];
         ClassData = new int[globalObjects];
@@ -71,6 +74,8 @@ public sealed class ScummState
     }
 
     public int GlobalObjects { get; }
+
+    public int GameVersion { get; }
 
     public byte[] GameMd5 = new byte[16];
     public int CurrentPaletteIndex, CurrentRoom, RoomResource, ObjectsInRoom, CurrentScript = 0xFF;
@@ -272,7 +277,7 @@ public sealed class ScummState
 
         foreach (var actor in Actors)
         {
-            actor.Sync(s);
+            actor.Sync(s, GameVersion);
         }
 
         // Sound::saveLoadWithSerializer
@@ -530,7 +535,7 @@ public sealed class ScummState
         s.Bytes(SoundEngineData, size);
     }
 
-    /// <summary>An actor. Mirrors <c>Actor::saveLoadWithSerializer</c>, then <c>Actor_v3::saveLoadWithSerializer</c> at version 3's revision.</summary>
+    /// <summary>An actor. Mirrors <c>Actor::saveLoadWithSerializer</c>, then for a version 3 game <c>Actor_v3::saveLoadWithSerializer</c> at version 3's revision.</summary>
     public sealed class ActorState
     {
         public int X, Y, HeOffsX, HeOffsY, Top, Bottom, Elevation, Width = 24, Facing = 180, Costume, Room, TalkColor = 15;
@@ -550,7 +555,7 @@ public sealed class ScummState
         public int[] HeJumpOffsets = new int[16], HeJumpCounts = new int[16], HeCondMasks = new int[16];
         public int XAdd, YAdd, StepX = 1, StepThreshold;
 
-        public void Sync(SaveSerializer s)
+        public void Sync(SaveSerializer s, int gameVersion = 3)
         {
             s.Int16(ref X, 8);
             s.Int16(ref Y, 8);
@@ -636,7 +641,12 @@ public sealed class ScummState
             s.Array(HeJumpCounts, 16, (x, i) => x.Uint16(ref HeJumpCounts[i]), 65);
             s.Array(HeCondMasks, 16, (x, i) => x.Uint32(ref HeCondMasks[i]), 65);
 
-            // Actor_v3, at version 3's revision
+            // Actor_v3, at version 3's revision; version 4's actors are Actor's
+            if (gameVersion != 3)
+            {
+                return;
+            }
+
             s.Uint16(ref XAdd, 101);
             s.Uint16(ref YAdd, 101);
             s.Uint16(ref StepX, 101);

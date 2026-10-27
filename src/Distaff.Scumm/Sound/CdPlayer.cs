@@ -24,6 +24,7 @@ public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : 
     private bool _playing;
     private long _start, _end, _position;
     private int _loops, _iterations;
+    private (int Track, int Start, int Duration, int NumLoops) _asked;
 
     // what was decoded and not yet used, and the rate converter's two frames and its place between them
     private int _decodedAt, _decodedCount;
@@ -43,6 +44,21 @@ public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : 
     }
 
     /// <summary>
+    /// The part last asked for and whether it still plays, as a save keeps it: what was asked
+    /// stays after it stops. Mirrors <c>DefaultAudioCDManager::getStatus</c>.
+    /// </summary>
+    public (bool Playing, int Track, int Start, int Duration, int NumLoops) Status
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return (_playing, _asked.Track, _asked.Start, _asked.Duration, _asked.NumLoops);
+            }
+        }
+    }
+
+    /// <summary>
     /// Plays a track from <paramref name="startFrame"/> for <paramref name="duration"/> CD frames,
     /// to its end when the duration is 0, <paramref name="numLoops"/> times: 0 and 1 both once, -1
     /// for ever. What was playing stops first. Mirrors <c>DefaultAudioCDManager::play</c>.
@@ -52,7 +68,13 @@ public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : 
         lock (_lock)
         {
             _playing = false;
-            if ((numLoops == 0 && startFrame == 0) || Open(track) is not { } stream)
+            if (numLoops == 0 && startFrame == 0)
+            {
+                return;
+            }
+
+            _asked = (track, startFrame, duration, numLoops);
+            if (Open(track) is not { } stream)
             {
                 return;
             }

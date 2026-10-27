@@ -495,10 +495,33 @@ Then the interface and a playing check:
   plays); Distaff always draws it, as ScummVM does by default. Restoring the CD after loading a
   save is phase 16's.
 
-### Phase 16: saves and the whole game
+### Phase 16: saves and the whole game (in progress)
 
 - Saves for version 4, and walkthrough tests that play the VGA CD release from the opening to
   the ending.
+- Done, `saveload.cpp` for version 4: the actors are ScummVM's `Actor`, without `Actor_v3`'s
+  four words; the 256 colours as the room and the scripts set them (`_currentPalette`) and the
+  colour cycles, both put back from the save and not from the room (`setupRoomSubBlocks` sets
+  neither); the bit variables; the charset, its colours and every charset's (`_charsetColorMap`,
+  `_charsetData`, `initCharset` setting slots 0 and 1's default); the boxes at 20 bytes, the
+  matrix to the end of their block; and what the CD last played (`getStatus`). A loaded part
+  that was playing plays on (`restoreCDAudioAfterLoad`): from 1.25 frames for each count of the
+  music timer the save holds, as many counts shorter. The timer is not saved, as in ScummVM: it
+  goes on counting, or not, as before the load.
+- `scumm.cpp`: version 4 takes `ScummEngine_v5::scummLoop_handleSaveLoad`, not version 3's: the
+  verbs are drawn again (`redrawVerbs`), and variable 66 set, on which the scripts draw the
+  notes' letters and the pointed-at object's name again.
+- Also for both releases: the darkened palette is saved black, as ScummVM never fills it before
+  version 8; a verb keeps the charset it was made in (`charset_nr`, 1 before); version 4 makes
+  verbs without a highlight colour (14 in version 3 only).
+- The VGA CD's scripts never use `o4_saveLoadGame`: the original interpreter saves from its own
+  menu, which ScummVM rebuilds (`showMainMenu`, `gfx_gui.cpp`). For now the VGA CD saves only
+  with `--save` and loads with `--load`.
+- Checked against the VGA CD release: a save on the cliff and one in the sanctuary with the
+  distaff read back into a new world save the same state again; the sanctuary save, loaded,
+  shows the same screen on the next step and plays the opening draft on the egg as the game
+  did; a save made while the proficiency screen speaks plays the line on from where the timer
+  stood. Not yet loaded in ScummVM.
 
 ## FM Towns
 

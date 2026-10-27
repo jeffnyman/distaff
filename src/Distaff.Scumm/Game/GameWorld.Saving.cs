@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Text;
 using Distaff.Scumm.Detection;
 using Distaff.Scumm.Graphics;
@@ -54,7 +55,7 @@ public sealed partial class GameWorld
     /// </summary>
     public SaveInfo Load(byte[] file)
     {
-        var (info, state) = SaveFile.Read(file, _owners.Length);
+        var (info, state) = SaveFile.Read(file, _owners.Length, _loader.Version);
         Restore(state);
         Time = info.PlayTime;
 
@@ -70,7 +71,9 @@ public sealed partial class GameWorld
     /// <c>ScummEngine_v3::scummLoop_handleSaveLoad</c> for Loom on DOS: a save made in the save
     /// room ends the save screen's script; one made where the save screen could have been opened
     /// goes through the save room inside a cutscene, as if loaded there, with the ego's box and
-    /// place kept for the camera.
+    /// place kept for the camera. The VGA CD has no save screen and takes <c>ScummEngine_v5</c>'s
+    /// instead: the verbs are drawn again, and variable 66 set, on which Loom's scripts draw the
+    /// notes' letters and the name over the pointed-at object's image again.
     /// </summary>
     private void HandleSaveLoad()
     {
@@ -81,6 +84,13 @@ public sealed partial class GameWorld
 
         _loadFromLauncher = false;
         _hasMask = false;
+        if (_loader.Version == 4)
+        {
+            RedrawVerbs();
+            Engine.Variables[66] = 1;
+            return;
+        }
+
         if (CurrentRoomNumber == SaveRoom)
         {
             TerminateSaveMenuScript();
@@ -192,7 +202,7 @@ public sealed partial class GameWorld
                     ScummState state;
                     try
                     {
-                        (info, state) = SaveFile.Read(file, _owners.Length);
+                        (info, state) = SaveFile.Read(file, _owners.Length, _loader.Version);
                     }
                     catch (InvalidDataException)
                     {
@@ -305,7 +315,7 @@ public sealed partial class GameWorld
     /// <summary>The world as a ScummVM save state. Mirrors the state <c>saveLoadWithSerializer</c> writes for Loom version 3.</summary>
     public ScummState Capture()
     {
-        var s = new ScummState(_owners.Length);
+        var s = new ScummState(_owners.Length, _loader.Version);
         var room = CurrentRoom;
         s.GameMd5 = ScummDetector.IndexMd5(_loader.Game);
         s.CurrentRoom = CurrentRoomNumber;
@@ -338,7 +348,16 @@ public sealed partial class GameWorld
             TextSlots[i].SaveTo(s.Strings[i]);
         }
 
-        (s.CharsetId, s.CharsetRendererColor) = (0, _textColor);
+        // the charset and its colours: version 3 has the one font, and no colours for it
+        (s.CharsetId, s.CharsetRendererColor) = (_charsetId, _textColor);
+        if (_loader.Version == 4)
+        {
+            CharsetColorMap.CopyTo(s.CharsetColorMap, 0);
+            for (int i = 0; i < _charsetData.Length; i++)
+            {
+                _charsetData[i].CopyTo(s.CharsetData, i * 16);
+            }
+        }
 
         // the cutscenes, the nesting and the sentences
         var (data, slots, offsets) = Engine.CutsceneStack;
@@ -390,13 +409,16 @@ public sealed partial class GameWorld
             (s.CursorHotspots[i * 2], s.CursorHotspots[i * 2 + 1]) = ((byte)_cursorHotspots[i].X, (byte)_cursorHotspots[i].Y);
         }
 
-        // the screen: the EGA's colours as resetPalette sets them, the room's view
-        for (int i = 0; i < Palettes.Ega.Length; i++)
+        // the screen: the EGA's colours as resetPalette sets them, or the VGA CD's as the room and the
+        // scripts set them; the darkened palette, which only later versions fill, stays black; the
+        // VGA CD's colour cycles; the room's view
+        Rgb[] colors = _loader.Version == 4 ? CurrentPalette : Palettes.Ega;
+        for (int i = 0; i < colors.Length; i++)
         {
-            (s.CurrentPalette[i * 3], s.CurrentPalette[i * 3 + 1], s.CurrentPalette[i * 3 + 2]) = (Palettes.Ega[i].R, Palettes.Ega[i].G, Palettes.Ega[i].B);
+            (s.CurrentPalette[i * 3], s.CurrentPalette[i * 3 + 1], s.CurrentPalette[i * 3 + 2]) = (colors[i].R, colors[i].G, colors[i].B);
         }
 
-        s.CurrentPalette.CopyTo(s.DarkenPalette, 0);
+        SaveCycles(s.ColorCycles);
         RoomPalette.CopyTo(s.RoomPalette, 0);
         ShadowPalette.CopyTo(s.ShadowPalette, 0);
         (s.EgoPositioned, s.ScreenEffectFlag, s.ScreenB, s.ScreenH) = (_egoPositioned ? 1 : 0, 1, ViewTop, ViewTop + ViewHeight);
@@ -433,6 +455,11 @@ public sealed partial class GameWorld
         _states.CopyTo(s.ObjectStates, 0);
         _classes.CopyTo(s.ClassData, 0);
         Array.Copy(Engine.Variables, s.Variables, ScummState.VariableCount);
+        Engine.BitVariables.CopyTo(s.BitVariables, 0);
+
+        // what the CD last played, and whether it still plays (getStatus)
+        var cd = Sound.Cd.Status;
+        (s.AudioCdStatus[0], s.AudioCdStatus[1], s.AudioCdStatus[2], s.AudioCdStatus[3], s.AudioCdStatus[4]) = (cd.Playing ? 1 : 0, cd.Track, cd.Start, cd.Duration, cd.NumLoops);
         return s;
     }
 
@@ -445,6 +472,8 @@ public sealed partial class GameWorld
     public void Restore(ScummState s)
     {
         Sound.StopAll();
+        Sound.Cd.Stop();
+        CdTrack = null;
         foreach (var slot in Engine.Slots)
         {
             slot.Kill();
@@ -454,6 +483,7 @@ public sealed partial class GameWorld
         Array.Copy(s.ObjectStates, _states, Math.Min(s.ObjectStates.Length, _states.Length));
         Array.Copy(s.ClassData, _classes, Math.Min(s.ClassData.Length, _classes.Length));
         Array.Copy(s.Variables, Engine.Variables, ScummState.VariableCount);
+        s.BitVariables.CopyTo(Engine.BitVariables, 0);
         s.ResourceMapper.CopyTo(_resourceMapper, 0);
         s.RoomPalette.CopyTo(RoomPalette, 0);
         s.ShadowPalette.CopyTo(ShadowPalette, 0);
@@ -535,6 +565,17 @@ public sealed partial class GameWorld
             TextSlots[i].LoadFrom(s.Strings[i]);
         }
 
+        // the VGA CD's charset, the one slot 0 starts from, with the colours the save has
+        if (_loader.Version == 4)
+        {
+            UseCharset(TextSlots[0].DefaultCharset);
+            s.CharsetColorMap.CopyTo(CharsetColorMap, 0);
+            for (int i = 0; i < _charsetData.Length; i++)
+            {
+                s.CharsetData.AsSpan(i * 16, 16).CopyTo(_charsetData[i]);
+            }
+        }
+
         SetColor(s.CharsetRendererColor);
         _egoPositioned = s.EgoPositioned != 0;
 
@@ -553,16 +594,29 @@ public sealed partial class GameWorld
             _cursorHotspots[i] = (s.CursorHotspots[i * 2], s.CursorHotspots[i * 2 + 1]);
         }
 
+        // the VGA CD's colours and cycles as the save has them: the room's are not set up again
+        if (_loader.Version == 4)
+        {
+            CurrentPalette = [.. Enumerable.Range(0, 256).Select(i => new Rgb(s.CurrentPalette[i * 3], s.CurrentPalette[i * 3 + 1], s.CurrentPalette[i * 3 + 2]))];
+            LoadCycles(s.ColorCycles);
+        }
+
         // initScreens with the save's bands clears them; nothing drawn over the room is left
         Screens.Init(s.ScreenB, s.ScreenH, room?.Width ?? Camera.ScreenWidth);
         Screens.ClearTextSurface();
         _hasMask = false;
         _drawnObjects.Clear();
         _input = 0;
+
+        // the CD part that was playing plays on (restoreCDAudioAfterLoad)
+        if (s.AudioCdStatus[0] != 0)
+        {
+            RestoreCdAfterLoad(s.AudioCdStatus[1], s.AudioCdStatus[2], s.AudioCdStatus[3], s.AudioCdStatus[4]);
+        }
     }
 
-    /// <summary>A version 3 box's size (<c>SIZEOF_BOX_V3</c>): its flags are its last byte.</summary>
-    private const int BoxSize = 18;
+    /// <summary>A box's size: version 3's end with their flags (<c>SIZEOF_BOX_V3</c>), version 4's with a scale after them (<c>SIZEOF_BOX</c>).</summary>
+    private int BoxSize => _loader.Version == 4 ? WalkBoxes.BoxSizeV4 : WalkBoxes.BoxSize;
 
     private static int Where(ScriptKind kind) => kind switch
     {
@@ -719,8 +773,11 @@ public sealed partial class GameWorld
 
             s.Resources[(ScummState.TypeMatrix, 2)] = new ScummState.Resource(boxes);
 
-            // ScummVM's own reckoning of the matrix: from the boxes' end to the picture
-            int matrix = room.ImageOffset - room.BoxOffset - size;
+            // ScummVM's own reckoning of the matrix: from the boxes' end to the picture in version 3,
+            // to the end of the boxes' block in version 4 (its size less its 6-byte header)
+            int matrix = _loader.Version == 4
+                ? BinaryPrimitives.ReadInt32LittleEndian(data[(room.BoxOffset - 6)..]) - 6 - size
+                : room.ImageOffset - room.BoxOffset - size;
             if (matrix > 0)
             {
                 s.Resources[(ScummState.TypeMatrix, 1)] = new ScummState.Resource(data.Slice(room.BoxOffset + size, matrix).ToArray());

@@ -51,6 +51,28 @@ public sealed partial class GameWorld
     }
 
     /// <summary>
+    /// The cycles as a save holds them, five numbers each: the delay, the counter, the flags (none
+    /// in version 4), the first and the last colour (<c>syncWithSerializer(ColorCycle)</c>).
+    /// </summary>
+    internal void SaveCycles(int[] saved)
+    {
+        for (int i = 0; i < ColorCycleCount; i++)
+        {
+            var cycle = _cycles[i];
+            (saved[i * 5], saved[i * 5 + 1], saved[i * 5 + 2], saved[i * 5 + 3], saved[i * 5 + 4]) = (cycle.Delay, cycle.Counter, 0, cycle.Start, cycle.End);
+        }
+    }
+
+    /// <summary>The cycles from a save, as <see cref="SaveCycles"/> writes them.</summary>
+    internal void LoadCycles(int[] saved)
+    {
+        for (int i = 0; i < ColorCycleCount; i++)
+        {
+            _cycles[i] = new ColorCycle { Delay = saved[i * 5], Counter = saved[i * 5 + 1], Start = (byte)saved[i * 5 + 3], End = (byte)saved[i * 5 + 4] };
+        }
+    }
+
+    /// <summary>
     /// Turns each running cycle one step: its counter moves on, back to its first colour after its
     /// last, and the shadow palette maps its colours from the counter down, wrapping (<c>cyclePalette</c>).
     /// </summary>

@@ -30,6 +30,13 @@ public sealed class TextSlot
 
     private (int X, int Y, int Right, int Height, int Color, bool Center, bool Overhead, int Charset) _default = (0, 0, GameWorld.ScreenWidth - 1, 0, 0x0F, false, false, 0);
 
+    /// <summary>The charset the slot starts from (<c>_default.charset</c>), which <c>initCharset</c> sets for slots 0 and 1.</summary>
+    public int DefaultCharset
+    {
+        get => _default.Charset;
+        set => _default = _default with { Charset = value };
+    }
+
     /// <summary>Mirrors <c>StringTab::loadDefault</c>.</summary>
     public void LoadDefault() => (X, Y, Right, Height, Color, Center, Overhead, Charset) = _default;
 
@@ -549,12 +556,19 @@ public sealed partial class GameWorld
     /// </summary>
     private void InitCharset(int id)
     {
-        _charsetId = id;
-        _font = _loader.LoadCharset(id) is { } data ? Charset.ParseClassic(data) : null;
+        UseCharset(id);
+        TextSlots[0].DefaultCharset = TextSlots[1].DefaultCharset = id;
         _charsetData[id].CopyTo(CharsetColorMap, 0);
     }
 
-    /// <summary>The charset version 4 text is drawn in (<c>_string[].charset</c>, which <c>initCharset</c> sets for every slot).</summary>
+    /// <summary>Draws version 4 text in a charset from now on.</summary>
+    private void UseCharset(int id)
+    {
+        _charsetId = id;
+        _font = _loader.LoadCharset(id) is { } data ? Charset.ParseClassic(data) : null;
+    }
+
+    /// <summary>The charset version 4 text is drawn in (<c>_string[].charset</c>, which <c>initCharset</c> sets for slots 0 and 1, the ones Loom prints with).</summary>
     private int _charsetId;
 
     /// <summary>The colours each version 4 charset was given (<c>_charsetData</c>), 16 for each of the 9.</summary>

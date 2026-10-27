@@ -72,8 +72,8 @@ public static class SaveFile
         return compressed.ToArray();
     }
 
-    /// <summary>Reads a save, compressed or not, into a state for a game with so many global objects.</summary>
-    public static (SaveInfo Info, ScummState State) Read(byte[] file, int globalObjects)
+    /// <summary>Reads a save, compressed or not, into a state for a game of a SCUMM version with so many global objects.</summary>
+    public static (SaveInfo Info, ScummState State) Read(byte[] file, int globalObjects, int gameVersion = 3)
     {
         var data = Decompress(file);
         var (info, start) = ReadHeader(data);
@@ -82,7 +82,7 @@ public static class SaveFile
             throw new InvalidDataException($"Save version {info.Version} is not one of {ScummState.OldestVersion} to {CurrentVersion}.");
         }
 
-        var state = new ScummState(globalObjects);
+        var state = new ScummState(globalObjects, gameVersion);
         var serializer = SaveSerializer.ForLoading(data[start..], info.Version);
         state.Sync(serializer);
         return (info, state);
