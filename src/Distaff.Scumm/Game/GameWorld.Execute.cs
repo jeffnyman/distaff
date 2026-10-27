@@ -1,0 +1,927 @@
+using Distaff.Scumm.Graphics;
+using Distaff.Scumm.Rooms;
+using Distaff.Scumm.Scripts;
+using Distaff.Scumm.View;
+
+namespace Distaff.Scumm.Game;
+
+/// <summary>The instructions the script engine hands over: the world's side of the <c>o5_</c>, <c>o4_</c> and <c>o3_</c> handlers.</summary>
+public sealed partial class GameWorld
+{
+    public int Execute(ScriptEngine engine, Instruction instruction, IReadOnlyList<int> arguments, IReadOnlyList<int[]> subArguments)
+    {
+        int Arg(int i) => arguments[i];
+
+        switch (instruction.Handler)
+        {
+            // objects
+            case "o5_setState":
+                PutState(Arg(0), Arg(1));
+                return 0;
+            case "o4_ifState":
+                return GetState(Arg(0)) == Arg(1) ? 1 : 0;
+            case "o4_ifNotState":
+                return GetState(Arg(0)) != Arg(1) ? 1 : 0;
+            case "o5_getObjectOwner":
+                return GetOwner(Arg(0));
+            case "o5_setOwnerOf":
+                SetOwnerOf(Arg(0), Arg(1));
+                return 0;
+            case "o5_setClass":
+                foreach (int cls in subArguments[0])
+                {
+                    if (cls == 0)
+                    {
+                        // class 0 clears every class; an actor also loses its box and clip flags
+                        _classes[CheckObject(Arg(0))] = 0;
+                        if (Arg(0) is >= 1 and < ActorCount)
+                        {
+                            Actors[Arg(0)].IgnoreBoxes = false;
+                            Actors[Arg(0)].ForceClip = 0;
+                        }
+                    }
+                    else
+                    {
+                        PutClass(Arg(0), cls, (cls & 0x80) != 0);
+                    }
+                }
+
+                return 0;
+            case "o5_ifClassOfIs":
+                foreach (int cls in subArguments[0])
+                {
+                    if (GetClass(Arg(0), cls) != ((cls & 0x80) != 0))
+                    {
+                        return 0;
+                    }
+                }
+
+                return 1;
+            case "o5_drawObject":
+                DrawObject(Arg(0), Arg(1), Arg(2));
+                return 0;
+            case "o5_setObjectName":
+                _newNames[Arg(0)] = instruction.Operands[1].Text!;
+                return 0;
+            case "o5_findObject":
+                return FindObject(Arg(0), Arg(1));
+            case "o5_getVerbEntrypoint":
+                return VerbEntrypoint(Arg(0), Arg(1));
+            case "o4_pickupObject":
+                PickupObject(Arg(0));
+                return 0;
+            case "o5_findInventory":
+                return FindInventory(Arg(0), Arg(1));
+            case "o5_getInventoryCount":
+                return _inventory.Count(o => o != 0 && GetOwner(o) == Arg(0));
+
+            // rooms and the camera
+            case "o5_loadRoom":
+                if (Arg(0) != CurrentRoomNumber)
+                {
+                    StartScene(Arg(0));
+                }
+
+                return 0;
+            case "o5_loadRoomWithEgo":
+                LoadRoomWithEgo(Arg(0), Arg(1), Arg(2), Arg(3));
+                return 0;
+            case "o5_pseudoRoom":
+                for (int i = 1; i < arguments.Count; i++)
+                {
+                    if (Arg(i) >= 0x80)
+                    {
+                        _resourceMapper[Arg(i) & 0x7F] = (byte)Arg(0);
+                    }
+                }
+
+                return 0;
+            case "o5_setCameraAt":
+                Camera.SetAtEx(Arg(0), Engine.Variables[Vars.CameraMinX], Engine.Variables[Vars.CameraMaxX]);
+                return 0;
+            case "o5_panCameraTo":
+                Camera.PanTo(Arg(0));
+                return 0;
+            case "o5_actorFollowCamera":
+                FollowActor(Actors[CheckActor(Arg(0))]);
+                Camera.MovingToActor = false;
+                return 0;
+            case "o5_roomOps":
+                RoomOps(instruction.SubOps[0], subArguments[0]);
+                return 0;
+            case "o5_lights":
+                if (Arg(2) == 0)
+                {
+                    Engine.Variables[Vars.CurrentLights] = Arg(0);
+                }
+
+                return 0;
+            case "o4_oldRoomEffect":
+                return 0;
+
+            // actors
+            case "o5_actorOps":
+                ActorOps(Actors[CheckActor(Arg(0))], instruction.SubOps, subArguments);
+                return 0;
+            case "o5_putActor":
+                PutActor(Actors[CheckActor(Arg(0))], Arg(1), Arg(2));
+                return 0;
+            case "o5_putActorInRoom":
+                {
+                    var actor = Actors[CheckActor(Arg(0))];
+                    if (actor.Visible && CurrentRoomNumber != Arg(1) && TalkingActor == actor.Number)
+                    {
+                        StopTalk();
+                    }
+
+                    actor.Room = Arg(1);
+                    if (Arg(1) == 0)
+                    {
+                        PutActor(actor, 0, 0, 0);
+                    }
+                }
+
+                return 0;
+            case "o5_putActorAtObject":
+                {
+                    var actor = Actors[CheckActor(Arg(0))];
+                    var (x, y) = WhereIsObject(Arg(1)) != ObjectPlace.NotFound && ObjectPosition(Arg(1)) is { } at ? (at.X, at.Y) : (240, 120);
+                    PutActor(actor, x, y);
+                }
+
+                return 0;
+            case "o5_animateActor":
+                if (Arg(0) is > 0 and < ActorCount)
+                {
+                    AnimateActor(Actors[Arg(0)], Arg(1));
+                }
+
+                return 0;
+            case "o5_faceActor":
+                return 0;
+            case "o5_walkActorTo":
+                WalkActorTo(Actors[CheckActor(Arg(0))], Arg(1), Arg(2));
+                return 0;
+            case "o5_walkActorToObject":
+                if (WhereIsObject(Arg(1)) != ObjectPlace.NotFound && ObjectPosition(Arg(1)) is { } walkTo)
+                {
+                    WalkActorTo(Actors[CheckActor(Arg(0))], walkTo.X, walkTo.Y);
+                }
+
+                return 0;
+            case "o5_walkActorToActor":
+                return 0;
+            case "o5_getActorRoom":
+                return Arg(0) is > 0 and < ActorCount ? Actors[Arg(0)].Room : 0;
+            case "o5_getActorCostume":
+                return Actors[CheckActor(Arg(0))].Costume;
+            case "o5_getActorElevation":
+                return Actors[CheckActor(Arg(0))].Elevation;
+            case "o5_getActorFacing":
+                return Actors[CheckActor(Arg(0))].Facing;
+            case "o5_getActorMoving":
+                return Actors[CheckActor(Arg(0))].Moving ? 1 : 0;
+            case "o5_getActorWalkBox":
+                return Actors[CheckActor(Arg(0))].WalkBox;
+            case "o5_getActorWidth":
+                return Actors[CheckActor(Arg(0))].Width;
+            case "o5_getActorX":
+                return ObjectOrActorPosition(Arg(0))?.X ?? -1;
+            case "o5_getActorY":
+                return ObjectOrActorPosition(Arg(0))?.Y ?? -1;
+            case "o5_isActorInBox":
+                {
+                    var actor = Actors[CheckActor(Arg(0))];
+                    return CurrentRoom is { } room && room.WalkBoxes.Contains(Arg(1), actor.X, actor.Y) ? 1 : 0;
+                }
+
+            case "o3_setBoxFlags":
+                return 0;
+            case "o3_waitForActor":
+                return 0;
+
+            // waiting
+            case "o5_wait":
+                Wait(engine, instruction.SubOps[0], subArguments[0]);
+                return 0;
+            case "o3_waitForSentence":
+                if (engine.Sentences.Count > 0
+                    ? engine.Sentences[^1].FreezeCount == 0 || engine.IsScriptInUse(Engine.Variables[Vars.SentenceScript])
+                    : engine.IsScriptInUse(Engine.Variables[Vars.SentenceScript]))
+                {
+                    engine.Repeat();
+                }
+
+                return 0;
+
+            // text
+            case "o5_print":
+                ActorToPrintFor = Arg(0);
+                DecodeParseString(instruction.SubOps, subArguments);
+                return 0;
+            case "o5_printEgo":
+                ActorToPrintFor = Engine.Variables[Vars.Ego];
+                DecodeParseString(instruction.SubOps, subArguments);
+                return 0;
+            case "o5_stringOps":
+                StringOps(instruction.SubOps[0], subArguments[0]);
+                return 0;
+
+            // verbs and the cursor
+            case "o5_verbOps":
+                VerbOps(Arg(0), instruction.SubOps, subArguments);
+                return 0;
+            case "o5_saveRestoreVerbs":
+                SaveRestoreVerbs(instruction.SubOps[0].Code, subArguments[0]);
+                return 0;
+            case "o5_cursorCommand":
+                CursorCommand(instruction.SubOps[0].Code, subArguments[0]);
+                return 0;
+            case "o5_doSentence":
+                return 0;
+
+            // sound, for the sound system to come
+            case "o5_startSound" or "o5_startMusic":
+                SoundsStarted.Add(Arg(0));
+                Engine.Variables[Vars.LastSound] = Arg(0);
+                return 0;
+            case "o5_stopSound" or "o5_stopMusic":
+                return 0;
+            case "o5_isSoundRunning":
+                return 0;
+
+            // resources are loaded on demand here
+            case "o5_resourceRoutines":
+                return 0;
+
+            case "o5_systemOps":
+                QuitRequested = true;
+                engine.BreakHere();
+                return 0;
+
+            case "o5_debug":
+                return 0;
+
+            default:
+                _unhandled.Add($"script {engine.CurrentScriptNumber} [{instruction.Offset:X4}] {instruction.Text}");
+                return 0;
+        }
+    }
+
+    /// <summary>Mirrors <c>setOwnerOf</c>: an owner of 0 also takes the object out of the inventory.</summary>
+    private void SetOwnerOf(int obj, int owner)
+    {
+        if (owner == 0)
+        {
+            ClearOwnerOf(obj);
+        }
+
+        PutOwner(obj, owner);
+        RunInventoryScript(0);
+    }
+
+    /// <summary>Mirrors <c>clearOwnerOf</c>: the object's scripts stop and it leaves the inventory, which closes up.</summary>
+    private void ClearOwnerOf(int obj)
+    {
+        Engine.StopObjectScript(obj);
+        if (GetOwner(obj) == OwnerRoom)
+        {
+            return;
+        }
+
+        int index = Array.IndexOf(_inventory, obj);
+        if (index < 0)
+        {
+            return;
+        }
+
+        _inventory[index] = 0;
+        _inventoryCode.Remove(obj);
+        for (int i = 0; i < InventorySize - 1; i++)
+        {
+            if (_inventory[i] == 0 && _inventory[i + 1] != 0)
+            {
+                _inventory[i] = _inventory[i + 1];
+                _inventory[i + 1] = 0;
+            }
+        }
+    }
+
+    /// <summary>Mirrors <c>o4_pickupObject</c>.</summary>
+    private void PickupObject(int obj)
+    {
+        if (CurrentRoom?.FindObject(obj) is not { } o || WhereIsObject(obj) == ObjectPlace.Inventory)
+        {
+            return;
+        }
+
+        int slot = Array.IndexOf(_inventory, 0);
+        if (slot < 0)
+        {
+            throw new InvalidOperationException("The inventory is full.");
+        }
+
+        _inventory[slot] = obj;
+        _inventoryCode[obj] = o.Code.ToArray();
+        PutOwner(obj, Engine.Variables[Vars.Ego]);
+        PutClass(obj, 32, true);
+        PutState(obj, 1);
+        RunInventoryScript(1);
+    }
+
+    /// <summary>Mirrors <c>runInventoryScript</c>.</summary>
+    private void RunInventoryScript(int arg)
+    {
+        if (Engine.Variables[Vars.InventoryScript] != 0)
+        {
+            Engine.RunScript(Engine.Variables[Vars.InventoryScript], args: [arg]);
+        }
+    }
+
+    /// <summary>Mirrors <c>findInventory</c>: the owner's <paramref name="index"/>th object, from 1.</summary>
+    private int FindInventory(int owner, int index)
+    {
+        int count = 1;
+        foreach (int obj in _inventory)
+        {
+            if (obj != 0 && GetOwner(obj) == owner && count++ == index)
+            {
+                return obj;
+            }
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// Mirrors <c>o5_drawObject</c> for small-header games: the object moves when a position other
+    /// than 255 is given, every object of the same place and size is switched off, and it is on.
+    /// </summary>
+    private void DrawObject(int obj, int x, int y)
+    {
+        if (CurrentRoom?.FindObject(obj) is not { } o)
+        {
+            return;
+        }
+
+        if (x != 0xFF)
+        {
+            _moved[obj] = (x * 8, y * 8);
+        }
+
+        var (px, py) = PositionOf(o);
+        foreach (var other in CurrentRoom.Objects)
+        {
+            var (ox, oy) = PositionOf(other);
+            if (ox == px && oy == py && other.Width == o.Width && other.Height == o.Height)
+            {
+                PutState(other.Number, 0);
+            }
+        }
+
+        PutState(obj, 1);
+    }
+
+    /// <summary>
+    /// The topmost touchable object at a point of the room whose parents show it. Mirrors
+    /// <c>findObject</c> for version 3.
+    /// </summary>
+    private int FindObject(int x, int y)
+    {
+        if (CurrentRoom is not { } room)
+        {
+            return 0;
+        }
+
+        foreach (var obj in room.Objects)
+        {
+            if (obj.Number < 1 || GetClass(obj.Number, 32) || !RoomRenderer.ParentsAllow(room.Objects, obj, GetState))
+            {
+                continue;
+            }
+
+            var (ox, oy) = PositionOf(obj);
+            if (ox <= x && obj.Width + ox > x && oy <= y && obj.Height + oy > y)
+            {
+                return obj.Number;
+            }
+        }
+
+        return 0;
+    }
+
+    /// <summary>Mirrors <c>getVerbEntrypoint</c>: the offset of an object's script for a verb, or 0.</summary>
+    private int VerbEntrypoint(int obj, int verb) => WhereIsObject(obj) switch
+    {
+        ObjectPlace.Room => CurrentRoom!.FindObject(obj)!.FindVerb((byte)verb) ?? 0,
+        ObjectPlace.Inventory => RoomObject.Parse(_inventoryCode[obj], 0, 0).FindVerb((byte)verb) ?? 0,
+        _ => 0,
+    };
+
+    /// <summary>Where an actor stands to use an object of the room, and which way it faces. Mirrors <c>getObjectXYPos</c> for version 3.</summary>
+    public (int X, int Y)? ObjectPosition(int obj)
+    {
+        if (CurrentRoom?.FindObject(obj) is not { } o)
+        {
+            return null;
+        }
+
+        var (x, y) = PositionOf(o);
+        return (o.WalkX + x - o.X, o.WalkY + y - o.Y);
+    }
+
+    /// <summary>Where an actor or object is: an actor's position, a carried object's owner's, or an object's walk-to point. Mirrors <c>getObjectOrActorXY</c>.</summary>
+    public (int X, int Y)? ObjectOrActorPosition(int obj)
+    {
+        if (obj is > 0 and < ActorCount)
+        {
+            return (Actors[obj].X, Actors[obj].Y);
+        }
+
+        return WhereIsObject(obj) switch
+        {
+            ObjectPlace.Inventory when GetOwner(obj) is > 0 and < ActorCount => (Actors[GetOwner(obj)].X, Actors[GetOwner(obj)].Y),
+            ObjectPlace.Room => ObjectPosition(obj),
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// Mirrors <c>o5_loadRoomWithEgo</c> for version 3: the ego goes to the room, stands at the
+    /// object unless the entry script placed it, the camera follows it, and it walks on when a
+    /// place is given.
+    /// </summary>
+    private void LoadRoomWithEgo(int obj, int room, int x, int y)
+    {
+        var ego = Actors[CheckActor(Engine.Variables[Vars.Ego])];
+        PutActor(ego, ego.X, ego.Y, room);
+        _egoPositioned = false;
+        Engine.Variables[Vars.WalkToObject] = obj;
+        StartScene(ego.Room);
+        Engine.Variables[Vars.WalkToObject] = 0;
+        if (!_egoPositioned && ObjectPosition(obj) is { } at)
+        {
+            PutActor(ego, at.X, at.Y, CurrentRoomNumber);
+        }
+
+        ego.Moving = false;
+        Camera.X = Camera.DestX = ego.X;
+        FollowActor(ego);
+        if (x != -1)
+        {
+            WalkActorTo(ego, x, y);
+        }
+    }
+
+    /// <summary>Mirrors <c>setCameraFollows</c>.</summary>
+    private void FollowActor(Actor actor)
+    {
+        Camera.Mode = CameraMode.FollowActor;
+        Camera.Follows = actor.Number;
+        if (!actor.IsInRoom(CurrentRoomNumber))
+        {
+            StartScene(actor.Room);
+            Camera.Mode = CameraMode.FollowActor;
+            Camera.X = actor.X;
+            Camera.SetAt(Camera.X, Engine.Variables[Vars.CameraMinX], Engine.Variables[Vars.CameraMaxX]);
+        }
+
+        if (Camera.OutsideTriggers(actor.X))
+        {
+            Camera.SetAt(actor.X, Engine.Variables[Vars.CameraMinX], Engine.Variables[Vars.CameraMaxX]);
+        }
+
+        RunInventoryScript(0);
+    }
+
+    /// <summary>Mirrors <c>Actor::putActor</c>: it shows when it lands in the current room and hides when it leaves.</summary>
+    private void PutActor(Actor actor, int x, int y, int? room = null)
+    {
+        int newRoom = room ?? actor.Room;
+        if (actor.Visible && CurrentRoomNumber != newRoom && TalkingActor == actor.Number)
+        {
+            StopTalk();
+        }
+
+        actor.X = x;
+        actor.Y = y;
+        actor.Room = newRoom;
+        if (Engine.Variables[Vars.Ego] == actor.Number)
+        {
+            _egoPositioned = true;
+        }
+
+        actor.Visible = actor.IsInRoom(CurrentRoomNumber);
+        actor.Moving = false;
+    }
+
+    /// <summary>For now an actor arrives where it walks at once; walking comes with the walkboxes.</summary>
+    private static void WalkActorTo(Actor actor, int x, int y)
+    {
+        actor.X = x;
+        actor.Y = y;
+        actor.Moving = false;
+    }
+
+    /// <summary>Mirrors <c>Actor::animateActor</c> for version 3: the chore in the top bits, the direction in the bottom two.</summary>
+    private static void AnimateActor(Actor actor, int anim)
+    {
+        int chore = 0x3F - (anim >> 2) + 2;
+        int dir = (anim & 3) switch { 0 => 270, 1 => 90, 2 => 180, _ => 0 };
+        switch (chore)
+        {
+            case 2:
+                actor.Frame = actor.StandFrame;
+                actor.Moving = false;
+                break;
+            case 3 or 4:
+                actor.Facing = dir;
+                break;
+            default:
+                actor.Frame = anim;
+                break;
+        }
+    }
+
+    /// <summary>Mirrors <c>o5_actorOps</c>: the sub-operations, numbered after <c>convertTable</c>.</summary>
+    private void ActorOps(Actor actor, IReadOnlyList<SubOperation> subOps, IReadOnlyList<int[]> args)
+    {
+        for (int i = 0; i < subOps.Count; i++)
+        {
+            int[] a = args[i];
+            switch (subOps[i].Code)
+            {
+                case 1:
+                    actor.Costume = a[0];
+                    break;
+                case 2:
+                    actor.StepX = a[0];
+                    actor.StepY = a[1];
+                    break;
+                case 3:
+                    actor.Sound = a[0];
+                    break;
+                case 4:
+                    actor.WalkFrame = a[0];
+                    break;
+                case 5:
+                    actor.TalkStartFrame = a[0];
+                    actor.TalkStopFrame = a[1];
+                    break;
+                case 6:
+                    actor.StandFrame = a[0];
+                    break;
+                case 8:
+                    actor.Init(0);
+                    _classes[actor.Number] = 0;
+                    break;
+                case 9:
+                    actor.Elevation = a[0];
+                    break;
+                case 10:
+                    actor.InitFrame = 1;
+                    actor.WalkFrame = 2;
+                    actor.StandFrame = 3;
+                    actor.TalkStartFrame = 4;
+                    actor.TalkStopFrame = 5;
+                    break;
+                case 11:
+                    actor.Palette[a[0] & 0xFF] = (byte)a[1];
+                    break;
+                case 12:
+                    actor.TalkColor = a[0];
+                    break;
+                case 13:
+                    actor.Name = subOps[i].Operands[0].Text;
+                    break;
+                case 14:
+                    actor.InitFrame = a[0];
+                    break;
+                case 16:
+                    actor.Width = a[0];
+                    break;
+                case 17:
+                    actor.ScaleX = a[0];
+                    actor.ScaleY = a[1];
+                    break;
+                case 18:
+                    actor.ForceClip = 0;
+                    break;
+                case 19:
+                    actor.ForceClip = a[0];
+                    break;
+                case 20:
+                    actor.IgnoreBoxes = true;
+                    break;
+            }
+        }
+    }
+
+    /// <summary>Mirrors <c>o5_roomOps</c> for version 3, whose two operands come first.</summary>
+    private void RoomOps(SubOperation sub, int[] a)
+    {
+        switch (sub.Code)
+        {
+            case 1:
+                {
+                    int width = CurrentRoom?.Width ?? Camera.ScreenWidth;
+                    int Clamp(int x) => Math.Min(Math.Max(x, Camera.ScreenWidth / 2), width - Camera.ScreenWidth / 2);
+                    Engine.Variables[Vars.CameraMinX] = Clamp(a[0]);
+                    Engine.Variables[Vars.CameraMaxX] = Clamp(a[1]);
+                }
+
+                break;
+            case 2:
+                RoomPalette[a[1] & 0xFF] = (byte)a[0];
+                break;
+            case 3:
+                ViewTop = a[0];
+                ViewHeight = a[1] - a[0];
+                break;
+            case 4:
+                ShadowPalette[a[1] & 0xFF] = (byte)a[0];
+                break;
+            default:
+                _unhandled.Add($"roomOps {sub}");
+                break;
+        }
+    }
+
+    /// <summary>Mirrors <c>o5_wait</c>: the instruction repeats while the actor moves, a message shows, the camera pans or a sentence runs.</summary>
+    private void Wait(ScriptEngine engine, SubOperation sub, int[] a)
+    {
+        bool waiting = sub.Code switch
+        {
+            1 => a[0] is > 0 and < ActorCount && Actors[a[0]].Moving,
+            2 => Engine.Variables[Vars.HaveMessage] != 0,
+            3 => Camera.X / 8 != Camera.DestX / 8,
+            4 => engine.Sentences.Count > 0
+                ? !(engine.Sentences[^1].FreezeCount != 0 && !engine.IsScriptInUse(Engine.Variables[Vars.SentenceScript]))
+                : engine.IsScriptInUse(Engine.Variables[Vars.SentenceScript]),
+            _ => false,
+        };
+
+        if (waiting)
+        {
+            engine.Repeat();
+        }
+    }
+
+    /// <summary>
+    /// Mirrors <c>decodeParseString</c>: the text slot by who prints, its defaults, the
+    /// sub-operations, and the text, which prints without saving the defaults back.
+    /// </summary>
+    private void DecodeParseString(IReadOnlyList<SubOperation> subOps, IReadOnlyList<int[]> args)
+    {
+        int slot = ActorToPrintFor switch { 252 => 3, 253 => 2, 254 => 1, _ => 0 };
+        var text = TextSlots[slot];
+        text.LoadDefault();
+        for (int i = 0; i < subOps.Count; i++)
+        {
+            int[] a = args[i];
+            switch (subOps[i].Code)
+            {
+                case 0:
+                    text.X = a[0];
+                    text.Y = a[1];
+                    text.Overhead = false;
+                    break;
+                case 1:
+                    text.Color = a[0];
+                    break;
+                case 2:
+                    text.Right = a[0];
+                    break;
+                case 4:
+                    text.Center = true;
+                    text.Overhead = false;
+                    break;
+                case 6:
+                    text.Height = a[0];
+                    break;
+                case 7:
+                    text.Overhead = true;
+                    break;
+                case 15:
+                    PrintString(slot, subOps[i].Operands[0].Text!);
+                    return;
+            }
+        }
+
+        text.SaveDefault();
+    }
+
+    /// <summary>Mirrors <c>o5_stringOps</c>.</summary>
+    private void StringOps(SubOperation sub, int[] a)
+    {
+        switch (sub.Code)
+        {
+            case 1:
+                _strings[CheckString(a[0])] = sub.Operands[1].Text;
+                break;
+            case 2:
+                _strings[CheckString(a[0])] = _strings[CheckString(a[1])]?.ToArray();
+                break;
+            case 3:
+                if (_strings[CheckString(a[0])] is { } target && a[1] >= 0 && a[1] < target.Length)
+                {
+                    target[a[1]] = (byte)a[2];
+                }
+
+                break;
+            case 5:
+                _strings[CheckString(a[0])] = a[1] != 0 ? new byte[a[1]] : null;
+                break;
+            default:
+                _unhandled.Add($"stringOps {sub}");
+                break;
+        }
+    }
+
+    private static int CheckString(int number)
+        => number is >= 0 and < StringCount ? number : throw new InvalidOperationException($"String {number} is out of range (0 to {StringCount - 1}).");
+
+    /// <summary>The slot holding a verb with this save id, or 0 (<c>getVerbSlot</c>).</summary>
+    private int VerbSlotOf(int verb, int saveId)
+    {
+        for (int i = 1; i < VerbCount; i++)
+        {
+            if (Verbs[i].VerbId == verb && Verbs[i].SaveId == saveId)
+            {
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
+    /// <summary>Mirrors <c>killVerb</c>.</summary>
+    private void KillVerb(int slot)
+    {
+        if (slot != 0)
+        {
+            Verbs[slot].VerbId = 0;
+            Verbs[slot].Mode = 0;
+            Verbs[slot].Name = null;
+            Verbs[slot].SaveId = 0;
+        }
+    }
+
+    /// <summary>Mirrors <c>o5_verbOps</c>; slot 0 takes what is set for a verb no slot holds.</summary>
+    private void VerbOps(int verb, IReadOnlyList<SubOperation> subOps, IReadOnlyList<int[]> args)
+    {
+        int slot = VerbSlotOf(verb, 0);
+        var vs = Verbs[slot];
+        vs.VerbId = verb;
+        for (int i = 0; i < subOps.Count; i++)
+        {
+            int[] a = args[i];
+            switch (subOps[i].Code)
+            {
+                case 1:
+                    if (slot != 0)
+                    {
+                        vs.ImageObject = a[0];
+                        vs.ImageRoom = Engine.Variables[Vars.RoomResource];
+                        vs.Type = 1;
+                    }
+
+                    break;
+                case 2:
+                    vs.Name = slot != 0 ? subOps[i].Operands[0].Text : null;
+                    vs.Type = 0;
+                    vs.ImageObject = 0;
+                    break;
+                case 3:
+                    vs.Color = a[0];
+                    break;
+                case 4:
+                    vs.HiColor = a[0];
+                    break;
+                case 5:
+                    vs.X = a[0];
+                    vs.Y = a[1];
+                    break;
+                case 6:
+                    vs.Mode = 1;
+                    break;
+                case 7:
+                    vs.Mode = 0;
+                    break;
+                case 8:
+                    KillVerb(slot);
+                    break;
+                case 9:
+                    slot = VerbSlotOf(verb, 0);
+                    if (slot == 0)
+                    {
+                        slot = Array.FindIndex(Verbs, 1, v => v.VerbId == 0);
+                        if (slot < 0)
+                        {
+                            throw new InvalidOperationException("Too many verbs.");
+                        }
+                    }
+
+                    vs = Verbs[slot];
+                    vs.Reset();
+                    vs.VerbId = verb;
+                    vs.HiColor = 14;
+                    vs.DimColor = 8;
+                    break;
+                case 16:
+                    vs.DimColor = a[0];
+                    break;
+                case 17:
+                    vs.Mode = 2;
+                    break;
+                case 18:
+                    vs.Key = a[0];
+                    break;
+                case 19:
+                    vs.Center = true;
+                    break;
+                case 20:
+                    vs.Name = slot != 0 && a[0] is > 0 and < StringCount ? _strings[a[0]]?.ToArray() : null;
+                    vs.Type = 0;
+                    vs.ImageObject = 0;
+                    break;
+                case 22:
+                    if (slot != 0 && vs.ImageObject != a[0])
+                    {
+                        vs.ImageObject = a[0];
+                        vs.ImageRoom = a[1];
+                        vs.Type = 1;
+                    }
+
+                    break;
+                case 23:
+                    vs.BackColor = a[0];
+                    break;
+            }
+        }
+    }
+
+    /// <summary>Mirrors <c>o5_saveRestoreVerbs</c>.</summary>
+    private void SaveRestoreVerbs(int op, int[] a)
+    {
+        for (int verb = a[0]; verb <= a[1]; verb++)
+        {
+            switch (op)
+            {
+                case 1:
+                    {
+                        int slot = VerbSlotOf(verb, 0);
+                        if (slot != 0 && Verbs[slot].SaveId == 0)
+                        {
+                            Verbs[slot].SaveId = a[2];
+                        }
+                    }
+
+                    break;
+                case 2:
+                    if (VerbSlotOf(verb, a[2]) != 0)
+                    {
+                        KillVerb(VerbSlotOf(verb, 0));
+                        Verbs[VerbSlotOf(verb, a[2])].SaveId = 0;
+                    }
+
+                    break;
+                case 3:
+                    KillVerb(VerbSlotOf(verb, a[2]));
+                    break;
+            }
+        }
+    }
+
+    /// <summary>Mirrors <c>o5_cursorCommand</c> for version 3: the cursor and the player's control, counted on and off.</summary>
+    private void CursorCommand(int op, int[] a)
+    {
+        switch (op)
+        {
+            case 1:
+                CursorState = 1;
+                break;
+            case 2:
+                CursorState = 0;
+                break;
+            case 3:
+                UserPut = 1;
+                break;
+            case 4:
+                UserPut = 0;
+                break;
+            case 5:
+                CursorState++;
+                break;
+            case 6:
+                CursorState--;
+                break;
+            case 7:
+                UserPut++;
+                break;
+            case 8:
+                UserPut--;
+                break;
+        }
+    }
+}

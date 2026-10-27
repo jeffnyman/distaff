@@ -31,9 +31,10 @@ public static class EgaBitmap
     /// the first at (<paramref name="x"/>, <paramref name="y"/>), and their mask into the target's
     /// mask; strips and rows that fall outside the target are skipped. Strips are drawn left to
     /// right into the target itself, because a copying run in a strip's first column takes the
-    /// pixels of the column to its left: the previous strip's, or the target's own.
+    /// pixels of the column to its left: the previous strip's, or the target's own. Colours are
+    /// drawn through <paramref name="colorMap"/> when there is one (<c>_roomPalette</c>).
     /// </summary>
-    public static void Draw(ReadOnlySpan<byte> picture, int firstStrip, int strips, int height, MaskedImage target, int x, int y)
+    public static void Draw(ReadOnlySpan<byte> picture, int firstStrip, int strips, int height, MaskedImage target, int x, int y, byte[]? colorMap = null)
     {
         if (picture.Length < 2)
         {
@@ -50,7 +51,7 @@ public static class EgaBitmap
                 continue;
             }
 
-            DrawStrip(picture, StripOffset(picture, maskOffset, strip), height, target.Pixels, left, y);
+            DrawStrip(picture, StripOffset(picture, maskOffset, strip), height, target.Pixels, left, y, colorMap);
             DrawMaskStrip(picture, maskOffset, strip, height, target.Mask, left, y);
         }
     }
@@ -79,8 +80,10 @@ public static class EgaBitmap
         return offset;
     }
 
-    private static void DrawStrip(ReadOnlySpan<byte> picture, int offset, int height, Surface8 target, int left, int top)
+    private static void DrawStrip(ReadOnlySpan<byte> picture, int offset, int height, Surface8 target, int left, int top, byte[]? colorMap)
     {
+        int Map(int color) => colorMap is null ? color : colorMap[color];
+
         var pixels = target.Pixels;
         int pitch = target.Width;
         int at = offset;
@@ -120,7 +123,7 @@ public static class EgaBitmap
 
                     for (int z = 0; z < run && x < 8; z++)
                     {
-                        Put((z & 1) != 0 ? colors & 0x0F : colors >> 4);
+                        Put(Map((z & 1) != 0 ? colors & 0x0F : colors >> 4));
                     }
                 }
                 else
@@ -148,7 +151,7 @@ public static class EgaBitmap
 
                 for (int z = 0; z < run && x < 8; z++)
                 {
-                    Put(code & 0x0F);
+                    Put(Map(code & 0x0F));
                 }
             }
         }

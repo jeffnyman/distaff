@@ -107,15 +107,35 @@ In `Distaff.Scumm.Scripts`:
   25,127 instructions); and decoded straight through, every one of them (114 global, 873 in
   rooms) ends exactly where its code does.
 
-### Phase 4: the game loop
+### Phase 4: the game loop (done)
 
-- `script.cpp`, `scumm.cpp`, `vars.cpp`: script slots, variables and bit variables, the boot
-  script, room changes, the camera (`camera.cpp`), Loom's start-up variable values (`vars.cpp`,
-  number of sounds, heap space).
-- `o5_roomOps` and `palette.cpp`: the room colours, the shadow palette and colour cycling.
+- `script.cpp`, `script_v5.cpp`, `script_v4.cpp`: the script engine (`ScriptEngine`): 80 slots with
+  their 25 local variables and arguments, nesting, the 800 variables with version 3's bit
+  variables inside them (`readVar`, `writeVar`), freezing by count, the cutscene stack and
+  overrides, the sentence queue and script, and the handlers that touch only script state.
+- `scumm.cpp`, `room.cpp`, `vars.cpp`, `camera.cpp`: the world (`GameWorld`): the step
+  (`scummLoop`, timers, delays at the DOS timer's 1193182/5041 Hz), room changes (`startScene`,
+  entry and exit scripts, pseudo-rooms), Loom's start-up variable values, the screen layout
+  (`initScreens`), the camera (`Camera`), objects' states, owners, classes, the inventory and
+  names, verbs as the scripts set them up, the string resources, the cursor and user-put counts.
+- `string.cpp`, `actor.cpp`: messages without the drawing (`printString`, `actorTalk`,
+  `stopTalk`, `displayDialog`, `handleNextCharsetCode`, `convertMessageToString`): how long each
+  stays up, which the scripts wait on.
+- `o5_roomOps` and `palette.cpp`: the room colours (drawn through by `EgaBitmap`) and the shadow
+  palette. No version 3 room has colour cycling of its own.
 - The copy protection: as ScummVM does by default, room 69 starts script 205 in place of 201
-  (`script_v5.cpp`, `o5_startScript`); `--copy-protection` keeps the Book of Patterns check.
-- Check: a headless run from boot reaches the title and the first room.
+  (`o5_startScript`); `--copy-protection` keeps the Book of Patterns check.
+- Brought forward from phase 7, to get past the proficiency screen: the mouse variables and
+  `checkExecVerbs` for clicks in the view and keys (`GameWorld.Input`).
+- Player: `--run [steps] [--click step:x,y]... [--copy-protection] [--screenshot file.png]` runs
+  the game headless and reports the rooms, messages and sounds.
+- Checked against the EGA release: from boot, the proficiency screen (room 69); with PRACTICE
+  clicked, the Lucasfilm Games title (room 1), the opening (rooms 2, 1, 2, 53) and Bobbin on the
+  cliff in room 2 ("Rise, son of Cygna." ... "Better get down to the village."); with the copy
+  protection kept, the Book of Patterns question.
+- Not yet: actors are state only (they arrive where they walk at once, and `faceActor` and
+  `walkActorToActor` do nothing); text, verbs, boxes drawn by `drawBox` and the cursor are not
+  drawn; sounds are recorded but not played, and none is ever running; room fades and shaking.
 
 ### Phase 5: actors and costumes
 

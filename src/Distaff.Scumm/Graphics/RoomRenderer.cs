@@ -8,11 +8,11 @@ public static class RoomRenderer
     /// <summary>The bits of an object's state that make it draw its image. Mirrors the mask in <c>drawRoomObjects</c> for version 3.</summary>
     public const int ImageStates = 0x0F;
 
-    /// <summary>The room's background picture and mask, without objects.</summary>
-    public static MaskedImage DrawBackground(Room room)
+    /// <summary>The room's background picture and mask, without objects, its colours drawn through <paramref name="colorMap"/> when there is one.</summary>
+    public static MaskedImage DrawBackground(Room room, byte[]? colorMap = null)
     {
         var image = new MaskedImage(new Surface8(room.Width, room.Height), new Surface8(room.Width, room.Height));
-        EgaBitmap.Draw(room.Data.Span[room.ImageOffset..], 0, room.Width / 8, room.Height, image, 0, 0);
+        EgaBitmap.Draw(room.Data.Span[room.ImageOffset..], 0, room.Width / 8, room.Height, image, 0, 0, colorMap);
         return image;
     }
 
@@ -83,12 +83,16 @@ public static class RoomRenderer
         return image;
     }
 
-    /// <summary>Draws an object's image and mask into a picture of its room, where the object stands.</summary>
-    public static void DrawObject(Room room, RoomObject obj, MaskedImage target)
+    /// <summary>
+    /// Draws an object's image and mask into a picture of its room, where the object stands or
+    /// where a script moved it to.
+    /// </summary>
+    public static void DrawObject(Room room, RoomObject obj, MaskedImage target, byte[]? colorMap = null, (int X, int Y)? at = null)
     {
         if (HasImage(room, obj))
         {
-            EgaBitmap.Draw(room.Data.Span[obj.ImageOffset..], 0, obj.Width / 8, obj.Height, target, obj.X, obj.Y);
+            var (x, y) = at ?? (obj.X, obj.Y);
+            EgaBitmap.Draw(room.Data.Span[obj.ImageOffset..], 0, obj.Width / 8, obj.Height, target, x, y, colorMap);
         }
     }
 

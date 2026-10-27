@@ -1,0 +1,55 @@
+using Distaff.Scumm.Game;
+using Distaff.Scumm.Graphics;
+using Distaff.Scumm.Hosting;
+using Distaff.Scumm.Resources;
+using Distaff.Scumm.Storage;
+
+namespace Distaff.Scumm;
+
+/// <summary>
+/// Loom for a host: a step of the world each tick and the screen presented. Mirrors ScummVM's
+/// <c>ScummEngine::go</c> loop, which waits a step's ticks of the game's clock between steps.
+/// </summary>
+public sealed class ScummEngine : Engine
+{
+    private GameWorld? _world;
+
+    public ScummEngine(IHost host, IGameContainer game, DetectedGame detected)
+        : base(host, game, detected)
+    {
+    }
+
+    /// <summary>Whether the game's copy protection is kept. Off by default, as in ScummVM. Set before <see cref="Initialize"/>.</summary>
+    public bool CopyProtection { get; set; }
+
+    /// <summary>The world being played, from <see cref="Initialize"/> on.</summary>
+    public GameWorld World => _world ?? throw new InvalidOperationException("The engine is not initialized.");
+
+    public override void Initialize()
+    {
+        _world = new GameWorld(ResourceLoader.Open(Game), Host.RandomSeed ?? Environment.TickCount)
+        {
+            CopyProtection = CopyProtection,
+        };
+        Host.Graphics.SetMode(GameWorld.ScreenWidth, GameWorld.ScreenHeight);
+        Host.Graphics.SetTitle($"Distaff - {Detected.Title}");
+        Host.Graphics.SetPalette(Palettes.Ega);
+        _world.Boot();
+    }
+
+    public override TickResult Tick(TimeSpan elapsed)
+    {
+        var world = World;
+        while (Host.Input.TryRead(out var input))
+        {
+            if (input.Type == Input.InputEventType.Quit)
+            {
+                return TickResult.Quit;
+            }
+        }
+
+        world.Step();
+        Host.Graphics.Present(world.Screen());
+        return world.QuitRequested ? TickResult.Quit : TickResult.After(world.StepLength);
+    }
+}

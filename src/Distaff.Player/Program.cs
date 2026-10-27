@@ -1,4 +1,5 @@
 using Distaff.Scumm.Detection;
+using Distaff.Scumm.Game;
 using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Rooms;
@@ -15,6 +16,10 @@ internal static class Program
         int? roomNumber = null;
         int? script = null;
         int? roomScripts = null;
+        int? run = null;
+        string? screenshot = null;
+        bool copyProtection = false;
+        var clicks = new List<(int Step, int X, int Y)>();
         string objects = "initial";
         bool mask = false;
         int zoom = 1;
@@ -35,6 +40,24 @@ internal static class Program
                 case "--room-scripts" when i + 1 < args.Length && int.TryParse(args[i + 1], out int rs):
                     roomScripts = rs;
                     i++;
+                    break;
+                case "--run":
+                    run = i + 1 < args.Length && int.TryParse(args[i + 1], out int steps) ? steps : 600;
+                    if (i + 1 < args.Length && int.TryParse(args[i + 1], out _))
+                    {
+                        i++;
+                    }
+
+                    break;
+                case "--screenshot" when i + 1 < args.Length:
+                    screenshot = args[++i];
+                    break;
+                case "--click" when i + 1 < args.Length && ParseClick(args[i + 1]) is { } click:
+                    clicks.Add(click);
+                    i++;
+                    break;
+                case "--copy-protection":
+                    copyProtection = true;
                     break;
                 case "--objects" when i + 1 < args.Length && args[i + 1] is "none" or "initial" or "all":
                     objects = args[++i];
@@ -84,6 +107,11 @@ internal static class Program
         Console.WriteLine($"language {release.Language ?? "unknown"}, platform {release.Platform ?? "unknown"}, index MD5 {release.Entry.Md5}");
         try
         {
+            if (run is { } runSteps)
+            {
+                return Run(ResourceLoader.Open(game), runSteps, copyProtection, clicks, screenshot, zoom);
+            }
+
             if (script is { } scriptNo)
             {
                 return ListScript(ResourceLoader.Open(game), scriptNo);
@@ -113,7 +141,57 @@ internal static class Program
         Console.Error.WriteLine("usage: distaff <game folder>");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
+        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--click step:x,y]... [--copy-protection] [--screenshot file.png] [--zoom N]");
         return 2;
+    }
+
+    /// <summary>Runs the game headless from boot for some steps, and reports where it got to.</summary>
+    /// <summary>A click given as <c>step:x,y</c>, in screen pixels.</summary>
+    private static (int Step, int X, int Y)? ParseClick(string text)
+    {
+        var parts = text.Split(':', ',');
+        return parts.Length == 3 && int.TryParse(parts[0], out int step) && int.TryParse(parts[1], out int x) && int.TryParse(parts[2], out int y)
+            ? (step, x, y)
+            : null;
+    }
+
+    private static int Run(ResourceLoader loader, int steps, bool copyProtection, List<(int Step, int X, int Y)> clicks, string? screenshot, int zoom)
+    {
+        var world = new GameWorld(loader) { CopyProtection = copyProtection };
+        world.Boot();
+        int room = -1;
+        for (int step = 0; step < steps && !world.QuitRequested; step++)
+        {
+            foreach (var click in clicks.Where(c => c.Step == step))
+            {
+                world.Click(click.X, click.Y);
+            }
+
+            world.Step();
+            if (world.CurrentRoomNumber != room)
+            {
+                room = world.CurrentRoomNumber;
+                Console.WriteLine($"step {world.Steps,5} ({world.Time.TotalSeconds:F1}s): room {room}");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"after {world.Steps} steps ({world.Time.TotalSeconds:F1}s): room {world.CurrentRoomNumber}, camera at {world.Camera.X}");
+        Console.WriteLine($"messages: {string.Join(" | ", world.MessageLog.Append(world.MessageText).Where(m => m.Length > 0))}");
+        Console.WriteLine($"sounds started: {string.Join(' ', world.SoundsStarted)}");
+        Console.WriteLine($"running scripts: {string.Join(' ', world.Engine.Slots.Where(s => !s.IsDead).Select(s => $"{s.Number}({s.Kind}{(s.Status == 1 ? $" wait {s.Delay}" : "")})"))}");
+        foreach (var group in world.Unhandled.GroupBy(u => u[(u.IndexOf(']') + 2)..].Split('(')[0]))
+        {
+            Console.WriteLine($"unhandled {group.Key}: {group.Count()}, first {group.First()}");
+        }
+
+        if (screenshot is not null)
+        {
+            File.WriteAllBytes(screenshot, PngWriter.Encode(world.Screen(), Palettes.Ega, zoom, zoom));
+            Console.WriteLine($"wrote {screenshot}");
+        }
+
+        return 0;
     }
 
     /// <summary>Disassembles a global script, from its start along every path execution can take.</summary>

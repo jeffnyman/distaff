@@ -39,6 +39,52 @@ public sealed class WalkBoxes
 
     public int Count => Boxes.Count;
 
+    /// <summary>The box number that means no box (<c>kOldInvalidBox</c>).</summary>
+    public const int InvalidBox = 255;
+
+    /// <summary>
+    /// Whether a point lies in a box: on the inner side of each of its four edges, taken in turn
+    /// around it. Mirrors <c>checkXYInBoxBounds</c> for version 3, which has no special case for
+    /// boxes that are lines.
+    /// </summary>
+    public bool Contains(int box, int x, int y)
+    {
+        if (box < 0 || box == InvalidBox || box >= Boxes.Count)
+        {
+            return false;
+        }
+
+        var b = Boxes[box];
+        if (x < b.UpperLeftX && x < b.UpperRightX && x < b.LowerRightX && x < b.LowerLeftX)
+        {
+            return false;
+        }
+
+        if (x > b.UpperLeftX && x > b.UpperRightX && x > b.LowerRightX && x > b.LowerLeftX)
+        {
+            return false;
+        }
+
+        if (y < b.UpperLeftY && y < b.UpperRightY && y < b.LowerRightY && y < b.LowerLeftY)
+        {
+            return false;
+        }
+
+        if (y > b.UpperLeftY && y > b.UpperRightY && y > b.LowerRightY && y > b.LowerLeftY)
+        {
+            return false;
+        }
+
+        return CompareSlope(b.UpperLeftX, b.UpperLeftY, b.UpperRightX, b.UpperRightY, x, y)
+            && CompareSlope(b.UpperRightX, b.UpperRightY, b.LowerRightX, b.LowerRightY, x, y)
+            && CompareSlope(b.LowerRightX, b.LowerRightY, b.LowerLeftX, b.LowerLeftY, x, y)
+            && CompareSlope(b.LowerLeftX, b.LowerLeftY, b.UpperLeftX, b.UpperLeftY, x, y);
+    }
+
+    /// <summary>Mirrors <c>compareSlope</c>: whether the point is on the inner side of the edge from 1 to 2.</summary>
+    private static bool CompareSlope(int x1, int y1, int x2, int y2, int x3, int y3)
+        => (y2 - y1) * (x3 - x1) <= (y3 - y1) * (x2 - x1);
+
     /// <summary>Reads the boxes at <paramref name="offset"/> of a room, and the matrix from after them up to <paramref name="end"/>.</summary>
     internal static WalkBoxes Parse(ReadOnlyMemory<byte> room, int offset, int end)
     {
