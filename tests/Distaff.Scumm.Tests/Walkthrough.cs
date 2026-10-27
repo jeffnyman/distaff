@@ -16,10 +16,13 @@ internal sealed class Walkthrough(GameWorld world)
     /// <summary>The longest a command waits before the walkthrough is taken to be stuck.</summary>
     public const int Patience = 6000;
 
-    /// <summary>The object Bobbin points at, for the distaff (variable 103).</summary>
-    public const int Pointed = 103;
-
     public GameWorld World { get; } = world;
+
+    /// <summary>How much higher the game's own variables are numbered: 50 on the VGA CD, whose engine keeps more of its own below them.</summary>
+    public int Shift => World.Version == 4 ? 50 : 0;
+
+    /// <summary>The object Bobbin points at, for the distaff (variable 103 on the EGA).</summary>
+    public int Pointed => 103 + Shift;
 
     /// <summary>Whether the player can act and Bobbin waits: control on, the cursor shown, no cutscene, no message, no sentence running, the ego standing and the camera still.</summary>
     public bool InControl
@@ -148,14 +151,14 @@ internal sealed class Walkthrough(GameWorld world)
 
         // the notes are played back and the draft looked up and sent (scripts 20 to 27), then the object answers
         int[] spinning = [20, 21, 22, 26, 27];
-        Until(() => World.Engine.Variables[98] == 0 && !spinning.Any(World.Engine.IsScriptRunning), Patience, "the draft");
+        Until(() => World.Engine.Variables[98 + Shift] == 0 && !spinning.Any(World.Engine.IsScriptRunning), Patience, "the draft");
         return Wait(10).Ready();
     }
 
     /// <summary>A draft's notes, 1 for c to 8 for the high C, as the game keeps them.</summary>
     public int[] Notes(int draft)
     {
-        int packed = World.Engine.Variables[50 + 2 * draft];
+        int packed = World.Engine.Variables[50 + Shift + 2 * draft];
         return [.. Enumerable.Range(0, 4).Select(k => ((packed >> (3 * k)) & 7) + 1)];
     }
 

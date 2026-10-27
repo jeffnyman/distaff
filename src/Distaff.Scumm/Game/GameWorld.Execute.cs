@@ -857,7 +857,9 @@ public sealed partial class GameWorld
 
                 break;
             case 2:
+                // _fullRedraw: the room is drawn again in its new colours
                 RoomPalette[a[1] & 0xFF] = (byte)a[0];
+                RedrawRoom();
                 break;
             case 3:
                 Screens.Init(a[0], a[1], CurrentRoom?.Width ?? Camera.ScreenWidth);

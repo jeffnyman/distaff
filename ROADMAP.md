@@ -388,9 +388,9 @@ the EGA engine, as the EGA's built on each other.
 - Left for phase 14, with the game loop: actors' version 4 setup (colours 255, the scale from
   their box, walking at their scale, `_zbuf` from the box mask) and `matrixOps`.
 
-### Phase 14: scripts, text and the interface (in progress)
+### Phase 14: scripts, text and the interface (done)
 
-Done so far: the VGA CD boots and plays its opening, silent, to Bobbin on the cliff.
+The VGA CD boots, plays its opening, and plays through the whole island, silent.
 
 - `ScriptEngine` takes a version: version 4's decoder and 6-byte script headers, and its bit
   variables, which are 4096 of their own (`_bitVars`), where version 3's are the bits of the
@@ -435,12 +435,37 @@ Then:
   last plane.
 - Scaling is not needed: no box, scale slot, `actorOps` or `roomOps` of Loom's scales anything.
 
-Still to do:
+Then the interface and a playing check:
 
-- Loom VGA's own interface: its distaff, verbs and cursor (`gfx_gui.cpp`, `verbs.cpp`).
-- `roomOps`' palette operations (`darkenPalette` and the like) as the scripts use them.
-- The CD sounds the scripts start and stop by number (`playCDTrackFromSoundID`), and a playing
-  check of the game beyond the cliff.
+- The interface is the scripts' own, as on the EGA: the distaff, its staff of notes and the
+  marks for the notes Bobbin knows are verbs, drawn by the code already ported. What was
+  version 4's alone is the image of what Bobbin points at (verb 54): `setVerbObject` for
+  `GF_SMALL_HEADER` keeps the object's whole `OI` block and then its `OC` block, and
+  `drawVerbBitmap` reads the width and height from the code block, draws the picture from 8
+  bytes into the image block (`getObjectImage`) with the VGA codecs and no mask, on a row of 8.
+  `gfx_gui.cpp`'s Loom code is ScummVM's own menus, not the game's, and is left out.
+- The cursor is drawn from charset 1 on the VGA CD, whichever charset the text is in
+  (`redefineBuiltinCursorFromChar`): a small arrow, its point at the hotspot.
+- On the VGA CD a camera that moves stops the talk first, as text is drawn over the room
+  (`stopTalk` in `redrawBGAreas` for versions 4 to 6).
+- `roomOps`: the scripts use only the scroll limits, room colour, screen, palette and shake.
+  Room colour (59 uses) and palette (50) were already ported (`_roomPalette` and
+  `_shadowPalette` for `GF_SMALL_HEADER`); a room colour now draws the room again (`_fullRedraw`), on the EGA as well, which changes no
+  pinned screen. No `darkenPalette` or other palette operation is used.
+- CD sounds by number: none. The only `startSound` is script 37's, of variable 213, and nothing
+  starts script 37 or sets variable 213 to anything but 0; the other scripts stop sound 0, which
+  leaves the CD alone (`stopCDSound`). The two 24-byte sound blocks (CD tracks, `SOUN` type 2)
+  are never played.
+- The VGA CD numbers the game's own variables 50 higher than the EGA: the draft table is
+  variables 100 to 131, the notes known 172, the object pointed at 153. `Walkthrough` reads them
+  by version.
+- Checked against the VGA CD release by playing: the opening skipped, Bobbin follows the leaf
+  to the sanctuary, takes the distaff and spins Opening on the egg; dyes the wool, takes the
+  flask, counts the owls, reads the gravestone, sees in the dark tent with Night Vision, turns
+  the straw to gold, opens the sky (f learned), opens the clam, and untwists the waterspout. The
+  leaf's icon, the distaff once taken and the egg opened are pinned, with the cursor's shape.
+  Not compared with ScummVM's output; screen transitions (`dissolveEffect`) are not ported, on
+  the EGA either.
 
 ### Phase 15: CD audio
 

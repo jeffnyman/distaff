@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Scripts;
 using Distaff.Scumm.View;
@@ -45,8 +46,9 @@ public sealed class VerbSlot
 
     /// <summary>
     /// The image copied from the object, kept when the room changes, as the <c>rtVerb</c> resource
-    /// holds it: the width in strips, the object's height byte (the height in its top five bits),
-    /// then the picture up to where its mask starts.
+    /// holds it. For the EGA: the width in strips, the object's height byte (the height in its top
+    /// five bits), then the picture up to where its mask starts. For the VGA CD: the object's whole
+    /// <c>OI</c> block, then its whole <c>OC</c> block.
     /// </summary>
     public byte[]? Image { get; set; }
 
@@ -237,7 +239,8 @@ public sealed partial class GameWorld
     /// Copies an object's image of the room on screen into the verb. Mirrors <c>setVerbObject</c>
     /// for <c>GF_OLD_BUNDLE</c>: its width in strips and height byte from the object's code, then
     /// as much of the image as its first word says, which is where its mask starts; an object the
-    /// room does not hold leaves the verb's image as it was.
+    /// room does not hold leaves the verb's image as it was. For <c>GF_SMALL_HEADER</c>, the VGA
+    /// CD's: the object's image block and its code block, whole.
     /// </summary>
     private void SetVerbObject(int obj, VerbSlot vs)
     {
@@ -247,6 +250,12 @@ public sealed partial class GameWorld
         }
 
         var image = CurrentRoom.Data.Span[o.ImageOffset..];
+        if (_loader.Version == 4)
+        {
+            vs.Image = [.. image[..BinaryPrimitives.ReadInt32LittleEndian(image)], .. o.Code.Span];
+            return;
+        }
+
         int size = Math.Min(image[0] | (image[1] << 8), image.Length);
         vs.Image = [(byte)(o.Width / 8), o.Code.Span[15], .. image[..size]];
     }
@@ -298,7 +307,9 @@ public sealed partial class GameWorld
 
     /// <summary>
     /// Draws a verb's image, strip by strip, into the band it is in, in the room's colours.
-    /// Mirrors <c>drawVerbBitmap</c>: the verb covers the image's strips and rows.
+    /// Mirrors <c>drawVerbBitmap</c>: the verb covers the image's strips and rows. Version 4 reads
+    /// the width and height from the code block after the image block, draws the image from 8
+    /// bytes into its block (<c>getObjectImage</c>), and starts on a row of 8.
     /// </summary>
     private void DrawVerbBitmap(VerbSlot vs)
     {
@@ -307,11 +318,23 @@ public sealed partial class GameWorld
             return;
         }
 
-        int strips = image[0];
-        int height = image[1] / 8 * 8;
         int xstart = band.Number == VirtScreenNumber.Main ? Camera.Left : 0;
+        int x = xstart + vs.CurRect.Left / 8 * 8, y = vs.CurRect.Top - band.Top;
         var target = new MaskedImage(front, front);
-        EgaBitmap.Draw(image.AsSpan(2), 0, strips, height, target, xstart + vs.CurRect.Left / 8 * 8, vs.CurRect.Top - band.Top, RoomPalette, mask: false);
+        int strips, height;
+        if (_loader.Version == 4)
+        {
+            int size = BinaryPrimitives.ReadInt32LittleEndian(image);
+            strips = image[size + 11];
+            height = image[size + 17] / 8 * 8;
+            VgaBitmap.Draw(image.AsSpan(8), 0, strips, height, target, x, y & ~7, zBuffers: 1, RoomPalette);
+        }
+        else
+        {
+            strips = image[0];
+            height = image[1] / 8 * 8;
+            EgaBitmap.Draw(image.AsSpan(2), 0, strips, height, target, x, y, RoomPalette, mask: false);
+        }
 
         vs.CurRect = new Rect(vs.CurRect.Left, vs.CurRect.Top, strips * 8, height);
         vs.OldRect = vs.CurRect;

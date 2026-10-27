@@ -97,32 +97,35 @@ public sealed partial class GameWorld
     /// <summary>
     /// Makes a cursor of a character of the font. Mirrors <c>redefineBuiltinCursorFromChar</c>:
     /// the character is drawn as text is drawn now, shadow included, and every pixel it sets is
-    /// the cursor's.
+    /// the cursor's. The VGA CD draws it in charset 1, whichever the text is in.
     /// </summary>
     private void RedefineCursorFromChar(int index, int chr)
     {
         var rows = _cursorImages[CheckCursor(index)];
         Array.Clear(rows);
-        if (_font is null)
+        var font = _loader.Version == 4 && _charsetId != 1
+            ? _loader.LoadCharset(1) is { } data ? Charset.ParseClassic(data) : null
+            : _font;
+        if (font is null)
         {
             return;
         }
 
         const byte Unset = 123;
-        int width = _font.CharWidth(chr);
-        var surface = new Surface8(Math.Max(1, width), _font.Height);
+        int width = font.CharWidth(chr);
+        var surface = new Surface8(Math.Max(1, width), font.Height);
         surface.Fill(Unset);
-        if (_font.IsClassic)
+        if (font.IsClassic)
         {
             // CharsetRendererClassic::drawChar, through the colour map as it stands
-            if (_font.ClassicGlyph(chr) is { } glyph)
+            if (font.ClassicGlyph(chr) is { } glyph)
             {
-                _font.DrawBitsN(surface, 0, 0, glyph, CharsetColorMap);
+                font.DrawBitsN(surface, 0, 0, glyph, CharsetColorMap);
             }
         }
         else
         {
-            Charset.DrawBits1(surface, 0, 0, _font.Glyph(chr), width, 8, _textColor, _shadow);
+            Charset.DrawBits1(surface, 0, 0, font.Glyph(chr), width, 8, _textColor, _shadow);
         }
         for (int y = 0; y < surface.Height && y < rows.Length; y++)
         {

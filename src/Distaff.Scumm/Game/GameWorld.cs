@@ -255,12 +255,18 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
     /// <summary>
     /// What was drawn over the room goes where the room is drawn again: everything when the camera
-    /// jumps, and the columns that scroll out of view when it moves a strip. Mirrors
+    /// jumps, and the columns that scroll out of view when it moves a strip. On the VGA CD, whose
+    /// text is drawn over the room, a camera that moves stops the talk first. Mirrors
     /// <c>redrawBGAreas</c> for versions before 7.
     /// </summary>
     private void RedrawForCamera()
     {
         int diff = Camera.X - Camera.LastX;
+        if (_loader.Version == 4 && diff != 0 && _hasMask)
+        {
+            StopTalk();
+        }
+
         if (diff is 8 or -8)
         {
             RedrawRoom(0, Camera.Left);

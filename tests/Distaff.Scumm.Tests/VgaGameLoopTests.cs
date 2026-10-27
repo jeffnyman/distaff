@@ -64,6 +64,84 @@ public class VgaGameLoopTests
         Assert.Equal(BobbinOnTheCliff, Hash(world));
     }
 
+    /// <summary>
+    /// Clicking the leaf points Bobbin at it, and the game shows it in the interface (verb 54): its
+    /// image copied from the room as version 4 keeps it, its image block and then its code block,
+    /// 6 strips wide and 40 rows high at the bottom right, with its name under it.
+    /// </summary>
+    [Fact]
+    public void Pointing_at_the_leaf_shows_its_icon()
+    {
+        if (Open() is not { } world)
+        {
+            return;
+        }
+
+        var w = Skip(world);
+        w.Click(Leaf);
+        Assert.Equal(Leaf, world.Engine.Variables[w.Pointed]);
+        var icon = world.Verbs.Single(v => v.VerbId == 54 && v.SaveId == 0);
+        Assert.Equal(1, icon.Type);
+        Assert.Equal(new Graphics.Rect(248, 152, 48, 40), icon.CurRect);
+        Assert.Contains("leaf", world.MessageLog);
+        Assert.Equal(LeafIcon, Hash(world));
+    }
+
+    /// <summary>
+    /// Bobbin follows the leaf to the sanctuary and takes the distaff after the Elders' scene: the
+    /// distaff and its staff of notes c to C show, the three he knows marked; Opening, spun on the
+    /// egg from the game's own table (variables 100 to 131 on the VGA CD), opens it, and Hetchel
+    /// sends Bobbin on his way.
+    /// </summary>
+    [Fact]
+    public void The_distaff_shows_once_taken_and_spins_opening_on_the_egg()
+    {
+        if (Open() is not { } world)
+        {
+            return;
+        }
+
+        var w = Skip(world);
+        w.Use(Leaf);
+        w.Use(CliffToVillage).InRoom(3).Ready();
+        w.Use(VillageToTents).InRoom(5).Ready();
+        w.Use(TentsToPath).InRoom(7).Ready();
+        w.Use(PathToSanctuary).InRoom(8).Ready();
+        w.Use(SanctuaryDoor).InRoom(9).Ready(20000);
+        w.Use(Distaff);
+        Assert.All(Enumerable.Range(1, 8), note => Assert.Contains(world.Verbs, v => v.VerbId == note && v.Mode == 1 && v.SaveId == 0));
+        Assert.Equal(3, world.Engine.Variables[Known]);
+        w.Click(Egg);
+        Assert.Equal(DistaffTaken, Hash(world));
+
+        w.Spin(0).Ready(20000);
+        Assert.Contains("You've already found Atropos' distaff. Good.", world.MessageLog);
+        Assert.Contains("Goodbye, Bobbin!  I must follow the swans.", world.MessageLog);
+        Assert.Equal(EggOpened, Hash(world));
+    }
+
+    /// <summary>
+    /// The VGA CD's cursor is character 1 of charset 1 (<c>redefineBuiltinCursorFromChar</c>), a
+    /// small arrow with its point at the hotspot, in the cursor's colour.
+    /// </summary>
+    [Fact]
+    public void The_cursor_is_an_arrow_from_charset_1()
+    {
+        if (Open() is not { } world)
+        {
+            return;
+        }
+
+        world.Boot();
+        Run(world, 300);
+        world.Click(100, 100);
+        var frame = new Graphics.Surface8(320, 200);
+        world.DrawCursor(frame);
+        var rows = Enumerable.Range(0, 9).Select(y => string.Concat(Enumerable.Range(0, 8).Select(x => frame[100 + x, 100 + y] != 0 ? '#' : '.')));
+        Assert.Equal(["#.......", "##......", "###.....", "####....", "#####...", "######..", "####....", "##......", "........"], rows);
+        Assert.Equal((0, 0), world.CursorHotspot);
+    }
+
     /// <summary>Version 4's bit variables are their own 4096 (<c>_bitVars</c>); version 3's are the bits of the global variables.</summary>
     [Fact]
     public void Version_4_bit_variables_are_their_own()
@@ -134,6 +212,22 @@ public class VgaGameLoopTests
     }
 
     private const string ProficiencyScreen = "2dd53cf928a17bed", BobbinOnTheCliff = "3cdf8e8514652f77";
+    private const string LeafIcon = "86fa1cda77b3bfb5", DistaffTaken = "6d7da77340d3b74d", EggOpened = "5ecac3ed1624160f";
+
+    // the objects of the VGA CD, numbered apart from the EGA's: the cliff (2), the village (3), the
+    // tents (5), the path (7), outside the sanctuary (8), the sanctuary (9)
+    private const int CliffToVillage = 78, Leaf = 79, VillageToTents = 86, TentsToPath = 126, PathToSanctuary = 177;
+    private const int SanctuaryDoor = 179, Egg = 195, Distaff = 196;
+
+    /// <summary>The notes the distaff plays, 3 for c d e (variable 122 on the EGA).</summary>
+    private const int Known = 172;
+
+    /// <summary>The proficiency screen, PRACTICE, and the opening skipped with Escape, to Bobbin on the cliff in control.</summary>
+    private static Walkthrough Skip(GameWorld world)
+    {
+        world.Boot();
+        return new Walkthrough(world).Wait(300).ClickAt(160, 95).Wait(100).Key(Input.Key.Escape, (char)27).Ready(8000);
+    }
 
     private static void Run(GameWorld world, int steps)
     {
