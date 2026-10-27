@@ -51,6 +51,28 @@ public sealed class CostumeState
         AnimCounter = 0;
     }
 
+    /// <summary>The limbs as a save holds them (<c>_cost.stopped</c>, <c>curpos</c>, <c>start</c>, <c>end</c>, <c>frame</c>).</summary>
+    public void SaveTo(Saves.ScummState.ActorState s)
+    {
+        s.Stopped = Stopped;
+        _position.CopyTo(s.CurPos, 0);
+        _start.CopyTo(s.Start, 0);
+        _end.CopyTo(s.End, 0);
+        _animation.CopyTo(s.CostumeFrame, 0);
+    }
+
+    /// <summary>The limbs from a save, with the actor's counters.</summary>
+    public void LoadFrom(Saves.ScummState.ActorState s)
+    {
+        Stopped = s.Stopped;
+        s.CurPos.CopyTo(_position, 0);
+        s.Start.CopyTo(_start, 0);
+        s.End.CopyTo(_end, 0);
+        s.CostumeFrame.CopyTo(_animation, 0);
+        SoundCounter = s.SoundCounter;
+        AnimCounter = s.AnimCounter;
+    }
+
     /// <summary>
     /// Starts frame <paramref name="frame"/> facing <paramref name="direction"/> (0 left, 1 right,
     /// 2 front, 3 back) on the limbs it lists that <paramref name="useMask"/> lets through, limb 0

@@ -16,7 +16,7 @@ public class DistaffTests
     /// plays out and everyone flies away; then double-clicks on the distaff. The clicks are at
     /// steps, in screen pixels.
     /// </summary>
-    private static readonly (int Step, int X, int Y)[] ToTheDistaff =
+    internal static readonly (int Step, int X, int Y)[] ToTheDistaff =
     [
         (100, 160, 92), (1300, 110, 115), (1400, 10, 120), (1550, 10, 125), (1700, 30, 40), (1800, 231, 110),
         (1900, 10, 100), (2100, 315, 120), (2300, 315, 120), (2500, 315, 120), (2700, 315, 120), (2900, 315, 120),

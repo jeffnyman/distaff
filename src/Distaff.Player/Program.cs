@@ -27,6 +27,10 @@ internal static class Program
         var keys = new List<(int Step, Key Key, char Ascii)>();
         int scale = 3;
         bool fullscreen = false;
+        string? load = null;
+        var saves = new List<(int Step, string Path)>();
+        string savesDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Distaff", "saves");
+        string target = "loom";
         int? traceActor = null;
         string objects = "initial";
         bool mask = false;
@@ -74,6 +78,18 @@ internal static class Program
                     break;
                 case "--fullscreen":
                     fullscreen = true;
+                    break;
+                case "--load" when i + 1 < args.Length:
+                    load = args[++i];
+                    break;
+                case "--save" when i + 1 < args.Length && args[i + 1].IndexOf(':') is > 0 and var colon && int.TryParse(args[i + 1][..colon], out int saveStep):
+                    saves.Add((saveStep, args[++i][(colon + 1)..]));
+                    break;
+                case "--saves" when i + 1 < args.Length:
+                    savesDirectory = args[++i];
+                    break;
+                case "--target" when i + 1 < args.Length:
+                    target = args[++i];
                     break;
                 case "--trace-actor" when i + 1 < args.Length && int.TryParse(args[i + 1], out int traced):
                     traceActor = traced;
@@ -132,7 +148,8 @@ internal static class Program
         {
             if (run is { } runSteps)
             {
-                return Run(ResourceLoader.Open(game), runSteps, copyProtection, clicks, keys, screenshot, zoom, traceActor);
+                var store = new FileSaveStore(savesDirectory);
+                return Run(ResourceLoader.Open(game), runSteps, copyProtection, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target);
             }
 
             if (script is { } scriptNo)
@@ -150,7 +167,7 @@ internal static class Program
                 return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
             }
 
-            return Play(game, release, copyProtection, scale, fullscreen);
+            return Play(game, release, copyProtection, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target);
         }
         catch (Exception ex) when (ex is NotSupportedException or InvalidDataException)
         {
@@ -161,22 +178,24 @@ internal static class Program
 
     private static int Usage()
     {
-        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--copy-protection]");
+        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--copy-protection] [--load file] [--saves folder] [--target name]");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
-        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--click step:x,y]... [--key step:K]... [--trace-actor N] [--copy-protection] [--screenshot file.png] [--zoom N]");
+        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--trace-actor N] [--copy-protection] [--screenshot file.png] [--zoom N]");
         return 2;
     }
 
     /// <summary>
     /// Plays the game in a window: the mouse and keys go to the game, which draws its own cursor.
-    /// Alt+Enter or F11 switches to full screen.
+    /// Alt+Enter or F11 switches to full screen. The game's save screen (F5) keeps its saves in
+    /// ScummVM's format in the saves folder, named after the target (<c>loom.s01</c>); a save
+    /// given starts the game as ScummVM's launcher does.
     /// </summary>
-    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int scale, bool fullscreen)
+    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target)
     {
-        using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen });
+        using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen, Saves = new FileSaveStore(savesDirectory) });
         var detected = new DetectedGame("scumm", "loom", "Loom", release.Variant, release.Language, release.Platform);
-        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection };
+        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, StartingSave = load, SaveTarget = target };
         SDL.SDL3.SDL_HideCursor();
         host.Run(engine);
         return 0;
@@ -191,7 +210,7 @@ internal static class Program
             : null;
     }
 
-    /// <summary>A key given as <c>step:K</c>: a character, <c>esc</c>, <c>space</c> or <c>f1</c> to <c>f9</c>.</summary>
+    /// <summary>A key given as <c>step:K</c>: a character, <c>esc</c>, <c>space</c>, <c>enter</c> or <c>f1</c> to <c>f9</c>.</summary>
     private static (int Step, Key Key, char Ascii)? ParseKey(string text)
     {
         int colon = text.IndexOf(':');
@@ -205,17 +224,31 @@ internal static class Program
         {
             "esc" => (step, Key.Escape, (char)27),
             "space" => (step, Key.Space, ' '),
+            "enter" => (step, Key.Return, (char)13),
             ['f', >= '1' and <= '9'] => (step, Key.F1 + (name[1] - '1'), (char)(315 + name[1] - '1')),
             [var c] => (step, (Key)char.ToLowerInvariant(c), c),
             _ => null,
         };
     }
 
-    /// <summary>Runs the game headless from boot for some steps, with clicks and keys at given steps, and reports where it got to.</summary>
-    private static int Run(ResourceLoader loader, int steps, bool copyProtection, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor)
+    /// <summary>
+    /// Runs the game headless from boot, or from a save, for some steps, with clicks and keys at
+    /// given steps, saving at others as ScummVM's menu saves, and reports where it got to.
+    /// </summary>
+    private static int Run(ResourceLoader loader, int steps, bool copyProtection, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor,
+        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target)
     {
-        var world = new GameWorld(loader) { CopyProtection = copyProtection };
-        world.Boot();
+        var world = new GameWorld(loader) { CopyProtection = copyProtection, SaveStore = store, SaveTarget = target };
+        if (load is not null)
+        {
+            var info = world.Load(File.ReadAllBytes(load));
+            Console.WriteLine($"loaded \"{info.Name}\" (save version {info.Version}, {info.PlayTime.TotalSeconds:F0}s played): room {world.CurrentRoomNumber}");
+        }
+        else
+        {
+            world.Boot();
+        }
+
         int room = -1;
         for (int step = 0; step < steps && !world.QuitRequested; step++)
         {
@@ -227,6 +260,12 @@ internal static class Program
             foreach (var key in keys.Where(k => k.Step == step))
             {
                 world.KeyDown(key.Key, KeyModifiers.None, key.Ascii);
+            }
+
+            foreach (var (_, path) in saves.Where(sv => sv.Step == step))
+            {
+                File.WriteAllBytes(path, world.Save(Path.GetFileNameWithoutExtension(path), DateTime.Now));
+                Console.WriteLine($"step {world.Steps,5}: saved {path}");
             }
 
             world.Step();

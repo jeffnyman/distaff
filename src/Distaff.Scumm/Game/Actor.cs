@@ -1,5 +1,6 @@
 using Distaff.Scumm.Costumes;
 using Distaff.Scumm.Rooms;
+using Distaff.Scumm.Saves;
 
 namespace Distaff.Scumm.Game;
 
@@ -56,6 +57,10 @@ public sealed class Actor(int number, IActorWorld world)
     private Point _point3 = new(NoPoint, 0);
     private int _curBox;
     private int _xFrac, _yFrac, _xAdd, _yAdd, _deltaXFactor, _deltaYFactor;
+
+    // where the leg began and its quarter, which only saves keep (walkdata.cur, walkdata.facing)
+    private Point _walkCur;
+    private int _walkFacing;
 
     // Actor_v3's step along the longer axis and the threshold of the fractions
     private int _stepX = 1;
@@ -133,6 +138,51 @@ public sealed class Actor(int number, IActorWorld world)
     public CostumeState Cost { get; } = new();
 
     public bool IsInCurrentRoom => Room == _world.CurrentRoomNumber && Room != 0;
+
+    /// <summary>The actor as a save holds it. Mirrors the fields <c>Actor::saveLoadWithSerializer</c> and <c>Actor_v3</c>'s write.</summary>
+    public void SaveTo(ScummState.ActorState s)
+    {
+        (s.X, s.Y, s.Elevation, s.Width, s.Facing, s.Costume, s.Room, s.TalkColor) = (X, Y, Elevation, Width, Facing, Costume, Room, TalkColor);
+        (s.ScaleX, s.ScaleY, s.Sound[0], s.TargetFacing, s.Moving) = (ScaleX, ScaleY, Sound, _targetFacing, Moving);
+        (s.IgnoreBoxes, s.ForceClip) = (IgnoreBoxes ? 1 : 0, ForceClip);
+        (s.InitFrame, s.WalkFrame, s.StandFrame, s.TalkStartFrame, s.TalkStopFrame) = (InitFrame, WalkFrame, StandFrame, TalkStartFrame, TalkStopFrame);
+        (s.SpeedX, s.SpeedY, s.AnimCounter, s.SoundCounter) = (SpeedX, SpeedY, Cost.AnimCounter, Cost.SoundCounter);
+        for (int i = 0; i < Palette.Length; i++)
+        {
+            s.Palette[i] = Palette[i];
+        }
+
+        (s.ShadowMode, s.Visible, s.Frame, s.AnimSpeed, s.AnimProgress, s.Walkbox) = (ShadowMode, Visible ? 1 : 0, Frame, AnimSpeed, _animProgress, WalkBox);
+        (s.NeedRedraw, s.CostumeNeedsInit) = (Visible ? 1 : 0, _costumeNeedsInit ? 1 : 0);
+        (s.DestX, s.DestY, s.DestBox, s.DestDir, s.CurBox) = (_dest.X, _dest.Y, _destBox, _destDir, _curBox);
+        (s.CurX, s.CurY, s.NextX, s.NextY, s.WalkFacing) = (_walkCur.X, _walkCur.Y, _next.X, _next.Y, _walkFacing);
+        (s.DeltaXFactor, s.DeltaYFactor, s.XFrac, s.YFrac, s.Point3X, s.Point3Y) = (_deltaXFactor, _deltaYFactor, _xFrac, _yFrac, _point3.X, _point3.Y);
+        Cost.SaveTo(s);
+        (s.XAdd, s.YAdd, s.StepX, s.StepThreshold) = (_xAdd, _yAdd, _stepX, _stepThreshold);
+    }
+
+    /// <summary>The actor from a save. Mirrors <c>Actor::saveLoadWithSerializer</c> when loading: what the save does not hold is reset first (<c>initActor(-1)</c>).</summary>
+    public void LoadFrom(ScummState.ActorState s)
+    {
+        Init(-1);
+        (X, Y, Elevation, Width, Facing, Costume, Room, TalkColor) = (s.X, s.Y, s.Elevation, s.Width, s.Facing, s.Costume, s.Room, s.TalkColor);
+        (ScaleX, ScaleY, Sound, _targetFacing, Moving) = (s.ScaleX, s.ScaleY, s.Sound[0], s.TargetFacing, s.Moving);
+        (IgnoreBoxes, ForceClip) = (s.IgnoreBoxes != 0, s.ForceClip);
+        (InitFrame, WalkFrame, StandFrame, TalkStartFrame, TalkStopFrame) = (s.InitFrame, s.WalkFrame, s.StandFrame, s.TalkStartFrame, s.TalkStopFrame);
+        (SpeedX, SpeedY) = (s.SpeedX, s.SpeedY);
+        for (int i = 0; i < Palette.Length; i++)
+        {
+            Palette[i] = (byte)s.Palette[i];
+        }
+
+        (ShadowMode, Visible, Frame, AnimSpeed, _animProgress, WalkBox) = (s.ShadowMode, s.Visible != 0, s.Frame, s.AnimSpeed, s.AnimProgress, s.Walkbox);
+        _costumeNeedsInit = s.CostumeNeedsInit != 0;
+        (_dest, _destBox, _destDir, _curBox) = (new(s.DestX, s.DestY), s.DestBox, s.DestDir, s.CurBox);
+        (_walkCur, _next, _walkFacing) = (new(s.CurX, s.CurY), new(s.NextX, s.NextY), s.WalkFacing);
+        (_deltaXFactor, _deltaYFactor, _xFrac, _yFrac, _point3) = (s.DeltaXFactor, s.DeltaYFactor, s.XFrac, s.YFrac, new(s.Point3X, s.Point3Y));
+        Cost.LoadFrom(s);
+        (_xAdd, _yAdd, _stepX, _stepThreshold) = (s.XAdd, s.YAdd, s.StepX, s.StepThreshold);
+    }
 
     public bool IsInRoom(int room) => Room == room && room != 0;
 
@@ -736,9 +786,11 @@ public sealed class Actor(int number, IActorWorld world)
         int deltaYFactor = diffY < 0 ? -SpeedY : SpeedY;
         _xFrac = _xAdd = deltaXFactor != 0 ? diffX / deltaXFactor : 0;
         _yFrac = _yAdd = deltaYFactor != 0 ? diffY / deltaYFactor : 0;
+        _walkCur = new(X, Y);
         _next = next;
         _deltaXFactor = deltaXFactor;
         _deltaYFactor = deltaYFactor;
+        _walkFacing = diffX >= 0 ? (diffY >= 0 ? 1 : 0) : (diffY >= 0 ? 2 : 3);
 
         // the facing ratio of version 3 is 3: a leg faces up or down only when it is steep
         _targetFacing = NewDirection(Math.Abs(diffY) * 3 > Math.Abs(diffX) ? 3 - (diffY >= 0 ? 1 : 0) : (diffX >= 0 ? 1 : 0));

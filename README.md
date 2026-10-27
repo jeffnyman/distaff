@@ -15,14 +15,15 @@ scripts), global scripts, sounds and the charset are read, and rooms are drawn w
 objects and masks: `distaff <folder> --room N` writes a room as a PNG and lists it. Every script
 decodes; `--script N` and `--room-scripts N` disassemble them. `distaff <folder>` plays the game
 in a window with the mouse and keys: the distaff and its drafts, text, the cursor and dark
-rooms are drawn, but there is no sound and no saving yet. It also runs headless, as the tests
+rooms are drawn, and the game's own save screen (F5) saves and loads in ScummVM's save format
+(`--load file` starts from a save); there is no sound yet. It also runs headless, as the tests
 run it: `distaff <folder> --run 2000 --click 100:160,92 --key 200:esc --screenshot end.png`.
 A scripted run gets from the proficiency screen to Bobbin weaving Opening on the egg.
 [ROADMAP.md](ROADMAP.md) gives the order of work.
 
 | Release | SCUMM version | Data | State |
 |---|---|---|---|
-| DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Playable without sound or saves |
+| DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Playable, with saves, without sound |
 | DOS VGA CD (1992) | 4 | `000.LFL`, `DISK01.LEC` (XOR 0x69), `90x.LFL`, one CD audio track | Identified |
 | FM Towns (1991) | 3, 256 colours (`GF_OLD256`) | `00.LFL` to `99.LFL`, not encoded, 16 CD audio tracks | Identified |
 
@@ -30,7 +31,7 @@ A scripted run gets from the proficiency screen to Bobbin weaving Opening on the
 
 | Path | What it is |
 |---|---|
-| `src/Distaff.Scumm` | The interpreter: the host contract, detection, resources, rooms and drawing them, the script decoder and engine, the game loop, costumes and walking actors, the font and text. |
+| `src/Distaff.Scumm` | The interpreter: the host contract, detection, resources, rooms and drawing them, the script decoder and engine, the game loop, costumes and walking actors, the font and text, verbs and the cursor, ScummVM-compatible saves. |
 | `src/Distaff.Player` | The `distaff` player: an SDL window (`Sdl`, from Maniacal), and the headless tools. |
 | `tests/Distaff.Scumm.Tests` | Unit tests, and tests that run against the real game data when it is present. |
 | `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`). |

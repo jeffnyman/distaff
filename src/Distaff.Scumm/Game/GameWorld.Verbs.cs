@@ -44,10 +44,11 @@ public sealed class VerbSlot
     public int ImageObject { get; set; }
 
     /// <summary>
-    /// The image copied from the object, kept when the room changes (the <c>rtVerb</c> resource):
-    /// its picture, its width in strips and its height in pixels.
+    /// The image copied from the object, kept when the room changes, as the <c>rtVerb</c> resource
+    /// holds it: the width in strips, the object's height byte (the height in its top five bits),
+    /// then the picture up to where its mask starts.
     /// </summary>
-    public (ReadOnlyMemory<byte> Picture, int Strips, int Height)? Image { get; set; }
+    public byte[]? Image { get; set; }
 
     public byte[]? Name { get; set; }
 }
@@ -234,15 +235,20 @@ public sealed partial class GameWorld
 
     /// <summary>
     /// Copies an object's image of the room on screen into the verb. Mirrors <c>setVerbObject</c>
-    /// for <c>GF_OLD_BUNDLE</c>: its width in strips from the object's code and its height; an
-    /// object the room does not hold leaves the verb's image as it was.
+    /// for <c>GF_OLD_BUNDLE</c>: its width in strips and height byte from the object's code, then
+    /// as much of the image as its first word says, which is where its mask starts; an object the
+    /// room does not hold leaves the verb's image as it was.
     /// </summary>
     private void SetVerbObject(int obj, VerbSlot vs)
     {
-        if (CurrentRoom?.FindObject(obj) is { } o && o.ImageOffset != 0)
+        if (CurrentRoom?.FindObject(obj) is not { } o || o.ImageOffset == 0)
         {
-            vs.Image = (CurrentRoom.Data[o.ImageOffset..], o.Width / 8, o.Height);
+            return;
         }
+
+        var image = CurrentRoom.Data.Span[o.ImageOffset..];
+        int size = Math.Min(image[0] | (image[1] << 8), image.Length);
+        vs.Image = [(byte)(o.Width / 8), o.Code.Span[15], .. image[..size]];
     }
 
     /// <summary>
@@ -301,11 +307,13 @@ public sealed partial class GameWorld
             return;
         }
 
+        int strips = image[0];
+        int height = image[1] / 8 * 8;
         int xstart = band.Number == VirtScreenNumber.Main ? Camera.Left : 0;
-        var target = new MaskedImage(front, new Surface8(front.Width, front.Height));
-        EgaBitmap.Draw(image.Picture.Span, 0, image.Strips, image.Height, target, xstart + vs.CurRect.Left / 8 * 8, vs.CurRect.Top - band.Top, RoomPalette);
+        var target = new MaskedImage(front, front);
+        EgaBitmap.Draw(image.AsSpan(2), 0, strips, height, target, xstart + vs.CurRect.Left / 8 * 8, vs.CurRect.Top - band.Top, RoomPalette, mask: false);
 
-        vs.CurRect = new Rect(vs.CurRect.Left, vs.CurRect.Top, image.Strips * 8, image.Height / 8 * 8);
+        vs.CurRect = new Rect(vs.CurRect.Left, vs.CurRect.Top, strips * 8, height);
         vs.OldRect = vs.CurRect;
     }
 

@@ -45,6 +45,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     private readonly byte[] _states;
     private readonly int[] _classes;
     private readonly Dictionary<int, (int X, int Y)> _moved = [];
+
+    // objects drawObject drew over the room since their strips were drawn again, in order
+    private readonly List<int> _drawnObjects = [];
     private readonly Dictionary<int, byte[]> _newNames = [];
     private readonly byte[]?[] _strings = new byte[]?[StringCount];
     private readonly int[] _inventory = new int[InventorySize];
@@ -172,6 +175,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         Engine.Variables[Vars.CameraPosX] = Camera.X;
         Engine.Variables[Vars.HaveMessage] = _haveMsg;
         UpdateMouseVariables();
+        HandleSaveLoad();
 
         Engine.RunAllScripts();
         CheckExecVerbs();
@@ -233,19 +237,34 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         int diff = Camera.X - Camera.LastX;
         if (diff is 8 or -8)
         {
-            Screens.RedrawMain(0, Camera.Left);
-            Screens.RedrawMain(Camera.Left + Camera.ScreenWidth);
+            RedrawRoom(0, Camera.Left);
+            RedrawRoom(Camera.Left + Camera.ScreenWidth);
         }
         else if (diff != 0)
         {
-            Screens.RedrawMain();
+            RedrawRoom();
         }
     }
 
     /// <summary>
+    /// The room is drawn again over columns of the main band (<c>redrawBGStrip</c> and
+    /// <c>drawRoomObjects</c>): what was drawn over it goes, and objects drawn there since are
+    /// back in the room's own order.
+    /// </summary>
+    private void RedrawRoom(int left = 0, int width = int.MaxValue)
+    {
+        Screens.RedrawMain(left, width);
+        long right = (long)left + width;
+        _drawnObjects.RemoveAll(number => CurrentRoom?.FindObject(number) is not { } o
+            || (PositionOf(o).X < right && PositionOf(o).X + o.Width > left));
+    }
+
+    /// <summary>
     /// The whole room with its objects as their states and moves show them, and its actors, in the
-    /// room's colours. With the room's lights off it is black but for the flashlight, when that is
-    /// on; the actors still show.
+    /// room's colours: the objects from the last to the first, then those <c>drawObject</c> drew
+    /// since their strips were last drawn, in that order, over the rest whatever their states
+    /// (the draw queue of <c>processDrawQue</c>). With the room's lights off it is black but for
+    /// the flashlight, when that is on; the actors still show.
     /// </summary>
     public MaskedImage RoomPicture(Room room)
     {
@@ -253,6 +272,14 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         foreach (var obj in RoomRenderer.VisibleObjects(room, GetState))
         {
             RoomRenderer.DrawObject(room, obj, image, RoomPalette, _moved.TryGetValue(obj.Number, out var at) ? at : null);
+        }
+
+        foreach (int number in _drawnObjects)
+        {
+            if (room.FindObject(number) is { } drawn)
+            {
+                RoomRenderer.DrawObject(room, drawn, image, RoomPalette, _moved.TryGetValue(number, out var at) ? at : null);
+            }
         }
 
         int lights = Engine.Variables[Vars.CurrentLights];
@@ -422,6 +449,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
         CurrentRoom = _loader.LoadRoom(resource) ?? throw new InvalidOperationException($"Room {resource} does not exist.");
         Screens.NewRoom(CurrentRoom.Width);
+        _drawnObjects.Clear();
         _boxFlags = [.. CurrentRoom.WalkBoxes.Boxes.Select(b => (int)b.Flags)];
         Engine.Variables[Vars.CameraMinX] = Camera.ScreenWidth / 2;
         Engine.Variables[Vars.CameraMaxX] = CurrentRoom.Width - Camera.ScreenWidth / 2;

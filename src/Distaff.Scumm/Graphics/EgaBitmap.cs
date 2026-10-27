@@ -32,9 +32,11 @@ public static class EgaBitmap
     /// mask; strips and rows that fall outside the target are skipped. Strips are drawn left to
     /// right into the target itself, because a copying run in a strip's first column takes the
     /// pixels of the column to its left: the previous strip's, or the target's own. Colours are
-    /// drawn through <paramref name="colorMap"/> when there is one (<c>_roomPalette</c>).
+    /// drawn through <paramref name="colorMap"/> when there is one (<c>_roomPalette</c>). Without
+    /// <paramref name="mask"/> the mask is neither read nor drawn, as for a verb's copy of an
+    /// image, which ends where the mask starts (<c>disableZBuffer</c>).
     /// </summary>
-    public static void Draw(ReadOnlySpan<byte> picture, int firstStrip, int strips, int height, MaskedImage target, int x, int y, byte[]? colorMap = null)
+    public static void Draw(ReadOnlySpan<byte> picture, int firstStrip, int strips, int height, MaskedImage target, int x, int y, byte[]? colorMap = null, bool mask = true)
     {
         if (picture.Length < 2)
         {
@@ -52,7 +54,10 @@ public static class EgaBitmap
             }
 
             DrawStrip(picture, StripOffset(picture, maskOffset, strip), height, target.Pixels, left, y, colorMap);
-            DrawMaskStrip(picture, maskOffset, strip, height, target.Mask, left, y);
+            if (mask)
+            {
+                DrawMaskStrip(picture, maskOffset, strip, height, target.Mask, left, y);
+            }
         }
     }
 

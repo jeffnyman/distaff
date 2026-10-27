@@ -41,6 +41,21 @@ public sealed class TextSlot
     /// have no defaults, so the text's place carries on to the next (the end of <c>decodeParseStringTextString</c>).
     /// </summary>
     public void KeepPlace() => _default = _default with { X = X, Y = Y, Height = Height, Color = Color };
+
+    /// <summary>The slot as a save holds it, each field with its default; the line height is not saved (<c>syncWithSerializer(StringTab)</c>).</summary>
+    public void SaveTo(Saves.ScummState.StringState s)
+    {
+        (s.X, s.Y, s.Right, s.Color, s.Charset, s.Center, s.Overhead) = (X, Y, Right, (sbyte)Color, Charset, Center ? 1 : 0, Overhead ? 1 : 0);
+        (s.DefaultX, s.DefaultY, s.DefaultRight, s.DefaultColor, s.DefaultCharset) = (_default.X, _default.Y, _default.Right, (sbyte)_default.Color, _default.Charset);
+        (s.DefaultCenter, s.DefaultOverhead) = (_default.Center ? 1 : 0, _default.Overhead ? 1 : 0);
+    }
+
+    /// <summary>The slot from a save; the line heights stay as they are.</summary>
+    public void LoadFrom(Saves.ScummState.StringState s)
+    {
+        (X, Y, Right, Color, Charset, Center, Overhead) = (s.X, s.Y, s.Right, s.Color & 0xFF, s.Charset, s.Center != 0, s.Overhead != 0);
+        _default = (s.DefaultX, s.DefaultY, s.DefaultRight, _default.Height, s.DefaultColor & 0xFF, s.DefaultCenter != 0, s.DefaultOverhead != 0, s.DefaultCharset);
+    }
 }
 
 /// <summary>
@@ -67,6 +82,7 @@ public sealed partial class GameWorld
     private int _nextLeft;
     private int _nextTop;
     private int _charsetColor;
+    private bool _haveActorSpeechMsg;
 
     // the charset renderer's pen (_top, _left, _startLeft, _right, _center, _color, _shadowType, _firstChar)
     private int _textTop;
@@ -84,7 +100,7 @@ public sealed partial class GameWorld
     private VirtScreenNumber _textScreen;
 
     /// <summary>The text slots: actors' speech, the three system slots, and the one text verbs draw in (<c>_string</c>).</summary>
-    public TextSlot[] TextSlots { get; } = [new(), new(), new(), new(), new()];
+    public TextSlot[] TextSlots { get; } = [new(), new(), new(), new(), new(), new()];
 
     /// <summary>Who <c>print</c> prints for: an actor, or 0xFC to 0xFF for the system slots (<c>_actorToPrintStrFor</c>).</summary>
     public int ActorToPrintFor { get; private set; }
@@ -163,6 +179,7 @@ public sealed partial class GameWorld
         }
 
         _charsetColor = TalkingActor > 0x7F ? TextSlots[0].Color : Actors[TalkingActor].TalkColor;
+        _haveActorSpeechMsg = true;
         _charsetBufPos = 0;
         _talkDelay = 0;
         _haveMsg = 0xFF;

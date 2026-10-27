@@ -23,6 +23,12 @@ public sealed class ScummEngine : Engine
     /// <summary>Whether the game's copy protection is kept. Off by default, as in ScummVM. Set before <see cref="Initialize"/>.</summary>
     public bool CopyProtection { get; set; }
 
+    /// <summary>A save to start from instead of the boot script, as ScummVM's launcher loads one. Set before <see cref="Initialize"/>.</summary>
+    public byte[]? StartingSave { get; set; }
+
+    /// <summary>The name save files start with (<c>loom.s01</c>). Set before <see cref="Initialize"/>.</summary>
+    public string SaveTarget { get; set; } = "loom";
+
     /// <summary>The world being played, from <see cref="Initialize"/> on.</summary>
     public GameWorld World => _world ?? throw new InvalidOperationException("The engine is not initialized.");
 
@@ -31,11 +37,20 @@ public sealed class ScummEngine : Engine
         _world = new GameWorld(ResourceLoader.Open(Game), Host.RandomSeed ?? Environment.TickCount)
         {
             CopyProtection = CopyProtection,
+            SaveStore = Host.Saves,
+            SaveTarget = SaveTarget,
         };
         Host.Graphics.SetMode(GameWorld.ScreenWidth, GameWorld.ScreenHeight);
         Host.Graphics.SetTitle($"Distaff - {Detected.Title}");
         Host.Graphics.SetPalette(Palettes.Ega);
-        _world.Boot();
+        if (StartingSave is { } save)
+        {
+            _world.Load(save);
+        }
+        else
+        {
+            _world.Boot();
+        }
     }
 
     public override TickResult Tick(TimeSpan elapsed)

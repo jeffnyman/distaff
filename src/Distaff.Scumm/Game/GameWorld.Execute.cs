@@ -120,7 +120,7 @@ public sealed partial class GameWorld
                     _flashlightStrips = (Arg(0), Arg(1));
                 }
 
-                Screens.RedrawMain();
+                RedrawRoom();
                 return 0;
             case "o4_oldRoomEffect":
                 return 0;
@@ -244,8 +244,9 @@ public sealed partial class GameWorld
                 DecodeParseString(instruction.SubOps, subArguments);
                 return 0;
             case "o5_stringOps":
-                StringOps(instruction.SubOps[0], subArguments[0]);
-                return 0;
+                return StringOps(instruction.SubOps[0], subArguments[0]);
+            case "o5_getStringWidth":
+                return _strings[CheckString(Arg(0))] is { } measured ? StringWidth(0, measured) : 0;
             case "o5_drawBox":
                 DrawBox(Arg(0), Arg(1), Arg(2), Arg(3), Arg(4));
                 return 0;
@@ -275,6 +276,12 @@ public sealed partial class GameWorld
 
             // resources are loaded on demand here
             case "o5_resourceRoutines":
+                return 0;
+
+            case "o4_saveLoadGame":
+                return SaveLoadGame(Arg(0), instruction);
+            case "o4_saveLoadVars":
+                SaveLoadVars(Arg(0), instruction.SubOps, subArguments);
                 return 0;
 
             case "o5_systemOps":
@@ -408,6 +415,8 @@ public sealed partial class GameWorld
         // the object is drawn over whatever was drawn there (drawObject from the draw queue)
         var (x0, y0) = PositionOf(o);
         Screens.RestoreMain(new Rect(x0, y0, o.Width, o.Height));
+        _drawnObjects.Remove(obj);
+        _drawnObjects.Add(obj);
     }
 
     /// <summary>
@@ -425,7 +434,7 @@ public sealed partial class GameWorld
         int right = Math.Min(Camera.EndStrip + 1, PositionOf(o).X / 8 + o.Width / 8);
         if (right > left)
         {
-            Screens.RedrawMain(left * 8, (right - left) * 8);
+            RedrawRoom(left * 8, (right - left) * 8);
         }
     }
 
@@ -852,16 +861,23 @@ public sealed partial class GameWorld
         text.SaveDefault();
     }
 
-    /// <summary>Mirrors <c>o5_stringOps</c>.</summary>
-    private void StringOps(SubOperation sub, int[] a)
+    /// <summary>
+    /// Mirrors <c>o5_stringOps</c>: a string is its text and the zero after it, as
+    /// <c>loadPtrToResource</c> keeps it, or a buffer of a given size; a character read is the result.
+    /// </summary>
+    private int StringOps(SubOperation sub, int[] a)
     {
         switch (sub.Code)
         {
             case 1:
-                _strings[CheckString(a[0])] = sub.Operands[1].Text;
+                _strings[CheckString(a[0])] = sub.Operands[1].Text is { } text ? [.. text, 0] : null;
                 break;
             case 2:
-                _strings[CheckString(a[0])] = _strings[CheckString(a[1])]?.ToArray();
+                if (_strings[CheckString(a[1])] is { } source)
+                {
+                    _strings[CheckString(a[0])] = [.. source.AsSpan(0, Math.Min(ResStrLen(source) + 1, source.Length))];
+                }
+
                 break;
             case 3:
                 if (_strings[CheckString(a[0])] is { } target && a[1] >= 0 && a[1] < target.Length)
@@ -870,6 +886,8 @@ public sealed partial class GameWorld
                 }
 
                 break;
+            case 4:
+                return _strings[CheckString(a[0])] is { } read && a[1] >= 0 && a[1] < read.Length ? read[a[1]] : 0;
             case 5:
                 _strings[CheckString(a[0])] = a[1] != 0 ? new byte[a[1]] : null;
                 break;
@@ -877,6 +895,23 @@ public sealed partial class GameWorld
                 _unhandled.Add($"stringOps {sub}");
                 break;
         }
+
+        return 0;
+    }
+
+    /// <summary>The length of a string before its zero, a code's bytes included. Mirrors <c>resStrLen</c>.</summary>
+    private static int ResStrLen(ReadOnlySpan<byte> text)
+    {
+        int at = 0;
+        while (at < text.Length && text[at] != 0)
+        {
+            if (text[at++] == 0xFF && at < text.Length && text[at++] is not (1 or 2 or 3 or 8))
+            {
+                at += 2;
+            }
+        }
+
+        return Math.Min(at, text.Length);
     }
 
     private static int CheckString(int number)

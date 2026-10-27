@@ -208,11 +208,44 @@ In `Distaff.Scumm.Scripts`:
   room with its lights put out (Loom only uses it in room 30, not yet reached). The window runs.
 - Not yet: Dyeing and the other drafts are not played; the pause banner; the restart question.
 
-### Phase 8: saves
+### Phase 8: saves (done, not yet checked against ScummVM)
 
-- `saveload.cpp`, `script_v4.cpp` (`o4_saveLoadGame`, Loom's save names from string 9): the
-  game's own save screen and ScummVM-compatible save files.
-- Check: a save written by Distaff loads in ScummVM, and the reverse.
+- `saveload.cpp` (`Saves`, by way of Maniacal): the save file (header, information section,
+  gzip) and the state field for field in ScummVM's order (`saveLoadWithSerializer` with
+  `ScummEngine_v5`'s cursors, `Actor_v3`'s walk at version 3's revision, 13 actors), written in
+  save version 108 (ScummVM 2.7's), read from 108 to 124; the sound engine's block is kept as
+  it is (the PC speaker's player writes none).
+- `GameWorld.Saving`: the world as the state (`Capture`) and back (`Restore`, as `loadState`:
+  the room without its scripts, its boxes with the flags the scripts left, objects moved, the
+  bands cleared). Strings, verbs (an image verb keeps its copy of the image, as `rtVerb` does),
+  actors' and objects' names and carried objects' code are resources; a running script is
+  saved where it last yielded or nested (`ResumeOffset`). Strings now keep their zero, and
+  `stringOps` reads a character (`GET_STRING_CHAR`) and copies up to the zero.
+- `script_v4.cpp`: `o4_saveLoadGame` (slots, the drive, whether a slot has a save, saving under
+  the name in strings 9 to 20, loading, with the name changed first as the original allowed)
+  and `o4_saveLoadVars` (the names read back from the saves). A load in the save room carries
+  on the loaded state's current script from where the loading one stands; a save from outside
+  it starts the game over and loads again (`_loadFromLauncher`).
+- `scumm.cpp`: after a load from outside the save screen, `ScummEngine_v3::scummLoop_handleSaveLoad`
+  for Loom: a save made in the save room ends the save script (`terminateSaveMenuScript`); one
+  made elsewhere goes through the save room inside a cutscene. ScummVM clears bit 13 of
+  variable 214 there on DOS; this release's own save script clears bit 14 (`Bit[3438]`), and
+  without that the distaff stays off after the load, so Distaff clears bit 14, as ScummVM does
+  for the FM Towns.
+- `o5_getStringWidth`, which the save screen uses to stop a name at the slot's edge.
+- Drawing: objects `drawObject` draws stay over the room's own objects until their strips are
+  drawn again (the draw queue), so the save screen's OK and CANCEL show over its buttons.
+- The player: `--load file` starts from a save as ScummVM's launcher does (window or headless);
+  `--save step:file` saves in a headless run as ScummVM's menu does; the game's save screen (F5)
+  keeps its saves in `--saves folder` (`%APPDATA%\Distaff\saves` by default) as `<target>.sNN`,
+  the target `loom` unless `--target` says otherwise.
+- Checked against the EGA release: a save read back saves the same state again (the mouse
+  aside, which ScummVM's original interface does not restore); a save on the cliff, loaded,
+  plays on as the game did; the save screen saves under a typed name and, in another game,
+  loads it back to the Loom with the distaff; that save and one made between steps both load
+  from the launcher to the Loom with the distaff.
+- Not yet: no save has been loaded in ScummVM, nor a ScummVM save here; no sounds are listed
+  in a save, so ScummVM reloads them as they start; the locked resources are not saved.
 
 ### Phase 9: sound
 

@@ -43,6 +43,7 @@ public sealed class ScriptEngine
     private readonly List<(int Number, ScriptKind Kind, int Slot)> _nested = [];
     private readonly List<Sentence> _sentences = [];
     private readonly Stack<int> _stack = new();
+    private bool _discardResult;
 
     public ScriptEngine(IScriptHost host, int seed = 1)
     {
@@ -260,6 +261,7 @@ public sealed class ScriptEngine
             if (Slots[i].Status == SlotStatus.Running && !executed[i])
             {
                 CurrentSlot = i;
+                Slots[i].ResumeOffset = Slots[i].Offset;
                 Execute(executed);
             }
         }
@@ -452,6 +454,45 @@ public sealed class ScriptEngine
         CurrentSlot = -1;
     }
 
+    /// <summary>
+    /// After a load in the middle of an instruction: the slot the save was running carries on from
+    /// <paramref name="offset"/>, as ScummVM's <c>o4_saveLoadGame</c> puts the old script pointer
+    /// into the loaded state's current script (<c>updateScriptPtr</c>); -1 for no slot. The nesting
+    /// is gone: no caller is left to go back to.
+    /// </summary>
+    internal void ContinueAfterLoad(int slot, int offset)
+    {
+        _nested.Clear();
+        CurrentSlot = slot;
+        if (slot >= 0)
+        {
+            Slots[slot].Offset = offset;
+        }
+    }
+
+    /// <summary>The cutscene stack, for saves: each level's argument, overriding slot and where it skips to (<c>vm.cutSceneData</c>, <c>cutSceneScript</c>, <c>cutScenePtr</c>).</summary>
+    internal (int[] Data, int[] Slot, int[] Offset) CutsceneStack => (_cutsceneData, _cutsceneSlot, _cutsceneOffset);
+
+    /// <summary>The slot that began the cutscene whose start script runs, or -1 (<c>vm.cutSceneScriptIndex</c>), for saves.</summary>
+    internal int CutsceneStarter
+    {
+        get => _cutsceneStarter;
+        set => _cutsceneStarter = value;
+    }
+
+    /// <summary>The scripts waiting for nested ones to return, for saves (<c>vm.nest</c>).</summary>
+    internal IReadOnlyList<(int Number, ScriptKind Kind, int Slot)> Nested => _nested;
+
+    /// <summary>Puts the cutscene level and the sentences a save holds back.</summary>
+    internal void Restore(int cutsceneLevel, IEnumerable<Sentence> sentences)
+    {
+        CutsceneLevel = cutsceneLevel;
+        _sentences.Clear();
+        _sentences.AddRange(sentences);
+        _nested.Clear();
+        CurrentSlot = -1;
+    }
+
     private void StopWhere(int number, Func<ScriptKind, bool> kind)
     {
         for (int i = 0; i < SlotCount; i++)
@@ -524,7 +565,14 @@ public sealed class ScriptEngine
         _nested.Add(caller < 0 ? (0, ScriptKind.Global, -1) : (Slots[caller].Number, Slots[caller].Kind, caller));
         int level = _nested.Count - 1;
 
+        // the caller's place is kept (updateScriptPtr), and the new script starts
+        if (caller >= 0)
+        {
+            Slots[caller].ResumeOffset = Slots[caller].Offset;
+        }
+
         CurrentSlot = index;
+        Slots[index].ResumeOffset = Slots[index].Offset;
         Execute(null);
 
         if (_nested.Count <= level)
@@ -813,6 +861,12 @@ public sealed class ScriptEngine
     /// </summary>
     private void WriteResult(ScriptSlot slot, Operand result, int value)
     {
+        if (_discardResult)
+        {
+            _discardResult = false;
+            return;
+        }
+
         int number = VariableNumber(result);
         if ((number & 0xF000) == Operand.LocalVariable)
         {
@@ -889,11 +943,38 @@ public sealed class ScriptEngine
         return _stack.Pop();
     }
 
-    /// <summary>Mirrors <c>beginCutscene</c>.</summary>
-    private void BeginCutscene(int[] args)
+    /// <summary>
+    /// For a host: the instruction running now sets no result, as <c>o4_saveLoadGame</c> sets none
+    /// when a load starts the game over.
+    /// </summary>
+    internal void DiscardResult() => _discardResult = true;
+
+    /// <summary>
+    /// Stops the running script and starts another in its place, with its freeze resistance and
+    /// recursion. Mirrors <c>o5_chainScript</c>, as <c>terminateSaveMenuScript</c> calls it.
+    /// </summary>
+    internal void ChainCurrent(int script, int[] args)
+    {
+        var slot = Slots[RunningSlot()];
+        bool freezeResistant = slot.FreezeResistant, recursive = slot.Recursive;
+        slot.Number = 0;
+        slot.Status = SlotStatus.Dead;
+        CurrentSlot = -1;
+        RunScript(script, freezeResistant, recursive, args);
+    }
+
+    /// <summary>
+    /// Mirrors <c>beginCutscene</c>. Outside any script, as after a load, no slot counts the
+    /// cutscene (ScummVM then writes past its slots).
+    /// </summary>
+    internal void BeginCutscene(int[] args)
     {
         int scr = CurrentSlot;
-        Slots[scr].CutsceneOverride++;
+        if (scr >= 0)
+        {
+            Slots[scr].CutsceneOverride++;
+        }
+
         if (++CutsceneLevel >= CutsceneLevels)
         {
             throw new InvalidOperationException("Cutscene stack overflow.");
@@ -912,18 +993,18 @@ public sealed class ScriptEngine
         _cutsceneStarter = -1;
     }
 
-    /// <summary>Mirrors <c>endCutscene</c>.</summary>
-    private void EndCutscene()
+    /// <summary>Mirrors <c>endCutscene</c>; outside any script no slot counts it.</summary>
+    internal void EndCutscene()
     {
-        var slot = Slots[RunningSlot()];
-        if (slot.CutsceneOverride > 0)
+        var slot = CurrentSlot >= 0 ? Slots[CurrentSlot] : null;
+        if (slot?.CutsceneOverride > 0)
         {
             slot.CutsceneOverride--;
         }
 
         int[] args = [_cutsceneData[CutsceneLevel]];
         Variables[Vars.Override] = 0;
-        if (_cutsceneOffset[CutsceneLevel] != 0 && slot.CutsceneOverride > 0)
+        if (_cutsceneOffset[CutsceneLevel] != 0 && slot?.CutsceneOverride > 0)
         {
             slot.CutsceneOverride--;
         }

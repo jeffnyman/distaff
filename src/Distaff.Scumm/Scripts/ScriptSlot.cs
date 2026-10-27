@@ -44,6 +44,13 @@ public sealed class ScriptSlot
     /// <summary>Where execution resumes.</summary>
     public int Offset { get; internal set; }
 
+    /// <summary>
+    /// Where the slot was when it last began a turn or started a nested script: what ScummVM's
+    /// <c>offs</c> holds while the slot runs, since <c>updateScriptPtr</c> only stores the script
+    /// pointer then. A save made by a running script keeps this.
+    /// </summary>
+    public int ResumeOffset { get; internal set; }
+
     /// <summary>Ticks left to wait while paused.</summary>
     public int Delay { get; internal set; }
 
