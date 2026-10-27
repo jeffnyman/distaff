@@ -133,16 +133,30 @@ In `Distaff.Scumm.Scripts`:
   clicked, the Lucasfilm Games title (room 1), the opening (rooms 2, 1, 2, 53) and Bobbin on the
   cliff in room 2 ("Rise, son of Cygna." ... "Better get down to the village."); with the copy
   protection kept, the Book of Patterns question.
-- Not yet: actors are state only (they arrive where they walk at once, and `faceActor` and
-  `walkActorToActor` do nothing); text, verbs, boxes drawn by `drawBox` and the cursor are not
-  drawn; sounds are recorded but not played, and none is ever running; room fades and shaking.
+- Not yet: text, verbs, boxes drawn by `drawBox` and the cursor are not drawn; sounds are
+  recorded but not played, and none is ever running; room fades and shaking.
 
-### Phase 5: actors and costumes
+### Phase 5: actors and costumes (done)
 
-- `costume.cpp`: the classic costume format and renderer, the v3 branches.
-- `actor.cpp`, `boxes.cpp`: walking, scaling, box flags (`o3_setBoxFlags`), Loom's actor palette
-  case.
-- Check: Bobbin walks across the first room along the boxes.
+- `costume.cpp`, `base-costume.cpp`: the classic costume format (`Costume`), the limbs'
+  animation (`CostumeState`: `costumeDecodeData` with its limb mask, `increaseAnim` with
+  version 3's sound counting) and drawing (`CostumeRenderer`: `setPalette`, `setFacing`,
+  `drawLimb`, `byleRLEDecode`), by way of Maniacal's port, drawn straight into the room's
+  picture so the room's mask can hide an actor where its box says (`_zbuf`).
+- `actor.cpp`: `Actor` and `Actor_v3`: costumes, showing and hiding, frames by role, facing and
+  turning, `adjustXYToBeInBox`, `adjustActorPos`, `startWalkActor`, `walkActor`,
+  `calcMovementFactor`, `actorWalkStep`, `findPathTowardsOld`, `animateCostume`; the world walks,
+  sorts by depth and draws them (`walkActors`, `processActors`), turns them to objects
+  (`faceToObject`) and walks them to each other (`walkActorToActor`). Version 3 has no scaling.
+- `boxes.cpp`: the box matrix of version 3 (`getNextBox`), the gates between boxes and the
+  closest points (`BoxGeometry`), box flags the scripts change (`o3_setBoxFlags`).
+- `palette.cpp`: the shadow palette remaps the colours shown (`updatePalette`).
+- Player: `--trace-actor N` with `--run` prints an actor's place, box and walk state each step.
+- Checked against the EGA release: all 159 costumes draw every frame facing each way (four more
+  index entries are leftovers pointing into other resources); after the opening Bobbin stands on
+  the cliff, and a click on the path below walks him through boxes 0 to 6 to the point nearest
+  it. His drop from the rock's edge to the path, between boxes 3 and 5, is quick, as the
+  nymph's drop in local script 201 is scripted; not yet compared with ScummVM.
 
 ### Phase 6: text
 

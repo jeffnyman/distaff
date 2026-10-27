@@ -153,23 +153,34 @@ public sealed partial class GameWorld
             case "o5_animateActor":
                 if (Arg(0) is > 0 and < ActorCount)
                 {
-                    AnimateActor(Actors[Arg(0)], Arg(1));
+                    Actors[Arg(0)].Animate(Arg(1));
                 }
 
                 return 0;
             case "o5_faceActor":
+                if (Arg(0) is > 0 and < ActorCount)
+                {
+                    FaceActor(Actors[Arg(0)], Arg(1));
+                }
+
                 return 0;
             case "o5_walkActorTo":
-                WalkActorTo(Actors[CheckActor(Arg(0))], Arg(1), Arg(2));
+                Actors[CheckActor(Arg(0))].StartWalk(Arg(1), Arg(2), -1);
                 return 0;
             case "o5_walkActorToObject":
-                if (WhereIsObject(Arg(1)) != ObjectPlace.NotFound && ObjectPosition(Arg(1)) is { } walkTo)
+                if (WhereIsObject(Arg(1)) != ObjectPlace.NotFound && ObjectWalkTo(Arg(1)) is { } walkTo)
                 {
-                    WalkActorTo(Actors[CheckActor(Arg(0))], walkTo.X, walkTo.Y);
+                    Actors[CheckActor(Arg(0))].StartWalk(walkTo.X, walkTo.Y, walkTo.Direction);
                 }
 
                 return 0;
             case "o5_walkActorToActor":
+                if (Arg(0) is > 0 and < ActorCount && Arg(1) is > 0 and < ActorCount
+                    && Actors[Arg(0)].IsInCurrentRoom && Actors[Arg(1)].IsInCurrentRoom)
+                {
+                    WalkActorToActor(Actors[Arg(0)], Actors[Arg(1)], Arg(2));
+                }
+
                 return 0;
             case "o5_getActorRoom":
                 return Arg(0) is > 0 and < ActorCount ? Actors[Arg(0)].Room : 0;
@@ -180,7 +191,7 @@ public sealed partial class GameWorld
             case "o5_getActorFacing":
                 return Actors[CheckActor(Arg(0))].Facing;
             case "o5_getActorMoving":
-                return Actors[CheckActor(Arg(0))].Moving ? 1 : 0;
+                return Actors[CheckActor(Arg(0))].Moving;
             case "o5_getActorWalkBox":
                 return Actors[CheckActor(Arg(0))].WalkBox;
             case "o5_getActorWidth":
@@ -196,6 +207,7 @@ public sealed partial class GameWorld
                 }
 
             case "o3_setBoxFlags":
+                SetBoxFlags(Arg(0), Arg(1));
                 return 0;
             case "o3_waitForActor":
                 return 0;
@@ -419,6 +431,10 @@ public sealed partial class GameWorld
     };
 
     /// <summary>Where an actor stands to use an object of the room, and which way it faces. Mirrors <c>getObjectXYPos</c> for version 3.</summary>
+    public (int X, int Y, int Direction)? ObjectWalkTo(int obj)
+        => CurrentRoom?.FindObject(obj) is { } o && ObjectPosition(obj) is { } at ? (at.X, at.Y, Actor.NewDirection(o.ActorDir & 3)) : null;
+
+    /// <summary>Where an actor stands to use an object of the room.</summary>
     public (int X, int Y)? ObjectPosition(int obj)
     {
         if (CurrentRoom?.FindObject(obj) is not { } o)
@@ -455,21 +471,26 @@ public sealed partial class GameWorld
     {
         var ego = Actors[CheckActor(Engine.Variables[Vars.Ego])];
         PutActor(ego, ego.X, ego.Y, room);
+        int oldDir = ego.Facing;
         _egoPositioned = false;
         Engine.Variables[Vars.WalkToObject] = obj;
         StartScene(ego.Room);
         Engine.Variables[Vars.WalkToObject] = 0;
-        if (!_egoPositioned && ObjectPosition(obj) is { } at)
+        if (!_egoPositioned && ObjectWalkTo(obj) is { } at)
         {
             PutActor(ego, at.X, at.Y, CurrentRoomNumber);
+            if (ego.Facing == oldDir)
+            {
+                ego.SetDirection(at.Direction + 180);
+            }
         }
 
-        ego.Moving = false;
+        ego.StopMoving();
         Camera.X = Camera.DestX = ego.X;
         FollowActor(ego);
         if (x != -1)
         {
-            WalkActorTo(ego, x, y);
+            ego.StartWalk(x, y, -1);
         }
     }
 
@@ -494,7 +515,7 @@ public sealed partial class GameWorld
         RunInventoryScript(0);
     }
 
-    /// <summary>Mirrors <c>Actor::putActor</c>: it shows when it lands in the current room and hides when it leaves.</summary>
+    /// <summary>Mirrors <c>Actor::putActor</c>: a talking actor leaving the room stops talking; the ego placed counts as positioned.</summary>
     private void PutActor(Actor actor, int x, int y, int? room = null)
     {
         int newRoom = room ?? actor.Room;
@@ -503,44 +524,46 @@ public sealed partial class GameWorld
             StopTalk();
         }
 
-        actor.X = x;
-        actor.Y = y;
-        actor.Room = newRoom;
         if (Engine.Variables[Vars.Ego] == actor.Number)
         {
             _egoPositioned = true;
         }
 
-        actor.Visible = actor.IsInRoom(CurrentRoomNumber);
-        actor.Moving = false;
+        actor.Put(x, y, newRoom);
     }
 
-    /// <summary>For now an actor arrives where it walks at once; walking comes with the walkboxes.</summary>
-    private static void WalkActorTo(Actor actor, int x, int y)
+    /// <summary>
+    /// Mirrors <c>Actor::faceToObject</c> for version 3: right or left of the actor, or in front or
+    /// behind when within half the other's width.
+    /// </summary>
+    private void FaceActor(Actor actor, int obj)
     {
-        actor.X = x;
-        actor.Y = y;
-        actor.Moving = false;
-    }
-
-    /// <summary>Mirrors <c>Actor::animateActor</c> for version 3: the chore in the top bits, the direction in the bottom two.</summary>
-    private static void AnimateActor(Actor actor, int anim)
-    {
-        int chore = 0x3F - (anim >> 2) + 2;
-        int dir = (anim & 3) switch { 0 => 270, 1 => 90, 2 => 180, _ => 0 };
-        switch (chore)
+        if (!actor.IsInCurrentRoom || ObjectOrActorPosition(obj) is not { } at)
         {
-            case 2:
-                actor.Frame = actor.StandFrame;
-                actor.Moving = false;
-                break;
-            case 3 or 4:
-                actor.Facing = dir;
-                break;
-            default:
-                actor.Frame = anim;
-                break;
+            return;
         }
+
+        int width = obj is > 0 and < ActorCount ? Actors[obj].Width : CurrentRoom?.FindObject(obj)?.Width ?? 0;
+        int dir = actor.X < at.X ? 1 : 0;
+        if (Math.Abs(actor.X - at.X) < width / 2)
+        {
+            dir = actor.Y > at.Y ? 3 : 2;
+        }
+
+        actor.TurnToDirection(Actor.NewDirection(dir));
+    }
+
+    /// <summary>Mirrors <c>ScummEngine_v5::walkActorToActor</c> for version 3: beside the other actor, so far off on this side, in a box.</summary>
+    private void WalkActorToActor(Actor actor, Actor to, int dist)
+    {
+        if (dist == 0xFF)
+        {
+            dist = actor.ScaleX * actor.Width / 0xFF + to.ScaleX * to.Width / 0xFF / 2;
+        }
+
+        int x = to.X < actor.X ? to.X + dist : to.X - dist;
+        var (ax, ay, _) = actor.AdjustXYToBeInBox(x, to.Y);
+        actor.StartWalk(ax, ay, -1);
     }
 
     /// <summary>Mirrors <c>o5_actorOps</c>: the sub-operations, numbered after <c>convertTable</c>.</summary>
@@ -552,11 +575,10 @@ public sealed partial class GameWorld
             switch (subOps[i].Code)
             {
                 case 1:
-                    actor.Costume = a[0];
+                    actor.SetCostume(a[0]);
                     break;
                 case 2:
-                    actor.StepX = a[0];
-                    actor.StepY = a[1];
+                    actor.SetWalkSpeed(a[0], a[1]);
                     break;
                 case 3:
                     actor.Sound = a[0];
@@ -652,7 +674,7 @@ public sealed partial class GameWorld
     {
         bool waiting = sub.Code switch
         {
-            1 => a[0] is > 0 and < ActorCount && Actors[a[0]].Moving,
+            1 => a[0] is > 0 and < ActorCount && Actors[a[0]].Moving != 0,
             2 => Engine.Variables[Vars.HaveMessage] != 0,
             3 => Camera.X / 8 != Camera.DestX / 8,
             4 => engine.Sentences.Count > 0

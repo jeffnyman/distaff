@@ -49,6 +49,7 @@ public sealed class ScummEngine : Engine
         }
 
         world.Step();
+        Host.Graphics.SetPalette(world.DisplayPalette());
         Host.Graphics.Present(world.Screen());
         return world.QuitRequested ? TickResult.Quit : TickResult.After(world.StepLength);
     }

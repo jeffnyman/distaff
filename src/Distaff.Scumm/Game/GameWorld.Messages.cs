@@ -125,7 +125,7 @@ public sealed partial class GameWorld
             // Loom does not animate an actor's talk for an empty message
             if (_charsetBuffer.Length > 0)
             {
-                actor.Frame = actor.TalkStartFrame;
+                RunTalkAnimation(actor, actor.TalkStartFrame);
                 _useTalkAnims = true;
             }
         }
@@ -148,7 +148,7 @@ public sealed partial class GameWorld
             var actor = Actors[talking];
             if (actor.IsInRoom(CurrentRoomNumber) && _useTalkAnims)
             {
-                actor.Frame = actor.TalkStopFrame;
+                RunTalkAnimation(actor, actor.TalkStopFrame);
                 _useTalkAnims = false;
             }
 
@@ -184,7 +184,7 @@ public sealed partial class GameWorld
         var talker = TalkingActor is > 0 and < ActorCount ? Actors[TalkingActor] : null;
         if (talker is not null && _charsetBufPos < _charsetBuffer.Length)
         {
-            talker.Frame = talker.TalkStartFrame;
+            RunTalkAnimation(talker, talker.TalkStartFrame);
             _useTalkAnims = true;
         }
 
@@ -264,10 +264,7 @@ public sealed partial class GameWorld
                 case 9:
                     {
                         int frame = Word();
-                        if (talker is not null)
-                        {
-                            talker.Frame = frame;
-                        }
+                        talker?.StartAnim(frame);
                     }
 
                     break;
@@ -391,6 +388,15 @@ public sealed partial class GameWorld
         }
 
         return text.ToString();
+    }
+
+    /// <summary>Mirrors <c>runActorTalkScript</c> for an actor without a talk script: the frame starts unless it shows already.</summary>
+    private void RunTalkAnimation(Actor actor, int frame)
+    {
+        if (TalkingActor != 0 && actor.IsInCurrentRoom && actor.Frame != frame)
+        {
+            actor.StartAnim(frame);
+        }
     }
 
     private static int CheckActor(int actor)

@@ -49,12 +49,12 @@ public sealed class WalkBoxes
     /// </summary>
     public bool Contains(int box, int x, int y)
     {
-        if (box < 0 || box == InvalidBox || box >= Boxes.Count)
+        if (box < 0 || box == InvalidBox || box > Boxes.Count || Boxes.Count == 0)
         {
             return false;
         }
 
-        var b = Boxes[box];
+        var b = Box(box);
         if (x < b.UpperLeftX && x < b.UpperRightX && x < b.LowerRightX && x < b.LowerLeftX)
         {
             return false;
@@ -79,6 +79,60 @@ public sealed class WalkBoxes
             && CompareSlope(b.UpperRightX, b.UpperRightY, b.LowerRightX, b.LowerRightY, x, y)
             && CompareSlope(b.LowerRightX, b.LowerRightY, b.LowerLeftX, b.LowerLeftY, x, y)
             && CompareSlope(b.LowerLeftX, b.LowerLeftY, b.UpperLeftX, b.UpperLeftY, x, y);
+    }
+
+    /// <summary>
+    /// A box by number; the number one past the last means the last, as <c>getBoxBaseAddr</c> takes
+    /// it for version 4 and before.
+    /// </summary>
+    public WalkBox Box(int box) => Boxes[box == Boxes.Count ? box - 1 : box];
+
+    /// <summary>
+    /// The box to go to next on the way from one box to another, or -1 for no way. The matrix
+    /// has a row per box: triplets of a lowest and a highest box and the box to go through for
+    /// them, ended by 0xFF. Mirrors <c>getNextBox</c> for version 3.
+    /// </summary>
+    public int NextBox(int from, int to)
+    {
+        if (from == to)
+        {
+            return to;
+        }
+
+        if (to == InvalidBox)
+        {
+            return -1;
+        }
+
+        if (from == InvalidBox)
+        {
+            return to;
+        }
+
+        var m = Matrix.Span;
+        int at = 0;
+        for (int i = 0; i < from && at < m.Length; i++)
+        {
+            while (at < m.Length && m[at] != 0xFF)
+            {
+                at += 3;
+            }
+
+            at++;
+        }
+
+        int dest = -1;
+        while (at + 2 < m.Length && m[at] != 0xFF)
+        {
+            if (m[at] <= to && to <= m[at + 1])
+            {
+                dest = (sbyte)m[at + 2];
+            }
+
+            at += 3;
+        }
+
+        return dest;
     }
 
     /// <summary>Mirrors <c>compareSlope</c>: whether the point is on the inner side of the edge from 1 to 2.</summary>

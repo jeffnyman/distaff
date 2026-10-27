@@ -20,6 +20,7 @@ internal static class Program
         string? screenshot = null;
         bool copyProtection = false;
         var clicks = new List<(int Step, int X, int Y)>();
+        int? traceActor = null;
         string objects = "initial";
         bool mask = false;
         int zoom = 1;
@@ -54,6 +55,10 @@ internal static class Program
                     break;
                 case "--click" when i + 1 < args.Length && ParseClick(args[i + 1]) is { } click:
                     clicks.Add(click);
+                    i++;
+                    break;
+                case "--trace-actor" when i + 1 < args.Length && int.TryParse(args[i + 1], out int traced):
+                    traceActor = traced;
                     i++;
                     break;
                 case "--copy-protection":
@@ -109,7 +114,7 @@ internal static class Program
         {
             if (run is { } runSteps)
             {
-                return Run(ResourceLoader.Open(game), runSteps, copyProtection, clicks, screenshot, zoom);
+                return Run(ResourceLoader.Open(game), runSteps, copyProtection, clicks, screenshot, zoom, traceActor);
             }
 
             if (script is { } scriptNo)
@@ -141,7 +146,7 @@ internal static class Program
         Console.Error.WriteLine("usage: distaff <game folder>");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
-        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--click step:x,y]... [--copy-protection] [--screenshot file.png] [--zoom N]");
+        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--click step:x,y]... [--trace-actor N] [--copy-protection] [--screenshot file.png] [--zoom N]");
         return 2;
     }
 
@@ -155,7 +160,7 @@ internal static class Program
             : null;
     }
 
-    private static int Run(ResourceLoader loader, int steps, bool copyProtection, List<(int Step, int X, int Y)> clicks, string? screenshot, int zoom)
+    private static int Run(ResourceLoader loader, int steps, bool copyProtection, List<(int Step, int X, int Y)> clicks, string? screenshot, int zoom, int? traceActor)
     {
         var world = new GameWorld(loader) { CopyProtection = copyProtection };
         world.Boot();
@@ -168,6 +173,12 @@ internal static class Program
             }
 
             world.Step();
+            if (traceActor is { } t)
+            {
+                var a = world.Actors[t];
+                Console.WriteLine($"step {world.Steps,5}: actor {t} room {a.Room} at ({a.X},{a.Y}) box {a.WalkBox} moving {a.Moving} facing {a.Facing} frame {a.Frame} visible {a.Visible} camera {world.Camera.X}");
+            }
+
             if (world.CurrentRoomNumber != room)
             {
                 room = world.CurrentRoomNumber;
@@ -187,7 +198,7 @@ internal static class Program
 
         if (screenshot is not null)
         {
-            File.WriteAllBytes(screenshot, PngWriter.Encode(world.Screen(), Palettes.Ega, zoom, zoom));
+            File.WriteAllBytes(screenshot, PngWriter.Encode(world.Screen(), world.DisplayPalette(), zoom, zoom));
             Console.WriteLine($"wrote {screenshot}");
         }
 

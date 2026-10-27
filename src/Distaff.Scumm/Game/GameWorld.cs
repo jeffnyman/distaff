@@ -1,4 +1,5 @@
 using System.Text;
+using Distaff.Scumm.Costumes;
 using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Rooms;
@@ -11,9 +12,9 @@ namespace Distaff.Scumm.Game;
 /// The game as it runs: the scripts, the room on screen and its objects, the actors, the camera,
 /// verbs, strings and messages. Mirrors ScummVM's <c>ScummEngine</c> loop (<c>scummLoop</c>,
 /// <c>startScene</c>) for the EGA release, and carries out the instructions the script engine
-/// hands over. Actors are state only so far: they are not drawn and arrive where they walk at once.
+/// hands over.
 /// </summary>
-public sealed partial class GameWorld : IScriptHost
+public sealed partial class GameWorld : IScriptHost, IActorWorld
 {
     /// <summary>Mirrors <c>_numActors</c> for version 3; actor 0 is not used.</summary>
     public const int ActorCount = 13;
@@ -47,6 +48,8 @@ public sealed partial class GameWorld : IScriptHost
     private readonly Dictionary<int, ReadOnlyMemory<byte>> _inventoryCode = [];
     private readonly byte[] _resourceMapper = new byte[128];
     private readonly List<string> _unhandled = [];
+    private readonly Dictionary<int, Costumes.Costume?> _costumes = [];
+    private int[] _boxFlags = [];
 
     public GameWorld(ResourceLoader loader, int seed = 1)
     {
@@ -56,7 +59,7 @@ public sealed partial class GameWorld : IScriptHost
         _states = [.. index.ObjectStates];
         _classes = [.. index.ObjectClasses];
         Engine = new ScriptEngine(this, seed);
-        Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i))];
+        Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i, this))];
         Verbs = [.. Enumerable.Range(0, VerbCount).Select(_ => new VerbSlot())];
         for (int i = 0; i < RoomPalette.Length; i++)
         {
@@ -94,7 +97,7 @@ public sealed partial class GameWorld : IScriptHost
     /// <summary>What the room's colours are drawn as (<c>_roomPalette</c>), which <c>roomOps</c> changes.</summary>
     public byte[] RoomPalette { get; } = new byte[256];
 
-    /// <summary>What actors' colours are drawn as (<c>_shadowPalette</c>).</summary>
+    /// <summary>What each colour on screen shows as (<c>_shadowPalette</c>, which <c>updatePalette</c> applies in version 3).</summary>
     public byte[] ShadowPalette { get; } = new byte[256];
 
     /// <summary>The cursor: whether it shows (<c>_cursor.state</c>) and whether the player can act (<c>_userPut</c>).</summary>
@@ -165,8 +168,22 @@ public sealed partial class GameWorld : IScriptHost
 
         if (CurrentRoomNumber != 0)
         {
+            foreach (var actor in Actors.Skip(1).Where(a => a.IsInCurrentRoom))
+            {
+                actor.Walk();
+            }
+
             Camera.Move(Engine.Variables[Vars.CameraMinX], Engine.Variables[Vars.CameraMaxX],
                 Engine.Variables[Vars.CameraFastX] != 0, Camera.Mode == CameraMode.FollowActor ? () => Actors[Camera.Follows].X : null);
+        }
+
+        if (CurrentRoomNumber != 0)
+        {
+            // processActors draws each actor and then moves its animation on
+            foreach (var actor in SortedActors())
+            {
+                actor.AnimateCostume();
+            }
         }
 
         Camera.LastX = Camera.X;
@@ -174,8 +191,8 @@ public sealed partial class GameWorld : IScriptHost
     }
 
     /// <summary>
-    /// The screen as the game shows it: the room's view, with the objects the states show, in the
-    /// view's place. Actors, text and verbs are not drawn yet.
+    /// The screen as the game shows it: the room's view, with the objects the states show and the
+    /// actors, in the view's place. Text and verbs are not drawn yet.
     /// </summary>
     public Surface8 Screen()
     {
@@ -191,7 +208,7 @@ public sealed partial class GameWorld : IScriptHost
         return screen;
     }
 
-    /// <summary>The whole room with its objects as their states and moves show them, in the room's colours.</summary>
+    /// <summary>The whole room with its objects as their states and moves show them, and its actors, in the room's colours.</summary>
     public MaskedImage RoomPicture(Room room)
     {
         var image = RoomRenderer.DrawBackground(room, RoomPalette);
@@ -200,7 +217,92 @@ public sealed partial class GameWorld : IScriptHost
             RoomRenderer.DrawObject(room, obj, image, RoomPalette, _moved.TryGetValue(obj.Number, out var at) ? at : null);
         }
 
+        bool actorColors = (Engine.Variables[Vars.CurrentLights] & 8) != 0;
+        foreach (var actor in SortedActors())
+        {
+            if (actor.Visible && LoadCostume(actor.Costume) is { } costume)
+            {
+                CostumeRenderer.Draw(costume, actor.Cost, Actor.OldDirection(actor.Facing),
+                    CostumeRenderer.Palette(costume, actor.Palette, actorColors), image, actor.X, actor.Y - actor.Elevation, ClipsActor(actor));
+            }
+        }
+
         return image;
+    }
+
+    /// <summary>The colours of the screen: the EGA's, through the shadow palette.</summary>
+    public Rgb[] DisplayPalette() => [.. Enumerable.Range(0, 16).Select(i => Palettes.Ega[ShadowPalette[i] & 0x0F])];
+
+    /// <summary>The actors of the current room with a costume, from the back to the front. Mirrors the sort of <c>processActors</c>.</summary>
+    private IEnumerable<Actor> SortedActors()
+        => Actors.Skip(1).Where(a => a.IsInCurrentRoom && a.Costume != 0).OrderBy(a => a.Y);
+
+    /// <summary>
+    /// Whether the room's mask hides the actor: unless it is forced either way or never clipped,
+    /// as its box says. Mirrors the <c>_zbuf</c> of <c>prepareDrawActorCostume</c> for version 3,
+    /// which has one mask.
+    /// </summary>
+    private bool ClipsActor(Actor actor)
+    {
+        if (actor.ForceClip != 0)
+        {
+            return true;
+        }
+
+        if (GetClass(actor.Number, Actor.ClassNeverClip))
+        {
+            return false;
+        }
+
+        return actor.WalkBox == WalkBoxes.InvalidBox || (CurrentRoom is { } room && actor.WalkBox <= room.WalkBoxes.Count && room.WalkBoxes.Count > 0 && room.WalkBoxes.Box(actor.WalkBox).Mask != 0);
+    }
+
+    // IActorWorld
+
+    public WalkBoxes? Boxes => CurrentRoom?.WalkBoxes;
+
+    public int BoxFlags(int box)
+    {
+        if (box < 0 || box == WalkBoxes.InvalidBox || _boxFlags.Length == 0 || box > _boxFlags.Length)
+        {
+            return 0;
+        }
+
+        return _boxFlags[box == _boxFlags.Length ? box - 1 : box];
+    }
+
+    /// <summary>Changes a box's flags for as long as the room is on screen (<c>setBoxFlags</c>).</summary>
+    public void SetBoxFlags(int box, int flags)
+    {
+        if (box >= 0 && box <= _boxFlags.Length && _boxFlags.Length > 0)
+        {
+            _boxFlags[box == _boxFlags.Length ? box - 1 : box] = flags;
+        }
+    }
+
+    public Costumes.Costume? LoadCostume(int number)
+    {
+        if (number == 0)
+        {
+            return null;
+        }
+
+        if (!_costumes.TryGetValue(number, out var costume))
+        {
+            // a few index entries are leftovers that point into other resources; they draw nothing
+            try
+            {
+                costume = _loader.Load(ResourceType.Costume, number) is { } data ? Costumes.Costume.Parse(number, data) : null;
+            }
+            catch (InvalidDataException)
+            {
+                costume = null;
+            }
+
+            _costumes[number] = costume;
+        }
+
+        return costume;
     }
 
     /// <summary>
@@ -223,7 +325,7 @@ public sealed partial class GameWorld : IScriptHost
 
         foreach (var actor in Actors.Skip(1))
         {
-            actor.Visible = false;
+            actor.Hide();
         }
 
         for (int i = 0; i < RoomPalette.Length; i++)
@@ -242,19 +344,21 @@ public sealed partial class GameWorld : IScriptHost
         if (room == 0)
         {
             CurrentRoom = null;
+            _boxFlags = [];
             return;
         }
 
         CurrentRoom = _loader.LoadRoom(resource) ?? throw new InvalidOperationException($"Room {resource} does not exist.");
+        _boxFlags = [.. CurrentRoom.WalkBoxes.Boxes.Select(b => (int)b.Flags)];
         Engine.Variables[Vars.CameraMinX] = Camera.ScreenWidth / 2;
         Engine.Variables[Vars.CameraMaxX] = CurrentRoom.Width - Camera.ScreenWidth / 2;
         Camera.Reset(CurrentRoom.Width);
 
         foreach (var actor in Actors.Skip(1))
         {
-            if (actor.IsInRoom(room))
+            if (actor.IsInCurrentRoom)
             {
-                actor.Visible = true;
+                actor.Show();
             }
         }
 

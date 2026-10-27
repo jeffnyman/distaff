@@ -14,9 +14,10 @@ folder holds. For the EGA release the index, rooms (objects, walkboxes, entry, e
 scripts), global scripts, sounds and the charset are read, and rooms are drawn with their
 objects and masks: `distaff <folder> --room N` writes a room as a PNG and lists it. Every script
 decodes; `--script N` and `--room-scripts N` disassemble them. The game runs headless from boot
-through the proficiency screen, the title and the opening to Bobbin on the cliff:
-`distaff <folder> --run 2000 --click 100:160,92 --screenshot end.png`. Actors, text and verbs are
-not drawn yet, and there is no sound or window. [ROADMAP.md](ROADMAP.md) gives the order of work.
+through the proficiency screen, the title and the opening to Bobbin on the cliff, and actors are
+drawn and walk along the room's boxes:
+`distaff <folder> --run 2000 --click 100:160,92 --screenshot end.png`. Text and verbs are not
+drawn yet, and there is no sound or window. [ROADMAP.md](ROADMAP.md) gives the order of work.
 
 | Release | SCUMM version | Data | State |
 |---|---|---|---|
@@ -28,7 +29,7 @@ not drawn yet, and there is no sound or window. [ROADMAP.md](ROADMAP.md) gives t
 
 | Path | What it is |
 |---|---|
-| `src/Distaff.Scumm` | The interpreter: the host contract, detection, resources, rooms and drawing them, the script decoder and engine, and the game loop. |
+| `src/Distaff.Scumm` | The interpreter: the host contract, detection, resources, rooms and drawing them, the script decoder and engine, the game loop, costumes and walking actors. |
 | `src/Distaff.Player` | The `distaff` command line player. |
 | `tests/Distaff.Scumm.Tests` | Unit tests, and tests that run against the real game data when it is present. |
 | `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`). |
