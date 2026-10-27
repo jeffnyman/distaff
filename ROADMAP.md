@@ -181,14 +181,32 @@ In `Distaff.Scumm.Scripts`:
 - Not yet: the overhead position of speech, which Loom's scripts never ask for; text is not
   compared with ScummVM screenshots.
 
-### Phase 7: the distaff and input
+### Phase 7: the distaff and input (done)
 
-- `verbs.cpp`, `input.cpp`, `cursor.cpp`: the verbs the scripts draw (the distaff's notes),
-  clicks, Loom's cursor built from the charset, the keys (skipping cutscenes, the period for
-  lines).
-- `gfx.cpp`: the flashlight that lights dark rooms, with Loom v3's offset (`drawFlashlight`).
-- The SDL host in the player: a window, mouse, keys.
-- Check: a scripted run plays the first drafts (opening, dyeing) headless.
+- `verbs.cpp` (`GameWorld.Verbs`): `o5_verbOps`, `o5_saveRestoreVerbs`, `killVerb`,
+  `setVerbObject` (an object's image copied out of the room on screen and kept),
+  `drawVerb`, `drawVerbBitmap`, `restoreVerbBG`, `restoreBackground` and `findVerbAtPos`.
+  Loom's verbs are all images: the distaff's parts, the staff and the icon of what is pointed
+  at. Text verbs draw in slot 4 as ScummVM draws them, without the highlight under the mouse.
+- `input.cpp`: clicks on verbs go to the verb script as the verb's (`checkExecVerbs`); the keys
+  of `processKeyboard` that version 3 keeps with the original interface: Escape skips a
+  cutscene and hands the game its cutscene key, the period ends a line, F1 to F9 are 315 on,
+  Ctrl and a letter its control code, the pause key pauses (without its banner).
+- `cursor.cpp` (`GameWorld.Cursor`): Loom's cursor made from the font's character 1
+  (`redefineBuiltinCursorFromChar`), its hotspot, the colour cycling of `animateCursor`; the
+  engine draws it over the frame it presents.
+- `gfx.cpp`: the dark room and the flashlight (`drawFlashlight`, `Flashlight`): 7 by 7 strips
+  around the ego, Loom v3's 4 right and 12 up, the corners masked as versions 1 to 3 mask them.
+- `object.cpp`: `o5_getDist` (`getObjActToObjActDist`), which the village's exit scripts use.
+- The player: `distaff <folder>` plays in an SDL window (the host from Maniacal), with
+  `--scale N` and `--fullscreen`; `--key step:K` presses keys in a headless run, which also
+  lists the verbs that are on.
+- Checked against the EGA release: a scripted run walks from the cliff through the village and
+  the tents to the Sanctuary, sees the council, picks up the distaff (drawn below the room with
+  its staff and the notes c, d and e), and weaves Opening (e c e d) on the egg, after which
+  Hetchel speaks; Escape skips the opening; the cursor's shape and colours; the flashlight in a
+  room with its lights put out (Loom only uses it in room 30, not yet reached). The window runs.
+- Not yet: Dyeing and the other drafts are not played; the pause banner; the restart question.
 
 ### Phase 8: saves
 

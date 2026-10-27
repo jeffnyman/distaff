@@ -83,8 +83,8 @@ public sealed partial class GameWorld
     private bool _hasMask;
     private VirtScreenNumber _textScreen;
 
-    /// <summary>The four text slots: actors' speech, then the three system slots (<c>_string</c>).</summary>
-    public TextSlot[] TextSlots { get; } = [new(), new(), new(), new()];
+    /// <summary>The text slots: actors' speech, the three system slots, and the one text verbs draw in (<c>_string</c>).</summary>
+    public TextSlot[] TextSlots { get; } = [new(), new(), new(), new(), new()];
 
     /// <summary>Who <c>print</c> prints for: an actor, or 0xFC to 0xFF for the system slots (<c>_actorToPrintStrFor</c>).</summary>
     public int ActorToPrintFor { get; private set; }

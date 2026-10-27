@@ -31,6 +31,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <summary>The screen's size.</summary>
     public const int ScreenWidth = 320, ScreenHeight = 200;
 
+    /// <summary>The bits of <c>VAR_CURRENT_LIGHTS</c>: the room lit, the flashlight on, actors in their colours (<c>LIGHTMODE_</c>).</summary>
+    public const int LightsRoomOn = 2, LightsFlashlightOn = 4, LightsActorColors = 8;
+
     /// <summary>The owner meaning "in its room" (<c>OF_OWNER_ROOM</c>).</summary>
     public const int OwnerRoom = 0x0F;
 
@@ -51,6 +54,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     private readonly Dictionary<int, Costumes.Costume?> _costumes = [];
     private int[] _boxFlags = [];
     private readonly Charset? _font;
+
+    // the flashlight's size in strips (ScummEngine_v5's _flashlight.xStrips and yStrips)
+    private (int X, int Y) _flashlightStrips = (7, 7);
 
     public GameWorld(ResourceLoader loader, int seed = 1)
     {
@@ -205,6 +211,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         }
 
         Camera.LastX = Camera.X;
+        AnimateCursor();
         Steps++;
     }
 
@@ -235,13 +242,29 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         }
     }
 
-    /// <summary>The whole room with its objects as their states and moves show them, and its actors, in the room's colours.</summary>
+    /// <summary>
+    /// The whole room with its objects as their states and moves show them, and its actors, in the
+    /// room's colours. With the room's lights off it is black but for the flashlight, when that is
+    /// on; the actors still show.
+    /// </summary>
     public MaskedImage RoomPicture(Room room)
     {
         var image = RoomRenderer.DrawBackground(room, RoomPalette);
         foreach (var obj in RoomRenderer.VisibleObjects(room, GetState))
         {
             RoomRenderer.DrawObject(room, obj, image, RoomPalette, _moved.TryGetValue(obj.Number, out var at) ? at : null);
+        }
+
+        int lights = Engine.Variables[Vars.CurrentLights];
+        if ((lights & LightsRoomOn) == 0)
+        {
+            var dark = new Surface8(image.Pixels.Width, image.Pixels.Height);
+            if ((lights & LightsFlashlightOn) != 0 && FlashlightRect() is { } light)
+            {
+                Flashlight.Copy(image.Pixels, dark, light.Intersect(dark.Bounds));
+            }
+
+            image = image with { Pixels = dark };
         }
 
         bool actorColors = (Engine.Variables[Vars.CurrentLights] & 8) != 0;
@@ -255,6 +278,28 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         }
 
         return image;
+    }
+
+    /// <summary>
+    /// Where the flashlight shines in the room, or null when it has no size or there is no ego.
+    /// Mirrors <c>drawFlashlight</c>: around the ego, on a strip and an even line, Loom version 3's
+    /// 4 pixels right and 12 up, kept within the view.
+    /// </summary>
+    private Rect? FlashlightRect()
+    {
+        int ego = Engine.Variables[Vars.Ego];
+        if (_flashlightStrips.X == 0 || _flashlightStrips.Y == 0 || ego is <= 0 or >= ActorCount)
+        {
+            return null;
+        }
+
+        int w = _flashlightStrips.X * 8;
+        int h = _flashlightStrips.Y * 8;
+        int x = (Actors[ego].X & ~7) - w / 2 - Camera.Left + 4;
+        int y = (Actors[ego].Y & ~1) - h / 2 - 12;
+        x = x < 0 ? 0 : Math.Min(x, Camera.ScreenWidth - w);
+        y = y < 0 ? 0 : Math.Min(y, ViewHeight - h);
+        return new Rect(x + Camera.Left, y, w, h);
     }
 
     /// <summary>The colours of the screen: the EGA's, through the shadow palette.</summary>
@@ -562,59 +607,4 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
     private int CheckObject(int obj)
         => obj >= 0 && obj < _owners.Length ? obj : throw new InvalidOperationException($"Object {obj} is out of range (0 to {_owners.Length - 1}).");
-}
-
-/// <summary>A verb on screen, as the scripts set it up. Mirrors ScummVM's <c>VerbSlot</c>.</summary>
-public sealed class VerbSlot
-{
-    public int VerbId { get; set; }
-
-    public int X { get; set; }
-
-    public int Y { get; set; }
-
-    public int Color { get; set; } = 2;
-
-    public int HiColor { get; set; }
-
-    public int DimColor { get; set; }
-
-    public int BackColor { get; set; }
-
-    /// <summary>0 for off, 1 for on, 2 for dimmed (<c>curmode</c>).</summary>
-    public int Mode { get; set; }
-
-    /// <summary>0 for text, 1 for an image (<c>type</c>).</summary>
-    public int Type { get; set; }
-
-    public int Key { get; set; }
-
-    public bool Center { get; set; }
-
-    /// <summary>Non-zero while saved by <c>saveRestoreVerbs</c> (<c>saveid</c>).</summary>
-    public int SaveId { get; set; }
-
-    /// <summary>The object whose image the verb shows, and the room it is in.</summary>
-    public int ImageObject { get; set; }
-
-    public int ImageRoom { get; set; }
-
-    public byte[]? Name { get; set; }
-
-    public void Reset()
-    {
-        VerbId = 0;
-        X = Y = 0;
-        Color = 2;
-        HiColor = 0;
-        DimColor = 0;
-        BackColor = 0;
-        Mode = 0;
-        Type = 0;
-        Key = 0;
-        Center = false;
-        SaveId = 0;
-        ImageObject = ImageRoom = 0;
-        Name = null;
-    }
 }

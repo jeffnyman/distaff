@@ -2,9 +2,19 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>distaff</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Description>Command line player for Loom: distaff &lt;game folder&gt;.</Description>
   </PropertyGroup>
+
+  <!-- SDL3 ships native libraries for every platform; a desktop player does not need the Android
+       and iOS ones, which are most of the package -->
+  <Target Name="DistaffTrimMobileNatives" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(ResolvedFileToPublish.RelativePath)', '^runtimes[\/](android|ios)'))" />
+    </ItemGroup>
+  </Target>
   <ItemGroup>
     <ProjectReference Include="..\Distaff.Scumm\Distaff.Scumm.csproj" />
+    <PackageReference Include="ppy.SDL3-CS" />
   </ItemGroup>
 </Project>

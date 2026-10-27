@@ -1,12 +1,12 @@
 using Distaff.Scumm.Scripts;
+using Distaff.Scumm.View;
 
 namespace Distaff.Scumm.Game;
 
 /// <summary>
 /// The player's mouse and keys, as the scripts see them. Mirrors ScummVM's mouse variables
 /// (<c>processInput</c>, <c>scummLoop_updateScummVars</c>) and <c>checkExecVerbs</c>, which hands
-/// a click or key to the game's verb script (<c>runInputScript</c>). Clicks on verbs come later:
-/// a verb's place on screen needs its text's width.
+/// a click or key to the game's verb script (<c>runInputScript</c>), and <c>processKeyboard</c>.
 /// </summary>
 public sealed partial class GameWorld
 {
@@ -58,8 +58,8 @@ public sealed partial class GameWorld
 
     /// <summary>
     /// Hands the step's click or key to the verb script, when the player has control. Mirrors
-    /// <c>checkExecVerbs</c> for version 3: a key is a verb's when one has it, a click in the view is
-    /// the scene's and one below it the verbs' area.
+    /// <c>checkExecVerbs</c> for version 3: a key is a verb's when one has it; a click is a verb's
+    /// when it falls on one, else the scene's in the view and the verbs' area in another band.
     /// </summary>
     private void CheckExecVerbs()
     {
@@ -86,16 +86,65 @@ public sealed partial class GameWorld
             return;
         }
 
-        int y = MouseY - ViewTop;
-        if (y >= 0 && y < ViewHeight)
+        if (Screens.Find(MouseY) is not { } zone)
         {
-            RunInputScript(SceneClickArea, 0, 0);
+            return;
         }
-        else if (MouseY >= ViewTop + ViewHeight)
+
+        int over = FindVerbAtPos(MouseX, MouseY);
+        if (over != 0)
         {
-            RunInputScript(VerbClickArea, 0, 0);
+            RunInputScript(VerbClickArea, Verbs[over].VerbId, 0);
+        }
+        else
+        {
+            RunInputScript(zone.Number == VirtScreenNumber.Main ? SceneClickArea : VerbClickArea, 0, 0);
         }
     }
+
+    /// <summary>
+    /// A key as the player types it. Mirrors the part of <c>processKeyboard</c> that version 3
+    /// with the original interface keeps: the pause key pauses, the period ends the line being
+    /// shown, Escape skips the cutscene and hands the game its cutscene key, F1 to F9 are 315 on,
+    /// Ctrl with a letter is the letter's control code, and any other character goes to the
+    /// game. The restart key's question is not asked.
+    /// </summary>
+    public void KeyDown(Input.Key key, Input.KeyModifiers modifiers, char ascii)
+    {
+        int pauseKey = Engine.Variables[Vars.PauseKey];
+        if (key == Input.Key.Escape)
+        {
+            Engine.AbortCutscene();
+            _input = Engine.Variables[Vars.CutsceneExitKey];
+        }
+        else if (key is >= Input.Key.F1 and <= Input.Key.F9)
+        {
+            _input = key - Input.Key.F1 + 315;
+        }
+        else if (ascii == 0)
+        {
+            return;
+        }
+        else if (pauseKey != 0 && ascii == pauseKey)
+        {
+            Paused = true;
+        }
+        else if (ascii == '.')
+        {
+            _talkDelay = 0;
+        }
+        else if ((modifiers & Input.KeyModifiers.Ctrl) != 0 && char.ToLowerInvariant(ascii) is >= 'a' and <= 'z')
+        {
+            _input = char.ToLowerInvariant(ascii) & 0x1F;
+        }
+        else
+        {
+            _input = ascii;
+        }
+    }
+
+    /// <summary>Whether the game is paused by its pause key; any key goes on (<c>showOldStyleBannerAndPause</c>, without its banner).</summary>
+    public bool Paused { get; set; }
 
     /// <summary>Mirrors <c>runInputScript</c>.</summary>
     private void RunInputScript(int area, int value, int mode)

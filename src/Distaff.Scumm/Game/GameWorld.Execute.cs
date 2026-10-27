@@ -115,7 +115,12 @@ public sealed partial class GameWorld
                 {
                     Engine.Variables[Vars.CurrentLights] = Arg(0);
                 }
+                else if (Arg(2) == 1)
+                {
+                    _flashlightStrips = (Arg(0), Arg(1));
+                }
 
+                Screens.RedrawMain();
                 return 0;
             case "o4_oldRoomEffect":
                 return 0;
@@ -207,6 +212,8 @@ public sealed partial class GameWorld
                     return CurrentRoom is { } room && room.WalkBoxes.Contains(Arg(1), actor.X, actor.Y) ? 1 : 0;
                 }
 
+            case "o5_getDist":
+                return ObjectDistance(Arg(0), Arg(1));
             case "o3_setBoxFlags":
                 SetBoxFlags(Arg(0), Arg(1));
                 return 0;
@@ -530,6 +537,51 @@ public sealed partial class GameWorld
     }
 
     /// <summary>
+    /// How far apart two actors or objects are, the larger of the two axes; 0 for two actors
+    /// together in another room, 255 when either cannot be placed. An actor measures to the point
+    /// of its boxes nearest an object. Mirrors <c>getObjActToObjActDist</c>.
+    /// </summary>
+    private int ObjectDistance(int a, int b)
+    {
+        var actorA = a is > 0 and < ActorCount ? Actors[a] : null;
+        var actorB = b is > 0 and < ActorCount ? Actors[b] : null;
+        if (actorA is not null && actorB is not null && actorA.Room == actorB.Room && actorA.Room != 0 && !actorA.IsInCurrentRoom)
+        {
+            return 0;
+        }
+
+        if (PlacedPosition(a) is not { } p || PlacedPosition(b) is not { } q)
+        {
+            return 0xFF;
+        }
+
+        if (actorA is not null && actorB is null)
+        {
+            var (x, y, _) = actorA.AdjustXYToBeInBox(q.X, q.Y);
+            q = (x, y);
+        }
+
+        return Math.Max(Math.Abs(p.X - q.X), Math.Abs(p.Y - q.Y));
+    }
+
+    /// <summary>Where an actor in the room, a carried object's owner in the room, or an object of the room is. Mirrors <c>getObjectOrActorXY</c>.</summary>
+    private (int X, int Y)? PlacedPosition(int obj)
+    {
+        if (obj is > 0 and < ActorCount)
+        {
+            return Actors[obj].IsInCurrentRoom ? (Actors[obj].X, Actors[obj].Y) : null;
+        }
+
+        return WhereIsObject(obj) switch
+        {
+            ObjectPlace.Inventory when GetOwner(obj) is > 0 and < ActorCount && Actors[GetOwner(obj)].IsInCurrentRoom
+                => (Actors[GetOwner(obj)].X, Actors[GetOwner(obj)].Y),
+            ObjectPlace.Room => ObjectPosition(obj),
+            _ => null,
+        };
+    }
+
+    /// <summary>
     /// Mirrors <c>o5_loadRoomWithEgo</c> for version 3: the ego goes to the room, stands at the
     /// object unless the entry script placed it, the camera follows it, and it walks on when a
     /// place is given.
@@ -829,188 +881,4 @@ public sealed partial class GameWorld
 
     private static int CheckString(int number)
         => number is >= 0 and < StringCount ? number : throw new InvalidOperationException($"String {number} is out of range (0 to {StringCount - 1}).");
-
-    /// <summary>The slot holding a verb with this save id, or 0 (<c>getVerbSlot</c>).</summary>
-    private int VerbSlotOf(int verb, int saveId)
-    {
-        for (int i = 1; i < VerbCount; i++)
-        {
-            if (Verbs[i].VerbId == verb && Verbs[i].SaveId == saveId)
-            {
-                return i;
-            }
-        }
-
-        return 0;
-    }
-
-    /// <summary>Mirrors <c>killVerb</c>.</summary>
-    private void KillVerb(int slot)
-    {
-        if (slot != 0)
-        {
-            Verbs[slot].VerbId = 0;
-            Verbs[slot].Mode = 0;
-            Verbs[slot].Name = null;
-            Verbs[slot].SaveId = 0;
-        }
-    }
-
-    /// <summary>Mirrors <c>o5_verbOps</c>; slot 0 takes what is set for a verb no slot holds.</summary>
-    private void VerbOps(int verb, IReadOnlyList<SubOperation> subOps, IReadOnlyList<int[]> args)
-    {
-        int slot = VerbSlotOf(verb, 0);
-        var vs = Verbs[slot];
-        vs.VerbId = verb;
-        for (int i = 0; i < subOps.Count; i++)
-        {
-            int[] a = args[i];
-            switch (subOps[i].Code)
-            {
-                case 1:
-                    if (slot != 0)
-                    {
-                        vs.ImageObject = a[0];
-                        vs.ImageRoom = Engine.Variables[Vars.RoomResource];
-                        vs.Type = 1;
-                    }
-
-                    break;
-                case 2:
-                    vs.Name = slot != 0 ? subOps[i].Operands[0].Text : null;
-                    vs.Type = 0;
-                    vs.ImageObject = 0;
-                    break;
-                case 3:
-                    vs.Color = a[0];
-                    break;
-                case 4:
-                    vs.HiColor = a[0];
-                    break;
-                case 5:
-                    vs.X = a[0];
-                    vs.Y = a[1];
-                    break;
-                case 6:
-                    vs.Mode = 1;
-                    break;
-                case 7:
-                    vs.Mode = 0;
-                    break;
-                case 8:
-                    KillVerb(slot);
-                    break;
-                case 9:
-                    slot = VerbSlotOf(verb, 0);
-                    if (slot == 0)
-                    {
-                        slot = Array.FindIndex(Verbs, 1, v => v.VerbId == 0);
-                        if (slot < 0)
-                        {
-                            throw new InvalidOperationException("Too many verbs.");
-                        }
-                    }
-
-                    vs = Verbs[slot];
-                    vs.Reset();
-                    vs.VerbId = verb;
-                    vs.HiColor = 14;
-                    vs.DimColor = 8;
-                    break;
-                case 16:
-                    vs.DimColor = a[0];
-                    break;
-                case 17:
-                    vs.Mode = 2;
-                    break;
-                case 18:
-                    vs.Key = a[0];
-                    break;
-                case 19:
-                    vs.Center = true;
-                    break;
-                case 20:
-                    vs.Name = slot != 0 && a[0] is > 0 and < StringCount ? _strings[a[0]]?.ToArray() : null;
-                    vs.Type = 0;
-                    vs.ImageObject = 0;
-                    break;
-                case 22:
-                    if (slot != 0 && vs.ImageObject != a[0])
-                    {
-                        vs.ImageObject = a[0];
-                        vs.ImageRoom = a[1];
-                        vs.Type = 1;
-                    }
-
-                    break;
-                case 23:
-                    vs.BackColor = a[0];
-                    break;
-            }
-        }
-    }
-
-    /// <summary>Mirrors <c>o5_saveRestoreVerbs</c>.</summary>
-    private void SaveRestoreVerbs(int op, int[] a)
-    {
-        for (int verb = a[0]; verb <= a[1]; verb++)
-        {
-            switch (op)
-            {
-                case 1:
-                    {
-                        int slot = VerbSlotOf(verb, 0);
-                        if (slot != 0 && Verbs[slot].SaveId == 0)
-                        {
-                            Verbs[slot].SaveId = a[2];
-                        }
-                    }
-
-                    break;
-                case 2:
-                    if (VerbSlotOf(verb, a[2]) != 0)
-                    {
-                        KillVerb(VerbSlotOf(verb, 0));
-                        Verbs[VerbSlotOf(verb, a[2])].SaveId = 0;
-                    }
-
-                    break;
-                case 3:
-                    KillVerb(VerbSlotOf(verb, a[2]));
-                    break;
-            }
-        }
-    }
-
-    /// <summary>Mirrors <c>o5_cursorCommand</c> for version 3: the cursor and the player's control, counted on and off.</summary>
-    private void CursorCommand(int op, int[] a)
-    {
-        switch (op)
-        {
-            case 1:
-                CursorState = 1;
-                break;
-            case 2:
-                CursorState = 0;
-                break;
-            case 3:
-                UserPut = 1;
-                break;
-            case 4:
-                UserPut = 0;
-                break;
-            case 5:
-                CursorState++;
-                break;
-            case 6:
-                CursorState--;
-                break;
-            case 7:
-                UserPut++;
-                break;
-            case 8:
-                UserPut--;
-                break;
-        }
-    }
 }

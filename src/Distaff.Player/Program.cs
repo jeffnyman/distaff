@@ -1,6 +1,10 @@
+using Distaff.Player.Sdl;
+using Distaff.Scumm;
 using Distaff.Scumm.Detection;
 using Distaff.Scumm.Game;
 using Distaff.Scumm.Graphics;
+using Distaff.Scumm.Hosting;
+using Distaff.Scumm.Input;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Rooms;
 using Distaff.Scumm.Scripts;
@@ -20,6 +24,9 @@ internal static class Program
         string? screenshot = null;
         bool copyProtection = false;
         var clicks = new List<(int Step, int X, int Y)>();
+        var keys = new List<(int Step, Key Key, char Ascii)>();
+        int scale = 3;
+        bool fullscreen = false;
         int? traceActor = null;
         string objects = "initial";
         bool mask = false;
@@ -56,6 +63,17 @@ internal static class Program
                 case "--click" when i + 1 < args.Length && ParseClick(args[i + 1]) is { } click:
                     clicks.Add(click);
                     i++;
+                    break;
+                case "--key" when i + 1 < args.Length && ParseKey(args[i + 1]) is { } key:
+                    keys.Add(key);
+                    i++;
+                    break;
+                case "--scale" when i + 1 < args.Length && int.TryParse(args[i + 1], out int sc) && sc is >= 1 and <= 8:
+                    scale = sc;
+                    i++;
+                    break;
+                case "--fullscreen":
+                    fullscreen = true;
                     break;
                 case "--trace-actor" when i + 1 < args.Length && int.TryParse(args[i + 1], out int traced):
                     traceActor = traced;
@@ -114,7 +132,7 @@ internal static class Program
         {
             if (run is { } runSteps)
             {
-                return Run(ResourceLoader.Open(game), runSteps, copyProtection, clicks, screenshot, zoom, traceActor);
+                return Run(ResourceLoader.Open(game), runSteps, copyProtection, clicks, keys, screenshot, zoom, traceActor);
             }
 
             if (script is { } scriptNo)
@@ -132,7 +150,7 @@ internal static class Program
                 return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
             }
 
-            return 0;
+            return Play(game, release, copyProtection, scale, fullscreen);
         }
         catch (Exception ex) when (ex is NotSupportedException or InvalidDataException)
         {
@@ -143,14 +161,27 @@ internal static class Program
 
     private static int Usage()
     {
-        Console.Error.WriteLine("usage: distaff <game folder>");
+        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--copy-protection]");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
-        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--click step:x,y]... [--trace-actor N] [--copy-protection] [--screenshot file.png] [--zoom N]");
+        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--click step:x,y]... [--key step:K]... [--trace-actor N] [--copy-protection] [--screenshot file.png] [--zoom N]");
         return 2;
     }
 
-    /// <summary>Runs the game headless from boot for some steps, and reports where it got to.</summary>
+    /// <summary>
+    /// Plays the game in a window: the mouse and keys go to the game, which draws its own cursor.
+    /// Alt+Enter or F11 switches to full screen.
+    /// </summary>
+    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int scale, bool fullscreen)
+    {
+        using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen });
+        var detected = new DetectedGame("scumm", "loom", "Loom", release.Variant, release.Language, release.Platform);
+        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection };
+        SDL.SDL3.SDL_HideCursor();
+        host.Run(engine);
+        return 0;
+    }
+
     /// <summary>A click given as <c>step:x,y</c>, in screen pixels.</summary>
     private static (int Step, int X, int Y)? ParseClick(string text)
     {
@@ -160,7 +191,28 @@ internal static class Program
             : null;
     }
 
-    private static int Run(ResourceLoader loader, int steps, bool copyProtection, List<(int Step, int X, int Y)> clicks, string? screenshot, int zoom, int? traceActor)
+    /// <summary>A key given as <c>step:K</c>: a character, <c>esc</c>, <c>space</c> or <c>f1</c> to <c>f9</c>.</summary>
+    private static (int Step, Key Key, char Ascii)? ParseKey(string text)
+    {
+        int colon = text.IndexOf(':');
+        if (colon < 1 || !int.TryParse(text[..colon], out int step))
+        {
+            return null;
+        }
+
+        string name = text[(colon + 1)..];
+        return name.ToLowerInvariant() switch
+        {
+            "esc" => (step, Key.Escape, (char)27),
+            "space" => (step, Key.Space, ' '),
+            ['f', >= '1' and <= '9'] => (step, Key.F1 + (name[1] - '1'), (char)(315 + name[1] - '1')),
+            [var c] => (step, (Key)char.ToLowerInvariant(c), c),
+            _ => null,
+        };
+    }
+
+    /// <summary>Runs the game headless from boot for some steps, with clicks and keys at given steps, and reports where it got to.</summary>
+    private static int Run(ResourceLoader loader, int steps, bool copyProtection, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor)
     {
         var world = new GameWorld(loader) { CopyProtection = copyProtection };
         world.Boot();
@@ -170,6 +222,11 @@ internal static class Program
             foreach (var click in clicks.Where(c => c.Step == step))
             {
                 world.Click(click.X, click.Y);
+            }
+
+            foreach (var key in keys.Where(k => k.Step == step))
+            {
+                world.KeyDown(key.Key, KeyModifiers.None, key.Ascii);
             }
 
             world.Step();
@@ -190,6 +247,7 @@ internal static class Program
         Console.WriteLine($"after {world.Steps} steps ({world.Time.TotalSeconds:F1}s): room {world.CurrentRoomNumber}, camera at {world.Camera.X}");
         Console.WriteLine($"messages: {string.Join(" | ", world.MessageLog.Append(world.MessageText).Where(m => m.Length > 0))}");
         Console.WriteLine($"sounds started: {string.Join(' ', world.SoundsStarted)}");
+        Console.WriteLine($"verbs on: {string.Join(' ', world.Verbs.Where(v => v.VerbId != 0 && v.Mode == 1 && v.SaveId == 0).Select(v => $"{v.VerbId}@({v.CurRect.Left},{v.CurRect.Top})-({v.CurRect.Right},{v.CurRect.Bottom})"))}");
         Console.WriteLine($"running scripts: {string.Join(' ', world.Engine.Slots.Where(s => !s.IsDead).Select(s => $"{s.Number}({s.Kind}{(s.Status == 1 ? $" wait {s.Delay}" : "")})"))}");
         foreach (var group in world.Unhandled.GroupBy(u => u[(u.IndexOf(']') + 2)..].Split('(')[0]))
         {

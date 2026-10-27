@@ -1,6 +1,7 @@
 using Distaff.Scumm.Game;
 using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Hosting;
+using Distaff.Scumm.Input;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Storage;
 
@@ -42,15 +43,34 @@ public sealed class ScummEngine : Engine
         var world = World;
         while (Host.Input.TryRead(out var input))
         {
-            if (input.Type == Input.InputEventType.Quit)
+            switch (input.Type)
             {
-                return TickResult.Quit;
+                case InputEventType.Quit:
+                    return TickResult.Quit;
+                case InputEventType.MouseMove:
+                    world.MoveMouse(input.X, input.Y);
+                    break;
+                case InputEventType.MouseDown when input.Button is MouseButton.Left or MouseButton.Right && !world.Paused:
+                    world.Click(input.X, input.Y, right: input.Button == MouseButton.Right);
+                    break;
+                case InputEventType.KeyDown when world.Paused:
+                    world.Paused = false;
+                    break;
+                case InputEventType.KeyDown:
+                    world.KeyDown(input.Key, input.Modifiers, input.Ascii);
+                    break;
             }
         }
 
-        world.Step();
+        if (!world.Paused)
+        {
+            world.Step();
+        }
+
+        var frame = world.Screen();
+        world.DrawCursor(frame);
         Host.Graphics.SetPalette(world.DisplayPalette());
-        Host.Graphics.Present(world.Screen());
+        Host.Graphics.Present(frame);
         return world.QuitRequested ? TickResult.Quit : TickResult.After(world.StepLength);
     }
 }
