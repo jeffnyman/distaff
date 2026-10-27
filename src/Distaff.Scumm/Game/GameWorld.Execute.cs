@@ -911,15 +911,29 @@ public sealed partial class GameWorld
                     text.Center = true;
                     text.Overhead = false;
                     break;
-                case 6:
+                case 6 when _loader.Version == 3:
                     text.Height = a[0];
+                    break;
+                case 6:
+                    // version 4: left-aligned
+                    text.Center = false;
+                    text.Overhead = false;
                     break;
                 case 7:
                     text.Overhead = true;
                     break;
+                case 8 when _loader.Version == 4:
+                    SayVoice((ushort)a[0], (ushort)a[1]);
+                    break;
                 case 15:
                     PrintString(slot, subOps[i].Operands[0].Text!);
-                    text.KeepPlace();
+
+                    // versions 1 to 3 have no defaults of their own: the slot keeps where it printed
+                    if (_loader.Version == 3)
+                    {
+                        text.KeepPlace();
+                    }
+
                     return;
             }
         }

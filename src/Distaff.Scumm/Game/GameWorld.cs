@@ -57,7 +57,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     private readonly List<string> _unhandled = [];
     private readonly Dictionary<int, Costumes.Costume?> _costumes = [];
     private int[] _boxFlags = [];
-    private readonly Charset? _font;
+    private Charset? _font;
 
     // the flashlight's size in strips (ScummEngine_v5's _flashlight.xStrips and yStrips)
     private (int X, int Y) _flashlightStrips = (7, 7);
@@ -74,11 +74,12 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         _owners = [.. index.ObjectOwners];
         _states = [.. index.ObjectStates];
         _classes = [.. index.ObjectClasses];
-        Engine = new ScriptEngine(this, seed);
+        Engine = new ScriptEngine(this, seed, loader.Version);
         Sound = new SoundSystem(sound, LoadSound, sampleRate);
         Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i, this))];
         Verbs = [.. Enumerable.Range(0, VerbCount).Select(_ => new VerbSlot())];
-        _font = loader.LoadCharset(0) is { } font ? Charset.Parse(font) : null;
+        // version 4 has no charset 0; its scripts pick one before any text (initCharset)
+        _font = loader.Version == 3 && loader.LoadCharset(0) is { } font ? Charset.Parse(font) : null;
         for (int i = 0; i < RoomPalette.Length; i++)
         {
             RoomPalette[i] = (byte)i;
@@ -187,8 +188,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         UpdateMouseVariables();
         HandleSaveLoad();
 
-        // updateMusicTimer: the player's timer, in quarter-frames of 240 a second
-        Engine.Variables[Vars.MusicTimer] = (int)(Sound.Player.MusicTimer * TimerFrequency / 240.0);
+        // updateMusicTimer: the CD's timer for the VGA CD (GF_AUDIOTRACKS); the player's otherwise, in quarter-frames of 240 a second
+        AdvanceCdTimer(delta * 4);
+        Engine.Variables[Vars.MusicTimer] = _loader.Version == 4 ? _cdMusicTimer : (int)(Sound.Player.MusicTimer * TimerFrequency / 240.0);
 
         Engine.RunAllScripts();
         CheckExecVerbs();
@@ -348,7 +350,20 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     }
 
     /// <summary>The colours of the screen: the EGA's, through the shadow palette.</summary>
-    public Rgb[] DisplayPalette() => [.. Enumerable.Range(0, 16).Select(i => Palettes.Ega[ShadowPalette[i] & 0x0F])];
+    /// <summary>
+    /// The colours on the screen. The EGA's are its 16 through the shadow palette; the VGA CD's
+    /// are the 256 of <see cref="CurrentPalette"/>, each through the shadow palette (<c>updatePalette</c>
+    /// with <c>_shadowPalRemap</c>).
+    /// </summary>
+    public Rgb[] DisplayPalette() => _loader.Version == 4
+        ? [.. Enumerable.Range(0, 256).Select(i => CurrentPalette[ShadowPalette[i]])]
+        : [.. Enumerable.Range(0, 16).Select(i => Palettes.Ega[ShadowPalette[i] & 0x0F])];
+
+    /// <summary>The SCUMM version the game is: 3 for the EGA, 4 for the VGA CD.</summary>
+    public int Version => _loader.Version;
+
+    /// <summary>The VGA CD's 256 colours as the game has set them (<c>_currentPalette</c>): the room's palette, as the scripts change it.</summary>
+    public Rgb[] CurrentPalette { get; private set; } = new Rgb[256];
 
     /// <summary>The actors of the current room with a costume, from the back to the front. Mirrors the sort of <c>processActors</c>.</summary>
     private IEnumerable<Actor> SortedActors()
@@ -409,7 +424,8 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
             // a few index entries are leftovers that point into other resources; they draw nothing
             try
             {
-                costume = _loader.Load(ResourceType.Costume, number) is { } data ? Costumes.Costume.Parse(number, data) : null;
+                costume = _loader.Load(ResourceType.Costume, number) is not { } data ? null
+                    : _loader.Version == 4 ? Costumes.Costume.ParseV4(number, data) : Costumes.Costume.Parse(number, data);
             }
             catch (InvalidDataException)
             {
@@ -469,6 +485,12 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         Screens.NewRoom(CurrentRoom.Width);
         _drawnObjects.Clear();
         _boxFlags = [.. CurrentRoom.WalkBoxes.Boxes.Select(b => (int)b.Flags)];
+
+        // a version 4 room sets the palette from its own (setCurrentPalette in resetRoomSubBlocks)
+        if (CurrentRoom.BlockOffsets.ContainsKey("PA"))
+        {
+            CurrentPalette = RoomRenderer.PaletteOf(CurrentRoom);
+        }
         Engine.Variables[Vars.CameraMinX] = Camera.ScreenWidth / 2;
         Engine.Variables[Vars.CameraMaxX] = CurrentRoom.Width - Camera.ScreenWidth / 2;
         Camera.Reset(CurrentRoom.Width);

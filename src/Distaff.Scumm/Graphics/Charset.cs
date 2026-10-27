@@ -16,6 +16,9 @@ public enum ShadowType
 /// </summary>
 public sealed class Charset
 {
+    /// <summary>Where a version 4 font starts in its charset resource (<c>_fontPtr += 17</c> in <c>setCurID</c>).</summary>
+    private const int ClassicFont = 17;
+
     private readonly ReadOnlyMemory<byte> _data;
     private readonly int _glyphs;
 
@@ -26,6 +29,26 @@ public sealed class Charset
         Height = height;
         _glyphs = 6 + count;
     }
+
+    private Charset(ReadOnlyMemory<byte> font, int bitsPerPixel, int height, int count)
+    {
+        _data = font;
+        IsClassic = true;
+        BitsPerPixel = bitsPerPixel;
+        Height = height;
+        Count = count;
+    }
+
+    /// <summary>
+    /// Whether this is a version 4 font (<c>CharsetRendererClassic</c>): from its start, the bits per
+    /// pixel, the height, a word count of characters, and a 32-bit offset per character from the
+    /// font's start, 0 for none. A character there is its width, height, and signed x and y offsets,
+    /// then its pixels, row by row, <see cref="BitsPerPixel"/> each, the high bits first.
+    /// </summary>
+    public bool IsClassic { get; }
+
+    /// <summary>The bits a version 4 font's pixels take (<c>_bitsPerPixel</c>): 1, 2, 4 or 8; 1 for version 3.</summary>
+    public int BitsPerPixel { get; } = 1;
 
     /// <summary>The characters the font holds (<c>_numChars</c>).</summary>
     public int Count { get; }
@@ -45,12 +68,93 @@ public sealed class Charset
         return new Charset(data, span[4], span[5]);
     }
 
+    /// <summary>Reads a version 4 charset resource, as <see cref="Resources.ResourceLoader.LoadCharset"/> returns it.</summary>
+    public static Charset ParseClassic(ReadOnlyMemory<byte> data)
+    {
+        if (data.Length < ClassicFont + 4)
+        {
+            throw new InvalidDataException($"A charset of {data.Length} bytes is too short for its header.");
+        }
+
+        var font = data[ClassicFont..];
+        var span = font.Span;
+        int bits = span[0];
+        if (bits is not (1 or 2 or 4 or 8))
+        {
+            throw new InvalidDataException($"A charset has {bits} bits a pixel.");
+        }
+
+        return new Charset(font, bits, span[1], System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(span[2..]));
+    }
+
+    /// <summary>A version 4 character: its size, offsets, and where its pixels start in the font.</summary>
+    public readonly record struct Glyph4(int Width, int Height, int OffsetX, int OffsetY, int Data);
+
+    /// <summary>A version 4 character, or null when the font has none. Mirrors <c>CharsetRendererClassic::prepareDraw</c>.</summary>
+    public Glyph4? ClassicGlyph(int c)
+    {
+        int entry = 4 + (c & 0xFF) * 4;
+        if (!IsClassic || entry + 4 > _data.Length)
+        {
+            return null;
+        }
+
+        var span = _data.Span;
+        int offset = System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(span[entry..]);
+        if (offset == 0 || offset + 4 > span.Length)
+        {
+            return null;
+        }
+
+        return new Glyph4(span[offset], span[offset + 1], (sbyte)span[offset + 2], (sbyte)span[offset + 3], offset + 4);
+    }
+
+    /// <summary>
+    /// Draws a version 4 character at (<paramref name="x"/>, <paramref name="y"/>), each pixel's
+    /// value through <paramref name="colorMap"/>, 0 transparent. Mirrors <c>drawBitsN</c>; pixels off
+    /// the surface are left out.
+    /// </summary>
+    public void DrawBitsN(Surface8 dest, int x, int y, Glyph4 glyph, ReadOnlySpan<byte> colorMap)
+    {
+        var src = _data.Span;
+        int at = glyph.Data;
+        int bpp = BitsPerPixel;
+        byte bits = at < src.Length ? src[at++] : (byte)0;
+        int numBits = 8;
+        for (int row = 0; row < glyph.Height && y + row < dest.Height; row++)
+        {
+            for (int col = 0; col < glyph.Width; col++)
+            {
+                int color = (bits >> (8 - bpp)) & 0xFF;
+                int px = x + col, py = y + row;
+                if (color != 0 && py >= 0 && px >= 0 && px < dest.Width)
+                {
+                    dest[px, py] = colorMap[color];
+                }
+
+                bits = (byte)(bits << bpp);
+                numBits -= bpp;
+                if (numBits == 0)
+                {
+                    bits = at < src.Length ? src[at++] : (byte)0;
+                    numBits = 8;
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// How far a character moves the pen. Mirrors <c>CharsetRendererV3::getCharWidth</c>, which reads
     /// the table without a bound: past the widths come the glyphs' bytes.
     /// </summary>
     public int CharWidth(int c)
     {
+        if (IsClassic)
+        {
+            // version 4: the width and the x offset (CharsetRendererClassic::getCharWidth)
+            return ClassicGlyph(c) is { } glyph ? glyph.Width + glyph.OffsetX : 0;
+        }
+
         int at = 6 + (c & 0xFF);
         return at < _data.Length ? _data.Span[at] : 0;
     }
@@ -64,13 +168,13 @@ public sealed class Charset
 
     /// <summary>
     /// The width of the text up to its end, a line break or a wait. Mirrors
-    /// <c>CharsetRenderer::getStringWidth</c> for version 3, which adds nothing to the width: '@'
-    /// draws nothing, code 8 ends a verb's text (<paramref name="arg"/> 1) or skips the spaces
+    /// <c>CharsetRenderer::getStringWidth</c>, which adds nothing to the width for version 3 and 1
+    /// from version 4 on: '@' draws nothing, code 8 ends a verb's text (<paramref name="arg"/> 1) or skips the spaces
     /// after it, and codes 10, 12, 13, 14 and 21 carry a word.
     /// </summary>
     public int StringWidth(int arg, ReadOnlySpan<byte> text)
     {
-        int width = 0;
+        int width = IsClassic ? 1 : 0;
         int pos = 0;
         byte Next(ReadOnlySpan<byte> t, ref int p) => p < t.Length ? t[p++] : (byte)0;
 

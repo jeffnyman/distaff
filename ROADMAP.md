@@ -388,13 +388,46 @@ the EGA engine, as the EGA's built on each other.
 - Left for phase 14, with the game loop: actors' version 4 setup (colours 255, the scale from
   their box, walking at their scale, `_zbuf` from the box mask) and `matrixOps`.
 
-### Phase 14: scripts, text and the interface
+### Phase 14: scripts, text and the interface (in progress)
 
-- Version 4's script handlers and the game loop (`ScummEngine_v4`, and the version 4 paths of
-  `o5_` handlers), the charsets of `90x.LFL` (`CharsetRendererClassic` with version 4's offsets),
-  and Loom VGA's own interface: its distaff, verbs and cursor (`gfx_gui.cpp`, `verbs.cpp`). The
-  palette as the game changes it: colour cycling (`CC`, `initCycl`, `cyclePalette`), the shadow
-  palette, and `roomOps`' palette operations. The game plays, silent.
+Done so far: the VGA CD boots and plays its opening, silent, to Bobbin on the cliff.
+
+- `ScriptEngine` takes a version: version 4's decoder and 6-byte script headers, and its bit
+  variables, which are 4096 of their own (`_bitVars`), where version 3's are the bits of the
+  global variables (`readVar`, `writeVar`). Version 3's packing had script 42's `Bit[26]` set bit
+  10 of the ego variable.
+- The palette: a room with a `PA` block sets the current palette (`setCurrentPalette` in
+  `resetRoomSubBlocks`), and the screen shows each colour through the shadow palette
+  (`updatePalette` with `_shadowPalRemap`).
+- Text (`CharsetRendererClassic`): `cursorCommand`'s `CHARSET_SET` picks a font from `90x.LFL`
+  (`initCharset`), 17 bytes into the charset (`setCurID`): bits per pixel, height, character
+  count, and a 32-bit offset per character to its width, height, signed offsets and pixels
+  (`prepareDraw`, `drawBitsN`), drawn through the charset's colour map, colour 1 the text's
+  (`printChar`). Widths add the x offset (`getCharWidth`), and a string's width starts at 1 from
+  version 4 on (`getStringWidth`). Version 4 text has no shadow and its colour is the whole byte.
+  `CHARSET_COLOR` (`cursorCommand` 14) sets the colour map from a word list.
+- `print`: sub-operation 6 left-aligns, and 8 is `SO_SAY_VOICE`; the slot's position is kept
+  only in version 3.
+- The CD timer (`GameWorld.CdAudio`): `SO_SAY_VOICE` plays part of track 1 from the offset given
+  in 7.5-frame units, less the 22650 frames before Loom's audio, for its length and 5 frames more,
+  or with 0 and 0 stops it; the timer counts once every four quarter-frames from then on
+  (`playCDTrack`, `cdTimerHandler`), and the main loop copies it into the music timer, which the
+  opening's scripts wait on. No sound yet.
+- Actors: costumes are parsed as version 4's, and an actor's first 32 colours start as 255, the
+  costume's own (`setActorCostume`).
+- Checked against the VGA CD release: the proficiency screen draws its choices in the VGA font;
+  PRACTICE plays the opening (rooms 69, 2, 53, 2, the first line spoken from frame 22 for 185)
+  to Bobbin on the cliff with the player in control, the screen pinned.
+
+Still to do:
+
+- Loom VGA's own interface: its distaff, verbs and cursor (`gfx_gui.cpp`, `verbs.cpp`).
+- The palette as the game changes it: colour cycling (`CC`, `initCycl`, `cyclePalette`), and
+  `roomOps`' palette operations.
+- Actors' version 4 setup: the scale from their box, walking at that scale, `_zbuf` from the box
+  mask, and `matrixOps`.
+- The CD sounds the scripts start and stop by number (`playCDTrackFromSoundID`), and a playing
+  check of the game beyond the cliff.
 
 ### Phase 15: CD audio
 

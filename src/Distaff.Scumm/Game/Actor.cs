@@ -20,6 +20,9 @@ public interface IActorWorld
 
     /// <summary>A costume, or null when there is none.</summary>
     Costume? LoadCostume(int number);
+
+    /// <summary>The SCUMM version the game is: 3 for the EGA, 4 for the VGA CD.</summary>
+    int Version { get; }
 }
 
 /// <summary>
@@ -272,9 +275,10 @@ public sealed class Actor(int number, IActorWorld world)
             Cost.Reset();
         }
 
-        for (int i = 0; i < 16; i++)
+        // GF_OLD_BUNDLE: the first 16 colours as they are; otherwise the first 32 the costume's own (setActorCostume)
+        for (int i = 0; i < (_world.Version == 3 ? 16 : 32); i++)
         {
-            Palette[i] = (byte)i;
+            Palette[i] = _world.Version == 3 ? (byte)i : (byte)0xFF;
         }
     }
 

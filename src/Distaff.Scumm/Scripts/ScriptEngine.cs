@@ -22,8 +22,11 @@ public sealed class ScriptEngine
     /// <summary>The first local script's number (<c>_numGlobalScripts</c> of <c>ScummEngine_v4::readMAXS</c>).</summary>
     public const int GlobalScriptCount = 200;
 
-    /// <summary>Global script code starts after the 4-byte resource header (<c>_resourceHeaderSize</c>).</summary>
-    public const int ScriptHeaderSize = 4;
+    /// <summary>Global script code starts after the resource header (<c>_resourceHeaderSize</c>): 4 bytes for version 3, 6 for version 4.</summary>
+    public int ScriptHeaderSize { get; }
+
+    /// <summary>The SCUMM version the scripts are written for: 3 or 4.</summary>
+    public int Version { get; }
 
     /// <summary>Mirrors <c>kMaxCutsceneNum</c>.</summary>
     public const int CutsceneLevels = 5;
@@ -38,16 +41,19 @@ public sealed class ScriptEngine
     public const int InstructionBudget = 100_000;
 
     private readonly IScriptHost _host;
-    private readonly ScriptDecoder _decoder = new();
+    private readonly ScriptDecoder _decoder;
     private readonly Random _random;
     private readonly List<(int Number, ScriptKind Kind, int Slot)> _nested = [];
     private readonly List<Sentence> _sentences = [];
     private readonly Stack<int> _stack = new();
     private bool _discardResult;
 
-    public ScriptEngine(IScriptHost host, int seed = 1)
+    public ScriptEngine(IScriptHost host, int seed = 1, int version = 3)
     {
         _host = host;
+        Version = version;
+        ScriptHeaderSize = version == 4 ? 6 : 4;
+        _decoder = new ScriptDecoder(version);
         _random = new Random(seed);
         for (int i = 0; i < Slots.Length; i++)
         {
@@ -114,12 +120,27 @@ public sealed class ScriptEngine
         _ => 0,
     };
 
-    /// <summary>Reads a variable by its number, flags included. Mirrors <c>ScummEngine::readVar</c> for version 3.</summary>
+    /// <summary>
+    /// The version 4 bit variables (<c>_bitVars</c>), 4096 of them, eight to a byte; version 3 keeps
+    /// its bit variables in the bits of the global variables instead.
+    /// </summary>
+    public byte[] BitVariables { get; } = new byte[BitVariableCount / 8];
+
+    /// <summary>How many bit variables version 4 has (<c>_numBitVariables</c> of <c>ScummEngine_v4::readMAXS</c>).</summary>
+    public const int BitVariableCount = 4096;
+
+    /// <summary>Reads a variable by its number, flags included. Mirrors <c>ScummEngine::readVar</c> for versions 3 and 4.</summary>
     public int ReadVar(int number)
     {
         if ((number & 0xF000) == 0)
         {
             return Variables[CheckVariable(number)];
+        }
+
+        if ((number & Operand.BitVariable) != 0 && Version == 4)
+        {
+            int index = CheckBitVariable(number & 0x7FFF);
+            return (BitVariables[index >> 3] & (1 << (index & 7))) != 0 ? 1 : 0;
         }
 
         if ((number & Operand.BitVariable) != 0)
@@ -137,12 +158,19 @@ public sealed class ScriptEngine
         throw new InvalidOperationException($"Variable 0x{number:X4} has no kind.");
     }
 
-    /// <summary>Writes a variable by its number, flags included. Mirrors <c>ScummEngine::writeVar</c> for version 3.</summary>
+    /// <summary>Writes a variable by its number, flags included. Mirrors <c>ScummEngine::writeVar</c> for versions 3 and 4.</summary>
     public void WriteVar(int number, int value)
     {
         if ((number & 0xF000) == 0)
         {
             Variables[CheckVariable(number)] = value;
+            return;
+        }
+
+        if ((number & Operand.BitVariable) != 0 && Version == 4)
+        {
+            int index = CheckBitVariable(number & 0x7FFF);
+            BitVariables[index >> 3] = (byte)(value != 0 ? BitVariables[index >> 3] | (1 << (index & 7)) : BitVariables[index >> 3] & ~(1 << (index & 7)));
             return;
         }
 
@@ -1027,6 +1055,9 @@ public sealed class ScriptEngine
 
     private static int CheckVariable(int number)
         => number is >= 0 and < Vars.Count ? number : throw new InvalidOperationException($"Variable {number} is out of range (0 to {Vars.Count - 1}).");
+
+    private static int CheckBitVariable(int number)
+        => number is >= 0 and < BitVariableCount ? number : throw new InvalidOperationException($"Bit variable {number} is out of range (0 to {BitVariableCount - 1}).");
 
     private static int CheckLocal(int number)
         => number is >= 0 and <= 20 ? number : throw new InvalidOperationException($"Local variable {number} is out of range (0 to 20).");

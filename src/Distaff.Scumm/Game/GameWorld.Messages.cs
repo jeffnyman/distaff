@@ -407,6 +407,14 @@ public sealed partial class GameWorld
     /// </summary>
     private void SetColor(int color, bool shadowModeSpecialFlag = false)
     {
+        if (_font is { IsClassic: true })
+        {
+            // version 4: the colour as it is, no shadow (CharsetRendererCommon::setColor)
+            _shadow = ShadowType.None;
+            _textColor = (byte)color;
+            return;
+        }
+
         _shadow = (color & 0x40) != 0 ? (shadowModeSpecialFlag ? ShadowType.None : ShadowType.Outline)
             : (color & 0x80) != 0 ? ShadowType.Normal : ShadowType.None;
         _textColor = (byte)(color & 0x0F);
@@ -421,6 +429,12 @@ public sealed partial class GameWorld
     {
         if (_font is null || Screens.Find(_textTop) is not { Front: { } front } vs || chr == '@')
         {
+            return;
+        }
+
+        if (_font.IsClassic)
+        {
+            PrintCharClassic(chr, ignoreCharsetMask, vs, front);
             return;
         }
 
@@ -472,6 +486,82 @@ public sealed partial class GameWorld
 
         _str = Rect.FromBounds(left, _str.Top, right, Math.Max(_str.Bottom, _textTop + height));
     }
+
+    /// <summary>
+    /// Draws a version 4 character at the pen and moves it on. Mirrors
+    /// <c>CharsetRendererClassic::printChar</c>: the text colour is the colour map's colour 1; the
+    /// character's offsets move the pen while it is drawn; nothing past the slot's right edge or
+    /// left of the screen; there are no shadows.
+    /// </summary>
+    private void PrintCharClassic(int chr, bool ignoreCharsetMask, VirtScreen vs, Surface8 front)
+    {
+        CharsetColorMap[1] = _textColor;
+        if (_font!.ClassicGlyph(chr) is not { } glyph)
+        {
+            return;
+        }
+
+        if (_firstChar)
+        {
+            _str = default;
+        }
+
+        _textTop += glyph.OffsetY;
+        _textLeft += glyph.OffsetX;
+        if (_textLeft + glyph.Width > _textRight + 1 || _textLeft < 0)
+        {
+            _textLeft += glyph.Width;
+            _textTop -= glyph.OffsetY;
+            return;
+        }
+
+        if (_firstChar)
+        {
+            _str = new Rect(_textLeft, _textTop, 0, 0);
+            _firstChar = false;
+        }
+
+        _str = Rect.FromBounds(Math.Min(_str.Left, _textLeft), Math.Min(_str.Top, _textTop), _str.Right, _str.Bottom);
+        if (!ignoreCharsetMask)
+        {
+            _hasMask = true;
+            _textScreen = vs.Number;
+        }
+
+        if (ignoreCharsetMask || !vs.HasTwoBuffers)
+        {
+            int xstart = vs.Number == VirtScreenNumber.Main ? Camera.Left : 0;
+            _font.DrawBitsN(front, _textLeft + xstart, _textTop - vs.Top, glyph, CharsetColorMap);
+        }
+        else
+        {
+            _font.DrawBitsN(Screens.TextSurface, _textLeft, _textTop, glyph, CharsetColorMap);
+        }
+
+        _textLeft += glyph.Width;
+        _str = Rect.FromBounds(_str.Left, _str.Top, Math.Max(_str.Right, _textLeft), Math.Max(_str.Bottom, _textTop + glyph.Height));
+        _textTop -= glyph.OffsetY;
+    }
+
+    /// <summary>
+    /// Picks a version 4 charset for all text (<c>initCharset</c>): its font, from <c>90x.LFL</c>, and
+    /// the colours set for it. A charset that is missing leaves no font.
+    /// </summary>
+    private void InitCharset(int id)
+    {
+        _charsetId = id;
+        _font = _loader.LoadCharset(id) is { } data ? Charset.ParseClassic(data) : null;
+        _charsetData[id].CopyTo(CharsetColorMap, 0);
+    }
+
+    /// <summary>The charset version 4 text is drawn in (<c>_string[].charset</c>, which <c>initCharset</c> sets for every slot).</summary>
+    private int _charsetId;
+
+    /// <summary>The colours each version 4 charset was given (<c>_charsetData</c>), 16 for each of the 9.</summary>
+    private readonly byte[][] _charsetData = [.. Enumerable.Range(0, 9).Select(_ => new byte[16])];
+
+    /// <summary>The colour each pixel value of a version 4 character is drawn in (<c>_charsetColorMap</c>); 1 is the text's colour.</summary>
+    public byte[] CharsetColorMap { get; } = new byte[16];
 
     /// <summary>
     /// Takes the speech off the screen. Mirrors <c>restoreCharsetBg</c>: the next message starts at

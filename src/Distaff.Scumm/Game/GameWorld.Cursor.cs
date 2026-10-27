@@ -73,7 +73,23 @@ public sealed partial class GameWorld
                 _currentCursor = CheckCursor(a[0]);
                 break;
             case 13:
-                // initCharset: Loom has one font, and the slots' default charset is already 0
+                // initCharset: the EGA has one font, and the slots' default charset is already 0
+                if (_loader.Version == 4)
+                {
+                    InitCharset(a[0]);
+                }
+
+                break;
+            case 14:
+                // version 4: the current charset's colours (_charsetColorMap, _charsetData); version 3 passes two values over
+                if (_loader.Version == 4)
+                {
+                    for (int i = 0; i < CharsetColorMap.Length && i < a.Length; i++)
+                    {
+                        CharsetColorMap[i] = _charsetData[_charsetId][i] = (byte)a[i];
+                    }
+                }
+
                 break;
         }
     }
@@ -96,7 +112,18 @@ public sealed partial class GameWorld
         int width = _font.CharWidth(chr);
         var surface = new Surface8(Math.Max(1, width), _font.Height);
         surface.Fill(Unset);
-        Charset.DrawBits1(surface, 0, 0, _font.Glyph(chr), width, 8, _textColor, _shadow);
+        if (_font.IsClassic)
+        {
+            // CharsetRendererClassic::drawChar, through the colour map as it stands
+            if (_font.ClassicGlyph(chr) is { } glyph)
+            {
+                _font.DrawBitsN(surface, 0, 0, glyph, CharsetColorMap);
+            }
+        }
+        else
+        {
+            Charset.DrawBits1(surface, 0, 0, _font.Glyph(chr), width, 8, _textColor, _shadow);
+        }
         for (int y = 0; y < surface.Height && y < rows.Length; y++)
         {
             for (int x = 0; x < width; x++)

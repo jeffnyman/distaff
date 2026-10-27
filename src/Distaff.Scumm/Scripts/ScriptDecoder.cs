@@ -126,7 +126,7 @@ public sealed class ScriptDecoder(int version = 3)
         }
 
         // getWordVararg: words until 0xFF, each a variable when its own lead byte has bit 0x80
-        void Varargs(ref Reader reader)
+        List<Operand> WordVararg(ref Reader reader)
         {
             var args = new List<Operand>();
             for (byte lead = reader.Byte(); lead != 0xFF; lead = reader.Byte())
@@ -134,8 +134,10 @@ public sealed class ScriptDecoder(int version = 3)
                 args.Add(VarOrWord(ref reader, lead, Param1));
             }
 
-            subOps.Add(new SubOperation(0, "args", args));
+            return args;
         }
+
+        void Varargs(ref Reader reader) => subOps.Add(new SubOperation(0, "args", WordVararg(ref reader)));
 
         SubOperation Sub(int code, string name, params Operand[] values) => new(code, name, values);
 
@@ -522,7 +524,9 @@ public sealed class ScriptDecoder(int version = 3)
                         11 => Sub(11, "CURSOR_HOTSPOT", VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2), VarOrByte(ref r, sub, Param3)),
                         12 => Sub(12, "CURSOR_SET", VarOrByte(ref r, sub, Param1)),
                         13 => Sub(13, "CHARSET_SET", VarOrByte(ref r, sub, Param1)),
-                        14 => Sub(14, "unknown14", VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2)),
+                        // version 3 passes two bytes over; version 4 sets the charset colours from a word list
+                        14 when Version == 3 => Sub(14, "unknown14", VarOrByte(ref r, sub, Param1), VarOrByte(ref r, sub, Param2)),
+                        14 => Sub(14, "CHARSET_COLOR", [.. WordVararg(ref r)]),
                         _ => throw new InvalidDataException($"cursorCommand sub-operation {sub & 0x1F} at {offset:X4} is not one ScummVM knows."),
                     });
                 }
