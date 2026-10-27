@@ -64,13 +64,29 @@ In `Distaff.Scumm.Resources` and `Rooms`:
 - The release carries the Roland Upgrade: `82.LFL` to `85.LFL` hold sounds 33 to 64, single
   blocks for the MT-32, which ScummVM reads only when the sound card is set to Roland.
 
-### Phase 2: room graphics
+### Phase 2: room graphics (done)
 
-- `gfx.cpp`: the EGA strip codecs (`Gdi::drawStripEGA`) and the z-plane masks, object images, and
-  drawing a room with its objects.
-- `palette.cpp`: the EGA palette, the shadow palette (`_shadowPalRemap`), colour cycling.
-- Player: `--room N` writes a room as a PNG.
-- Check: rooms 1 and a few others as PNGs, compared against ScummVM screenshots.
+In `Distaff.Scumm.Graphics`:
+
+- `gfx.cpp`: the EGA picture format (`EgaBitmap`: `Gdi::drawBitmap`, `drawStrip` and
+  `decodeMask` for `GF_16COLOR` and `GF_OLD_BUNDLE`, `drawStripEGA`, `decompressMaskImg`), with
+  its one mask. Strips are drawn left to right into the room's own picture, since a copying run
+  takes the pixels to its left.
+- `object.cpp`: drawing a room with its objects (`RoomRenderer`: `drawRoomObjects`,
+  `drawRoomObject`, `drawObject`), by state and parent, each object's mask replacing the room's
+  where it is drawn. Objects without an image of their own point at another object's, or at the
+  first code block; an image belongs to its object when it has as many strips as the object is
+  wide.
+- `palette.cpp`: the 16 EGA colours (`Palettes.Ega`).
+- Player: `--room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]` writes a
+  room as a PNG and lists it.
+- Checked against the EGA release: all 76 rooms and the 618 images that belong to their objects
+  decode within their data; the title room's picture and mask are pinned. Rooms 1 (the title), 2
+  (the opening), 9 (the Loom), 28 (the dragon's cave) and 34 were looked at, not yet compared
+  with ScummVM screenshots.
+- Moved to phase 4, because the scripts set them (`o5_roomOps`): the room colours
+  (`SO_ROOM_COLOR`, the `_roomPalette` that `drawStripEGA` draws through), the shadow palette
+  (`SO_ROOM_PALETTE`) and colour cycling.
 
 ### Phase 3: scripts
 
@@ -84,6 +100,7 @@ In `Distaff.Scumm.Resources` and `Rooms`:
 - `script.cpp`, `scumm.cpp`, `vars.cpp`: script slots, variables and bit variables, the boot
   script, room changes, the camera (`camera.cpp`), Loom's start-up variable values (`vars.cpp`,
   number of sounds, heap space).
+- `o5_roomOps` and `palette.cpp`: the room colours, the shadow palette and colour cycling.
 - The copy protection: as ScummVM does by default, room 69 starts script 205 in place of 201
   (`script_v5.cpp`, `o5_startScript`); `--copy-protection` keeps the Book of Patterns check.
 - Check: a headless run from boot reaches the title and the first room.
