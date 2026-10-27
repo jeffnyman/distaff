@@ -278,10 +278,27 @@ In `Distaff.Scumm.Scripts`:
   at 12 seconds). Not compared with recordings or with ScummVM's output.
 - Out of scope: MT-32 and the Roland Upgrade's sounds; CMS.
 
-### Phase 10: the whole game
+### Phase 10: the whole game (done)
 
-- Walkthrough tests that play from the opening to the ending, a section at a time, with saves at
-  each section's end.
+- `WalkthroughTests` play the EGA release at the practice level from the proficiency screen to
+  "The End" in ten sections: the Elders, the island, leaving the island, Crystalgard and the
+  shepherds, the dragon, the caves, the forge, the Bishop, the void, and the Loom. Each section
+  loads the save the one before it made into a new world and saves at its end, so every save on
+  the way is played on from. Each pins what was said, the room it ends in, the drafts learned and
+  used (the flags in the game's draft table) and, where they grow, the notes the distaff plays. The
+  whole game runs in about three seconds.
+- `Walkthrough` plays as a player does: it waits for control (no cutscene, message or sentence
+  script, Bobbin standing, the camera still), clicks and double-clicks objects by number,
+  scrolling to them first, and leaves by exits, clicking again when a walk box's cutscene cuts
+  the walk short. It can point at an object while the game is still talking, and it spins a draft
+  by reading the draft's notes from the game's table, which is shuffled each game.
+- No engine change was needed: everything the scripts asked for worked. Some things the run
+  showed about the game itself:
+  - The distaff gains f once Opening, Dyeing and Straw into Gold have all been used. Dyeing must
+    go on the white wool, and Straw into Gold on the straw in the wheel's tent.
+  - g comes at the waterspout, a at the dragon, and b and the high C at the Loom.
+- Not covered: the Standard and Expert levels, optional scenes (the graves and the chalice in
+  Crystalgard), deaths and other ways through. Nothing has been compared with ScummVM.
 
 ## VGA CD
 

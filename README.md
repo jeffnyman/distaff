@@ -18,12 +18,13 @@ in a window with the mouse and keys: the distaff and its drafts, text, the curso
 rooms are drawn, and the game's own save screen (F5) saves and loads in ScummVM's save format
 (`--load file` starts from a save), with sound on the AdLib, the PCjr or the PC speaker. It also runs headless, as the tests
 run it: `distaff <folder> --run 2000 --click 100:160,92 --key 200:esc --screenshot end.png`.
-A scripted run gets from the proficiency screen to Bobbin weaving Opening on the egg.
+The walkthrough tests play the whole game, from the proficiency screen to the end, a section at a
+time, each section starting from the save the one before it made.
 [ROADMAP.md](ROADMAP.md) gives the order of work.
 
 | Release | SCUMM version | Data | State |
 |---|---|---|---|
-| DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Playable, with saves and sound |
+| DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Playable to the end, with saves and sound |
 | DOS VGA CD (1992) | 4 | `000.LFL`, `DISK01.LEC` (XOR 0x69), `90x.LFL`, one CD audio track | Identified |
 | FM Towns (1991) | 3, 256 colours (`GF_OLD256`) | `00.LFL` to `99.LFL`, not encoded, 16 CD audio tracks | Identified |
 
