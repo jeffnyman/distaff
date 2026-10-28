@@ -2,5 +2,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Distaff.Scumm\Distaff.Scumm.csproj" />
     <ProjectReference Include="..\..\src\Distaff.Audio\Distaff.Audio.csproj" />
+    <!-- the window host, for a smoke test of its pace; SDL runs it offscreen -->
+    <ProjectReference Include="..\..\src\Distaff.Player\Distaff.Player.csproj" />
   </ItemGroup>
 </Project>

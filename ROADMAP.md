@@ -968,3 +968,13 @@ loop, and were right.
   20.1 s, and the VGA CD's spoken prompt, as recorded from the window's audio, the same as
   `--run`'s (correlation 1.0000), at the window's volume of 192.
 - The window is centred where the video driver allows it (offscreen and Wayland do not).
+- The schedule is its own class, `TickSchedule` (in `Distaff.Scumm.Hosting`), so the tests can
+  drive it with a clock of their own. `TickScheduleTests` checks that against a host that works a
+  few milliseconds a tick and wakes up to 2 ms late, no tick starts early and 900 frames end
+  within 5 ms of the clock; that a long sleep comes in slices of at most 50 ms, the last
+  fraction of a millisecond rounded up; that a host 200 ms behind runs ticks back to back until
+  it is on time; and that one a second behind carries on from now.
+- `WindowTests` plays each release in the real window host for three seconds, SDL running it
+  offscreen with its dummy sound card, and checks the game time against the clock: no more than
+  2% and 0.1 s ahead, and not far behind. With the delays halved, as the old loop had them in
+  effect, all three fail (5.4 to 6.2 s of game time in 3 s).
