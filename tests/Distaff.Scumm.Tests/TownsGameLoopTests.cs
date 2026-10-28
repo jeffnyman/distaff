@@ -5,8 +5,10 @@ using Distaff.Scumm.Game;
 using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Input;
 using Distaff.Scumm.Resources;
+using Distaff.Scumm.Saves;
 using Distaff.Scumm.Scripts;
 using Distaff.Scumm.Sound;
+using Distaff.Scumm.Storage;
 
 namespace Distaff.Scumm.Tests;
 
@@ -154,6 +156,83 @@ public class TownsGameLoopTests
         w.Key(Key.F5, '\0').Wait(50);
         Assert.Equal(70, world.CurrentRoomNumber);
         Assert.Contains(world.MessageLog, m => m.StartsWith("Insert save-load disk in Drive A."));
+    }
+
+    /// <summary>
+    /// The FM Towns' own save screen: in the sanctuary, Opening learned, F5, SAVE, the first slot,
+    /// a name typed, Enter and OK save under that name. In another game, on the cliff, F5, LOAD
+    /// (which asks whether slot 0 has a save, as the FM Towns' screen does, and goes on when any
+    /// slot has), the slot and OK load it, and the game goes on in the sanctuary with Opening.
+    /// Loaded as ScummVM's launcher loads it, the same save ends the save screen and goes on there
+    /// too.
+    /// </summary>
+    [Fact]
+    public void The_save_screen_saves_and_loads()
+    {
+        if (TownsResourceTests.Open() is not { } loader)
+        {
+            return;
+        }
+
+        var store = new MemorySaveStore();
+        var world = new GameWorld(loader) { SaveStore = store };
+        var w = new Walkthrough(world);
+        world.Boot();
+        w.Wait(100).Key(Key.Escape, (char)27).Ready();
+        w.Use(Leaf);
+        w.Use(CliffToVillage).InRoom(3).Ready();
+        w.Use(VillageToTents).InRoom(5).Ready();
+        w.Use(TentsToPath).InRoom(7).Ready();
+        w.Use(PathToSanctuary).InRoom(8).Ready();
+        w.Use(SanctuaryDoor).InRoom(9).Ready(20000);
+        w.Use(Distaff);
+        w.Click(Egg).Spin(0).Ready(20000);
+
+        w.Key(Key.F5, '\0').Wait(50);
+        w.ClickAt(SaveButton.X, SaveButton.Y).Wait(40).ClickAt(FirstSlot.X, FirstSlot.Y).Wait(30);
+        foreach (char c in "egg")
+        {
+            w.Key((Key)c, c).Wait(5);
+        }
+
+        w.Key(Key.Return, (char)13).Wait(60).ClickAt(OkButton.X, OkButton.Y).Wait(80);
+        Assert.Contains("The game was saved.", world.MessageLog);
+        var file = ReadAll(store, "loom-fm.s01");
+        Assert.Equal("egg", SaveFile.ReadInfo(file).Name);
+
+        var other = new GameWorld(loader) { SaveStore = store };
+        var o = new Walkthrough(other);
+        other.Boot();
+        o.Wait(100).Key(Key.Escape, (char)27).Ready();
+        o.Key(Key.F5, '\0').Wait(50);
+        o.ClickAt(LoadButton.X, LoadButton.Y).Wait(40);
+        Assert.Contains(other.MessageLog, m => m.StartsWith("Select game to load, then select"));
+        o.ClickAt(FirstSlot.X, FirstSlot.Y).Wait(30).ClickAt(OkButton.X, OkButton.Y).InRoom(9).Ready();
+        InTheSanctuaryWithOpening(other);
+
+        var launched = new GameWorld(loader) { SaveStore = store };
+        launched.Load(file);
+        Assert.Equal(GameWorld.SaveRoom, launched.CurrentRoomNumber);
+        new Walkthrough(launched).InRoom(9).Ready();
+        InTheSanctuaryWithOpening(launched);
+    }
+
+    private static void InTheSanctuaryWithOpening(GameWorld world)
+    {
+        Assert.Equal(9, world.CurrentRoomNumber);
+        Assert.Equal((1, 1), (world.UserPut, world.CursorState));
+        Assert.Equal(3, world.Engine.Variables[Known]);
+        Assert.NotEqual(0, world.Engine.Variables[50] & 0x2000);
+    }
+
+    private static readonly (int X, int Y) SaveButton = (232, 47), LoadButton = (284, 47), FirstSlot = (100, 21), OkButton = (259, 87);
+
+    private static byte[] ReadAll(ISaveStore store, string name)
+    {
+        using var input = store.OpenRead(name) ?? throw new InvalidOperationException($"{name} was not saved.");
+        using var copy = new MemoryStream();
+        input.CopyTo(copy);
+        return copy.ToArray();
     }
 
     /// <summary>

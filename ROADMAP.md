@@ -767,7 +767,36 @@ Part 2, the effects (done):
   state (with saves), wave tables and PCM notes keyed from them, the chip's registers written
   directly, the LFO and DAC, and the PC-98's SSG and rhythm sources.
 
-### Phase 22: saves and the whole game
+### Phase 22: saves and the whole game (done)
 
-- Saves, the original interface's menu for the FM Towns (`gfx_gui.cpp`), and walkthrough tests
-  from the opening to the end.
+- Saves for the FM Towns (`ScummState.SyncTowns`, `GameWorld.CaptureTowns`): after the objects'
+  states, a byte saying the FM Towns' screen follows, then its text layer's colours, the
+  colour-cycling fields, where the text last drew (`_curStringRect`), the classic charset's
+  colours, the shadow colour `towns_setPaletteFromPtr` picks (the darkest of colours 1 to 15),
+  and the palette, layer and clearing flags; its 16-bit palette is not saved (version 88 on).
+  The room's palette is saved and loaded as the VGA CD's, and a room's matrix is reckoned from
+  its box block, as for any small-header room.
+- The sound player's state goes in the sound engine's data (`Player_Towns_v1::saveLoadWithSerializer`,
+  `Player_Towns::saveLoadWithSerializer`): the CD sound when it still plays and loops, its count
+  and volume, the Euphony sound unless it ended without looping, its volume, and each PCM
+  channel's sound, those that ended let go first. After a load the player starts again what the
+  save had going (`restoreAfterLoad`), and the CD's own status is left to it
+  (`restoreCDAudioAfterLoad` does nothing for the FM Towns).
+- Loading (`ScummEngine_v3::scummLoop_handleSaveLoad` and `terminateSaveMenuScript` for the FM
+  Towns): the save room's way through starts the sounds again with script 38, given the sound in
+  variable 163, and the player's restore is then skipped; the verbs come back with script 17, not
+  18; ending the save screen also stops script 202 first, takes the screen's objects 909, 908,
+  903 and 904 away, runs script 38 too, and puts script 5, not 6, in the save script's place.
+- The game's own save screen (room 70, which F5 opens): asked whether slot 0 holds a save, the
+  FM Towns is told it does whenever any save exists, as ScummVM tells it (`o4_saveLoadGame`'s
+  0xC0); its script asks before it lists the saves to load.
+- `TownsWalkthroughTests` plays the whole game at Practice level, the EGA walkthrough's route
+  step for step, in ten sections, each from the save the one before made, loaded into a new
+  world; another test reads each save back and checks the FM Towns' screen and sound in it, and
+  loads it. `TownsGameLoopTests.The_save_screen_saves_and_loads` saves through the game's screen
+  under a typed name and loads it through the screen in another game, and as the launcher does.
+- Checked against the FM Towns release: the whole game, from the opening to "The End", through
+  all ten saves. Its lines are the EGA's but for a typo the EGA has ("Thanks goodness!") and the
+  credits for the FM Towns conversion and its CD music.
+- Not covered: the Standard and Expert levels, and a save made while a looping CD sound plays
+  (the tests play without the CD's tracks).

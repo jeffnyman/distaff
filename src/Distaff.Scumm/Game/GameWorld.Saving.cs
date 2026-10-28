@@ -58,7 +58,7 @@ public sealed partial class GameWorld
     /// </summary>
     public SaveInfo Load(byte[] file)
     {
-        var (info, state) = SaveFile.Read(file, _owners.Length, _loader.Version);
+        var (info, state) = SaveFile.Read(file, _owners.Length, _loader.Version, FmTowns);
         Restore(state);
         Time = info.PlayTime;
 
@@ -76,7 +76,10 @@ public sealed partial class GameWorld
     /// goes through the save room inside a cutscene, as if loaded there, with the ego's box and
     /// place kept for the camera. The VGA CD has no save screen and takes <c>ScummEngine_v5</c>'s
     /// instead: the verbs are drawn again, and variable 66 set, on which Loom's scripts draw the
-    /// notes' letters and the name over the pointed-at object's image again.
+    /// notes' letters and the name over the pointed-at object's image again. The FM Towns' save
+    /// room starts its sounds again with script 38, given the sound in variable 163, and so does
+    /// the path through it; otherwise its sound player starts again what the save had going
+    /// (<c>restoreAfterLoad</c>).
     /// </summary>
     private void HandleSaveLoad()
     {
@@ -94,15 +97,14 @@ public sealed partial class GameWorld
             return;
         }
 
+        bool restoreSounds = true;
+        const int SaveLoadVar = 100, VerbFlags = 214, SoundVar = 163;
+        var v = Engine.Variables;
         if (CurrentRoomNumber == SaveRoom)
         {
             TerminateSaveMenuScript();
-            return;
         }
-
-        const int SaveLoadVar = 100, VerbFlags = 214;
-        var v = Engine.Variables;
-        if (UserPut > 0 && !Engine.IsScriptRunning(v[Vars.VerbScript]))
+        else if (UserPut > 0 && !Engine.IsScriptRunning(v[Vars.VerbScript]))
         {
             int prevFlag = v[VerbFlags] & 0x6000;
             Engine.BeginCutscene([]);
@@ -117,11 +119,22 @@ public sealed partial class GameWorld
             v[SaveLoadVar] = 0;
             v[VerbFlags] &= ~blockVerbsFlag;
             Engine.EndCutscene();
+            if (FmTowns && v[SoundVar] != 0)
+            {
+                Engine.RunScript(38, args: [v[SoundVar]]);
+            }
+
+            restoreSounds = false;
         }
         else if (v[SaveLoadVar] == 2)
         {
-            Engine.RunScript(18, args: [2]);
+            Engine.RunScript(FmTowns ? 17 : 18, args: [2]);
             v[SaveLoadVar + 2] = v[SaveLoadVar + 3] = 0;
+        }
+
+        if (FmTowns && restoreSounds)
+        {
+            TownsPlayer.RestoreAfterLoad(LoadSound);
         }
     }
 
@@ -133,12 +146,20 @@ public sealed partial class GameWorld
     /// cleared is bit 14 of variable 214 (<c>Bit[3438]</c>), which this release's own save script
     /// clears when the player leaves the screen: ScummVM clears bit 13 on DOS (and 14 only on the FM
     /// Towns), and with bit 14 left set the room's entry script does not bring the distaff back.
+    /// The FM Towns' also stops the names script first, takes the screen's objects 909, 908, 903
+    /// and 904 away, starts the sounds again with script 38, given the sound in variable 163, and
+    /// puts script 5 in the save script's place.
     /// </summary>
     private void TerminateSaveMenuScript()
     {
         if (Engine.CurrentSlot < 0)
         {
             return;
+        }
+
+        if (FmTowns)
+        {
+            Engine.StopScript(202);
         }
 
         Engine.Variables[Vars.VerbScript] = Engine.ReadVar(Operand.LocalVariable | 2);
@@ -150,14 +171,29 @@ public sealed partial class GameWorld
         Engine.StopScript(202);
         Engine.WriteVar(Operand.BitVariable | 0xD6E, 0);
         Engine.Variables[100] = 0;
+        if (FmTowns)
+        {
+            foreach (int obj in (int[])[909, 908, 903, 904])
+            {
+                PutState(obj, 0);
+                _drawnObjects.Remove(obj);
+            }
+        }
+
         Engine.EndCutscene();
+        if (FmTowns && Engine.Variables[163] != 0)
+        {
+            Engine.RunScript(38, args: [Engine.Variables[163]]);
+        }
+
         CursorState = 1;
         UserPut = 1;
-        Engine.ChainCurrent(6, [0]);
+        Engine.ChainCurrent(FmTowns ? 5 : 6, [0]);
     }
 
     /// <summary>
-    /// The save screen's instruction: how many slots, which drive, whether a slot has a save, save
+    /// The save screen's instruction: how many slots, which drive, whether a slot has a save (for the
+    /// FM Towns' slot 0, whether any has, as its LOAD asks before listing them), save
     /// to a slot under the name in its string, load from one. A load replaces the world; the script
     /// that asked carries on after the instruction in the loaded state, or, when the save was not
     /// made in the save room, the game starts again from the boot script, is loaded once more, and
@@ -173,7 +209,8 @@ public sealed partial class GameWorld
             case 0x20:
                 return 3;
             case 0xC0:
-                return ReadSave(slot) is not null ? 6 : 7;
+                // the FM Towns' screen asks about slot 0 before LOAD: there, any save will do
+                return ReadSave(slot) is not null || (FmTowns && slot == 0 && AnySave()) ? 6 : 7;
             case 0x80:
                 return WriteSave(slot, SaveName(slot)) ? 0 : 2;
 
@@ -195,7 +232,7 @@ public sealed partial class GameWorld
                     ScummState state;
                     try
                     {
-                        (info, state) = SaveFile.Read(file, _owners.Length, _loader.Version);
+                        (info, state) = SaveFile.Read(file, _owners.Length, _loader.Version, FmTowns);
                     }
                     catch (InvalidDataException)
                     {
@@ -303,6 +340,17 @@ public sealed partial class GameWorld
         return true;
     }
 
+    /// <summary>
+    /// Whether any slot, 0 to 99, has a save file: the files named after the target and a slot.
+    /// Mirrors <c>listSavegames</c> as <c>o4_saveLoadGame</c> uses it for Loom's FM Towns release.
+    /// </summary>
+    private bool AnySave()
+    {
+        string prefix = SaveFileName(0)[..^2];
+        return SaveStore?.List(prefix).Any(name => name.Length == prefix.Length + 2
+            && int.TryParse(name.AsSpan(prefix.Length), System.Globalization.NumberStyles.None, null, out _)) == true;
+    }
+
     /// <summary>A slot's save file, or null when it has none.</summary>
     private byte[]? ReadSave(int slot)
     {
@@ -322,7 +370,7 @@ public sealed partial class GameWorld
     /// <summary>The world as a ScummVM save state. Mirrors the state <c>saveLoadWithSerializer</c> writes for Loom version 3.</summary>
     public ScummState Capture()
     {
-        var s = new ScummState(_owners.Length, _loader.Version);
+        var s = new ScummState(_owners.Length, _loader.Version, FmTowns);
         var room = CurrentRoom;
         s.GameMd5 = ScummDetector.IndexMd5(_loader.Game);
         s.CurrentRoom = CurrentRoomNumber;
@@ -419,7 +467,7 @@ public sealed partial class GameWorld
         // the screen: the EGA's colours as resetPalette sets them, or the VGA CD's as the room and the
         // scripts set them; the darkened palette, which only later versions fill, stays black; the
         // VGA CD's colour cycles; the room's view
-        Rgb[] colors = _loader.Version == 4 ? CurrentPalette : Palettes.Ega;
+        Rgb[] colors = _loader.Version == 4 || FmTowns ? CurrentPalette : Palettes.Ega;
         for (int i = 0; i < colors.Length; i++)
         {
             (s.CurrentPalette[i * 3], s.CurrentPalette[i * 3 + 1], s.CurrentPalette[i * 3 + 2]) = (colors[i].R, colors[i].G, colors[i].B);
@@ -428,6 +476,10 @@ public sealed partial class GameWorld
         SaveCycles(s.ColorCycles);
         RoomPalette.CopyTo(s.RoomPalette, 0);
         ShadowPalette.CopyTo(s.ShadowPalette, 0);
+        if (FmTowns)
+        {
+            CaptureTowns(s);
+        }
         (s.EgoPositioned, s.ScreenEffectFlag, s.ScreenB, s.ScreenH) = (_egoPositioned ? 1 : 0, 1, ViewTop, ViewTop + ViewHeight);
 
         for (int i = 0; i < ScummState.ActorCount; i++)
@@ -602,10 +654,18 @@ public sealed partial class GameWorld
         }
 
         // the VGA CD's colours and cycles as the save has them: the room's are not set up again
-        if (_loader.Version == 4)
+        if (_loader.Version == 4 || FmTowns)
         {
             CurrentPalette = [.. Enumerable.Range(0, 256).Select(i => new Rgb(s.CurrentPalette[i * 3], s.CurrentPalette[i * 3 + 1], s.CurrentPalette[i * 3 + 2]))];
             LoadCycles(s.ColorCycles);
+        }
+
+        // the FM Towns' screen and sound: where the text last drew, and the sound player's state
+        if (FmTowns)
+        {
+            var r = s.TownsCurStringRect;
+            _curStringRect = s.HasTownsData ? Rect.FromBounds(r[0], r[1], r[2], r[3]) : Rect.FromBounds(-1, -1, -1, -1);
+            TownsPlayer.LoadState(s.SoundEngineData);
         }
 
         // initScreens with the save's bands clears them; nothing drawn over the room is left
@@ -615,8 +675,8 @@ public sealed partial class GameWorld
         _drawnObjects.Clear();
         _input = 0;
 
-        // the CD part that was playing plays on (restoreCDAudioAfterLoad)
-        if (s.AudioCdStatus[0] != 0)
+        // the CD part that was playing plays on (restoreCDAudioAfterLoad); the FM Towns' player sees to its own
+        if (s.AudioCdStatus[0] != 0 && !FmTowns)
         {
             RestoreCdAfterLoad(s.AudioCdStatus[1], s.AudioCdStatus[2], s.AudioCdStatus[3], s.AudioCdStatus[4]);
         }
@@ -780,9 +840,9 @@ public sealed partial class GameWorld
 
             s.Resources[(ScummState.TypeMatrix, 2)] = new ScummState.Resource(boxes);
 
-            // ScummVM's own reckoning of the matrix: from the boxes' end to the picture in version 3,
-            // to the end of the boxes' block in version 4 (its size less its 6-byte header)
-            int matrix = _loader.Version == 4
+            // ScummVM's own reckoning of the matrix: from the boxes' end to the picture in the EGA's
+            // rooms, to the end of the boxes' block in those with small headers (its size less its 6-byte header)
+            int matrix = room.SmallHeader
                 ? BinaryPrimitives.ReadInt32LittleEndian(data[(room.BoxOffset - 6)..]) - 6 - size
                 : room.ImageOffset - room.BoxOffset - size;
             if (matrix > 0)

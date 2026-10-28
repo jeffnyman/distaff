@@ -46,6 +46,13 @@ public sealed class PlayerTowns : MusicPlayer
     private bool _eupLooping;
     private int _eupVolLeft, _eupVolRight;
 
+    // how many times the CD sound plays (_cdaNumLoops), and the CD sound and its count a save holds
+    private int _cdaNumLoops;
+    private int _cdaCurrentSoundTemp, _cdaNumLoopsTemp;
+
+    /// <summary>The size of the player's state in a save: the CD's and Euphony's eight bytes, then nine PCM channels of 13 each.</summary>
+    public const int SaveStateSize = 8 + 9 * 13;
+
     /// <param name="sampleRate">The output's rate.</param>
     /// <param name="cd">The CD, whose volume the player sets.</param>
     /// <param name="playCd">Plays a track from a start for a length in CD frames, a number of times (<c>Sound::playCDTrack</c>).</param>
@@ -437,8 +444,124 @@ public sealed class PlayerTowns : MusicPlayer
         _eupCurrentSound = sound;
     }
 
-    /// <summary>Mirrors <c>playCdaTrack</c>: a sound already playing on the CD goes on.</summary>
-    private void PlayCdaTrack(int sound, ReadOnlySpan<byte> data)
+    /// <summary>
+    /// The player's state as a save keeps it (<c>Player_Towns_v1::saveLoadWithSerializer</c> and
+    /// <c>Player_Towns::saveLoadWithSerializer</c>): the CD sound, when it still plays and plays
+    /// more than once, and its count; the CD's volume; the Euphony sound, unless it has ended and
+    /// does not loop, whether it loops, and its volume; then each PCM channel's sound, those that
+    /// have ended let go first.
+    /// </summary>
+    public byte[] SaveState()
+    {
+        lock (_sync)
+        {
+            var data = new byte[SaveStateSize];
+            data[0] = (byte)(_cd.IsPlaying && _cdaNumLoops > 1 ? CurrentCdSound & 0xFF : 0);
+            data[1] = (byte)_cdaNumLoops;
+            (data[2], data[3]) = ((byte)CdVolume.Left, (byte)CdVolume.Right);
+            if (!_eupLooping && !_player.IsPlaying)
+            {
+                _eupCurrentSound = 0;
+            }
+
+            (data[4], data[5], data[6], data[7]) = ((byte)_eupCurrentSound, (byte)(_eupLooping ? 1 : 0), (byte)_eupVolLeft, (byte)_eupVolRight);
+            for (int i = 1; i < 9; i++)
+            {
+                if (_pcmCurrentSound[i].Index != 0 && _intf.PcmEffectPlaying(i + 0x3f) == 0)
+                {
+                    _intf.PcmChanOff(i + 0x3f);
+                    _pcmCurrentSound[i].Index = 0;
+                }
+            }
+
+            for (int i = 0; i < 9; i++)
+            {
+                var p = _pcmCurrentSound[i];
+                int at = 8 + i * 13;
+                BitConverter.TryWriteBytes(data.AsSpan(at), (short)p.Index);
+                BitConverter.TryWriteBytes(data.AsSpan(at + 2), (short)p.Chan);
+                (data[at + 4], data[at + 5], data[at + 6]) = ((byte)p.Note, (byte)p.Velo, (byte)p.Pan);
+                (data[at + 7], data[at + 8]) = ((byte)(p.Paused ? 1 : 0), (byte)(p.Looping ? 1 : 0));
+                BitConverter.TryWriteBytes(data.AsSpan(at + 9), p.Priority);
+            }
+
+            return data;
+        }
+    }
+
+    /// <summary>Takes the player's state from a save, for <see cref="RestoreAfterLoad"/>; a save without it leaves the player as it is.</summary>
+    public void LoadState(byte[] data)
+    {
+        if (data.Length < SaveStateSize)
+        {
+            return;
+        }
+
+        lock (_sync)
+        {
+            (_cdaCurrentSoundTemp, _cdaNumLoopsTemp) = (data[0], data[1]);
+            CdVolume = (data[2], data[3]);
+            (_eupCurrentSound, _eupLooping, _eupVolLeft, _eupVolRight) = (data[4], data[5] != 0, data[6], data[7]);
+            for (int i = 0; i < 9; i++)
+            {
+                var p = _pcmCurrentSound[i];
+                int at = 8 + i * 13;
+                p.Index = BitConverter.ToUInt16(data, at);
+                p.Chan = BitConverter.ToInt16(data, at + 2);
+                (p.Note, p.Velo, p.Pan) = (data[at + 4], data[at + 5], data[at + 6]);
+                (p.Paused, p.Looping) = (data[at + 7] != 0, data[at + 8] != 0);
+                p.Priority = BitConverter.ToUInt32(data, at + 9);
+            }
+        }
+    }
+
+    /// <summary>
+    /// After a load, the sounds the save had going start again (<c>Player_Towns_v1::restoreAfterLoad</c>
+    /// and <c>Player_Towns::restoreAfterLoad</c>): the CD's volume, the CD sound at the volume it
+    /// had, the Euphony sound at its volume, and each sampled sound once, as it was started.
+    /// </summary>
+    /// <param name="resource">A sound's resource, from its 6-byte header, or null.</param>
+    public void RestoreAfterLoad(Func<int, byte[]?> resource)
+    {
+        lock (_sync)
+        {
+            SetVolumeCd(CdVolume.Left, CdVolume.Right);
+            if (_cdaCurrentSoundTemp != 0 && resource(_cdaCurrentSoundTemp) is { Length: >= 6 + 24 } cda && cda[13] == 2)
+            {
+                PlayCdaTrack(_cdaCurrentSoundTemp, cda.AsSpan(6), skipTrackVelo: true);
+                CurrentCdSound = _cdaCurrentSoundTemp;
+                _cdaNumLoops = _cdaNumLoopsTemp;
+            }
+
+            if (_eupCurrentSound != 0 && resource(_eupCurrentSound) is { Length: > 14 } eup && eup[13] == 1)
+            {
+                SetSoundVolume(_eupCurrentSound, _eupVolLeft, _eupVolRight);
+                PlayEuphonyTrack(_eupCurrentSound, eup);
+            }
+
+            var restored = new List<int>();
+            for (int i = 1; i < 9; i++)
+            {
+                var p = _pcmCurrentSound[i];
+                if (p.Index == 0 || p.Index == 0xffff || restored.Contains(p.Index))
+                {
+                    continue;
+                }
+
+                restored.Add(p.Index);
+                if (resource(p.Index) is { Length: > 14 } pcm && pcm[13] == 0)
+                {
+                    PlayPcmTrack(p.Index, pcm, p.Velo, p.Pan, p.Note, (int)p.Priority);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Mirrors <c>playCdaTrack</c>: the sound's volume, or the scripts' for it, unless restoring
+    /// after a load; a sound already playing on the CD goes on.
+    /// </summary>
+    private void PlayCdaTrack(int sound, ReadOnlySpan<byte> data, bool skipTrackVelo = false)
     {
         if (sound == 0)
         {
@@ -446,13 +569,9 @@ public sealed class PlayerTowns : MusicPlayer
         }
 
         var o = sound < NumSoundMax ? _overrides[sound] : default;
-        if (o.Left + o.Right != 0)
+        if (!skipTrackVelo)
         {
-            SetVolumeCd(o.Left, o.Right);
-        }
-        else
-        {
-            SetVolumeCd(data[8], data[9]);
+            SetVolumeCd(o.Left + o.Right != 0 ? o.Left : data[8], o.Left + o.Right != 0 ? o.Right : data[9]);
         }
 
         if (sound == CurrentCdSound && _cd.IsPlaying)
@@ -462,6 +581,7 @@ public sealed class PlayerTowns : MusicPlayer
 
         var p = data[16..];
         int loops = p[1];
+        _cdaNumLoops = loops;
         int start = ((p[2] * 60) + p[3]) * CdPlayer.FramesPerSecond + p[4];
         int end = ((p[5] * 60) + p[6]) * CdPlayer.FramesPerSecond + p[7];
         _playCd(p[0], start, end <= start ? 0 : end - start, loops == 0xFF ? -1 : loops);

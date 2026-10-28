@@ -30,10 +30,12 @@ public sealed class ScummState
 
     /// <param name="globalObjects">How many objects the game has.</param>
     /// <param name="gameVersion">The game's SCUMM version, 3 or 4: version 3's actors save four more fields.</param>
-    public ScummState(int globalObjects, int gameVersion = 3)
+    /// <param name="fmTowns">Whether the game is the FM Towns', whose screen saves more.</param>
+    public ScummState(int globalObjects, int gameVersion = 3, bool fmTowns = false)
     {
         GlobalObjects = globalObjects;
         GameVersion = gameVersion;
+        FmTowns = fmTowns;
         ObjectOwners = new byte[globalObjects];
         ObjectStates = new byte[globalObjects];
         ClassData = new int[globalObjects];
@@ -76,6 +78,9 @@ public sealed class ScummState
     public int GlobalObjects { get; }
 
     public int GameVersion { get; }
+
+    /// <summary>Whether the save is the FM Towns release's.</summary>
+    public bool FmTowns { get; }
 
     public byte[] GameMd5 = new byte[16];
     public int CurrentPaletteIndex, CurrentRoom, RoomResource, ObjectsInRoom, CurrentScript = 0xFF;
@@ -129,6 +134,15 @@ public sealed class ScummState
     public byte[] ObjectOwners;
     public byte[] ObjectStates;
     public byte[] ShadowPalette = new byte[256];
+
+    // the FM Towns' screen: its text layer's colours, the colour-cycling fields, the text's place,
+    // the classic charset's colours, the shadow colour, and the palette, layer and clearing flags
+    public bool HasTownsData;
+    public byte[] TownsTextPalette = new byte[48];
+    public int[] TownsCycleRects = new int[10 * 4];
+    public int[] TownsCurStringRect = [-1, -1, -1, -1];
+    public byte[] TownsCharsetColorMap = new byte[16];
+    public int TownsOverrideShadowColor, TownsCycleRectCount, TownsPaletteFlags, TownsClearLayerFlag = 1, TownsActiveLayerFlags = 3;
     public byte[] RoomPalette = new byte[256];
     public byte[] PalManipPalette = new byte[0x300];
     public byte[] PalManipIntermediatePalette = new byte[0x600];
@@ -330,6 +344,10 @@ public sealed class ScummState
 
         s.Bytes(ObjectOwners, GlobalObjects);
         s.Bytes(ObjectStates, GlobalObjects);
+        if (FmTowns)
+        {
+            SyncTowns(s);
+        }
 
         // the shadow palette (_shadowPaletteSize is 256 from ScummEngine_v4::readMAXS), then for versions below 5 the room palette
         s.Bytes(ShadowPalette, 256);
@@ -510,6 +528,33 @@ public sealed class ScummState
     /// speaker's player saves nothing; the AdLib player's block is kept as it is. Mirrors the sound
     /// part of <c>saveLoadWithSerializer</c> and <c>checkSoundEngineSaveDataSize</c>.
     /// </summary>
+    /// <summary>
+    /// The FM Towns' screen, after a byte that says it is there (version 88 on). The 16-bit palette
+    /// is not saved for the FM Towns from version 88. Mirrors the FM Towns part of
+    /// <c>ScummEngine::saveLoadWithSerializer</c>; a <c>Common::Rect</c> is its left, top, right
+    /// and bottom.
+    /// </summary>
+    private void SyncTowns(SaveSerializer s)
+    {
+        int has = HasTownsData ? 1 : 0;
+        s.Byte(ref has);
+        HasTownsData = has != 0;
+        if (!HasTownsData)
+        {
+            return;
+        }
+
+        s.Bytes(TownsTextPalette, 48);
+        s.Array(TownsCycleRects, TownsCycleRects.Length, (x, i) => x.Int16(ref TownsCycleRects[i]));
+        s.Array(TownsCurStringRect, 4, (x, i) => x.Int16(ref TownsCurStringRect[i]));
+        s.Bytes(TownsCharsetColorMap, 16);
+        s.Byte(ref TownsOverrideShadowColor);
+        s.Byte(ref TownsCycleRectCount);
+        s.Byte(ref TownsPaletteFlags);
+        s.Byte(ref TownsClearLayerFlag);
+        s.Byte(ref TownsActiveLayerFlags);
+    }
+
     private void SyncSoundEngine(SaveSerializer s)
     {
         int size = SoundEngineData.Length;

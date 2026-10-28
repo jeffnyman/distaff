@@ -123,6 +123,35 @@ public sealed partial class GameWorld
         }
     }
 
+    /// <summary>
+    /// What a save keeps of the FM Towns' screen and sound: the text layer's colours, where the
+    /// text last drew, the shadow colour <c>towns_setPaletteFromPtr</c> picks from the room's
+    /// palette (the darkest of colours 1 to 15), the flags as Loom leaves them (no cycling fields,
+    /// the layers both on), and the sound player's state.
+    /// </summary>
+    private void CaptureTowns(Saves.ScummState s)
+    {
+        s.HasTownsData = true;
+        for (int i = 0; i < 16; i++)
+        {
+            (s.TownsTextPalette[i * 3], s.TownsTextPalette[i * 3 + 1], s.TownsTextPalette[i * 3 + 2]) = (TownsTextPalette[i].R, TownsTextPalette[i].G, TownsTextPalette[i].B);
+        }
+
+        s.TownsCurStringRect = [_curStringRect.Left, _curStringRect.Top, _curStringRect.Right, _curStringRect.Bottom];
+        int shadow = 1, darkest = 48;
+        for (int i = 1; i < 16; i++)
+        {
+            int value = CurrentPalette[i].R + CurrentPalette[i].G + CurrentPalette[i].B;
+            if (darkest > value)
+            {
+                (shadow, darkest) = (i, value);
+            }
+        }
+
+        s.TownsOverrideShadowColor = shadow;
+        s.SoundEngineData = TownsPlayer.SaveState();
+    }
+
     /// <summary>Clears the FM Towns' text surface and text layer (<c>clearLayer(1)</c> with the text surface).</summary>
     private void ClearTownsText()
     {

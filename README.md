@@ -15,11 +15,11 @@ scripts), global scripts, sounds and the charset are read, and rooms are drawn w
 objects and masks: `distaff <folder> --room N` writes a room as a PNG and lists it. Every script
 decodes; `--script N` and `--room-scripts N` disassemble them. `distaff <folder>` plays the game
 in a window with the mouse and keys: the distaff and its drafts, text, the cursor and dark
-rooms are drawn, and the game's own save screen (F5; the VGA CD's menu) saves and loads in ScummVM's save format, named as ScummVM names each release's saves (`loom-ega.s01`, `loom-vga.s01`)
+rooms are drawn, and the game's own save screen (F5; the VGA CD's menu) saves and loads in ScummVM's save format, named as ScummVM names each release's saves (`loom-ega.s01`, `loom-vga.s01`, `loom-fm.s01`)
 (`--load file` starts from a save), with sound on the AdLib, the PCjr or the PC speaker. It also runs headless, as the tests
 run it: `distaff <folder> --run 2000 --click 100:160,92 --key 200:esc --screenshot end.png`.
-The walkthrough tests play the whole game, the EGA and the VGA CD releases both, from the
-proficiency screen to the end, a section at a time, each section starting from the save the one
+The walkthrough tests play the whole game, the EGA, VGA CD and FM Towns releases all three, from the
+start to the end, a section at a time, each section starting from the save the one
 before it made.
 [ROADMAP.md](ROADMAP.md) gives the order of work.
 
@@ -27,7 +27,7 @@ before it made.
 |---|---|---|---|
 | DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Playable to the end, with saves and sound |
 | DOS VGA CD (1992) | 4 | `000.LFL`, `DISK01.LEC` (XOR 0x69), `90x.LFL`, one CD audio track | Playable to the end, with its voices and music, and its own menu (F5) to save and load |
-| FM Towns (1991) | 3, 256 colours (`GF_OLD256`) | `00.LFL` to `99.LFL`, not encoded, 16 CD audio tracks | Plays from the opening into the island (`--difficulty` sets the proficiency level), with its CD music and its sound on the Towns' emulated FM and PCM chips |
+| FM Towns (1991) | 3, 256 colours (`GF_OLD256`) | `00.LFL` to `99.LFL`, not encoded, 16 CD audio tracks | Playable to the end (`--difficulty` sets the proficiency level), with its CD music, its sound on the Towns' emulated FM and PCM chips, and its own save screen (F5) |
 
 ## Layout
 
