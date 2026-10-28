@@ -32,8 +32,9 @@ public readonly record struct CostumeCel(int Width, int Height, int RelX, int Re
 /// offset for each of the 16 limbs, and one offset per animation; offsets count from the size
 /// word. The VGA CD's costumes start with a 32-bit size and the tag <c>CO</c>, have every field 2
 /// bytes further on, and a palette of 16 colours (format <c>0x58</c>) or 32 (<c>0x59</c>) where the
-/// EGA has its colour byte. Animation <c>frame * 4 + direction</c> lists the limbs it changes: for
-/// each, the index of its first command (a byte, or for the VGA CD a word) and how many follow.
+/// EGA has its colour byte. The FM Towns' are laid out as the VGA CD's. Animation
+/// <c>frame * 4 + direction</c> lists the limbs it changes: for each, the index of its first
+/// command (a byte, or for the VGA CD a word) and how many follow.
 /// Each command picks a cel from the limb's frame table; commands <see cref="Hide"/>,
 /// <see cref="Stop"/> and <see cref="Start"/> are not cels.</para>
 /// <para>A cel: width, height, the offsets of its corner and of the next limb, as six words, then
@@ -63,7 +64,7 @@ public sealed class Costume
     private readonly int _frameOffsets;
     private readonly int _animationOffsets;
 
-    private Costume(int number, ReadOnlyMemory<byte> data, bool smallHeader)
+    private Costume(int number, ReadOnlyMemory<byte> data, bool smallHeader, int version, bool old256 = false)
     {
         var span = data.Span;
         int shift = smallHeader ? 2 : 0;
@@ -74,7 +75,9 @@ public sealed class Costume
 
         Number = number;
         Data = data;
-        Version = smallHeader ? 4 : 3;
+        Version = version;
+        SmallHeader = smallHeader;
+        Old256 = old256;
         AnimationCount = span[shift + 4] + 1;
         Format = span[shift + 5] & 0x7F;
         HasOwnLeftPictures = (span[shift + 5] & 0x80) != 0;
@@ -118,8 +121,14 @@ public sealed class Costume
 
     public int Number { get; }
 
-    /// <summary>The SCUMM version of the release the costume is from: 3 for the EGA, 4 for the VGA CD.</summary>
+    /// <summary>The SCUMM version of the release the costume is from: 3 for the EGA and FM Towns, 4 for the VGA CD.</summary>
     public int Version { get; }
+
+    /// <summary>Whether the costume starts with a 6-byte header and has a palette of its own (<c>GF_SMALL_HEADER</c> without <c>GF_OLD_BUNDLE</c>): the VGA CD's and the FM Towns'.</summary>
+    public bool SmallHeader { get; }
+
+    /// <summary>Whether the costume is the FM Towns', whose commands 0x79 to 0x7B draw nothing (<c>GF_OLD256</c> in <c>drawLimb</c>).</summary>
+    public bool Old256 { get; }
 
     /// <summary>The costume resource, from its size word.</summary>
     public ReadOnlyMemory<byte> Data { get; }
@@ -147,10 +156,13 @@ public sealed class Costume
     public int ColorShift => ColorCount == 32 ? 3 : 4;
 
     /// <summary>Parses an EGA costume, from its size word.</summary>
-    public static Costume Parse(int number, ReadOnlyMemory<byte> data) => new(number, data, smallHeader: false);
+    public static Costume Parse(int number, ReadOnlyMemory<byte> data) => new(number, data, smallHeader: false, version: 3);
 
     /// <summary>Parses a VGA CD costume, from its 6-byte header.</summary>
-    public static Costume ParseV4(int number, ReadOnlyMemory<byte> data) => new(number, data, smallHeader: true);
+    public static Costume ParseV4(int number, ReadOnlyMemory<byte> data) => new(number, data, smallHeader: true, version: 4);
+
+    /// <summary>Parses an FM Towns costume, from its 6-byte header.</summary>
+    public static Costume ParseTowns(int number, ReadOnlyMemory<byte> data) => new(number, data, smallHeader: true, version: 3, old256: true);
 
     /// <summary>The command byte at an index; the low 7 bits pick a cel.</summary>
     public byte Command(int index)

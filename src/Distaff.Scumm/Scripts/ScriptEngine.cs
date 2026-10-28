@@ -53,6 +53,7 @@ public sealed class ScriptEngine
         _host = host;
         Version = version;
         ScriptHeaderSize = version == 4 || fmTowns ? 6 : 4;
+        FmTowns = fmTowns;
         _decoder = new ScriptDecoder(version, fmTowns);
         _random = new Random(seed);
         for (int i = 0; i < Slots.Length; i++)
@@ -89,10 +90,14 @@ public sealed class ScriptEngine
 
     /// <summary>
     /// Whether the game's copy protection is kept. Off by default, as ScummVM's
-    /// <c>copy_protection</c> option is: then room 69 starts script 205 where it asks for 201,
-    /// as the LucasArts Classic Adventures release did (<c>o5_startScript</c>).
+    /// <c>copy_protection</c> option is: then the DOS releases' room 69 starts script 205 where it
+    /// asks for 201, as the LucasArts Classic Adventures release did (<c>o5_startScript</c>), and
+    /// the FM Towns' bit 15 of variable 214 reads 0 (<c>readVar</c>).
     /// </summary>
     public bool CopyProtection { get; set; }
+
+    /// <summary>Whether the scripts are the FM Towns release's.</summary>
+    public bool FmTowns { get; }
 
     /// <summary>The room whose script 201 asks for a draft from the Book of Patterns.</summary>
     public const int CopyProtectionRoom = 69;
@@ -147,6 +152,11 @@ public sealed class ScriptEngine
         {
             int bit = number & 0x0F;
             int variable = CheckVariable((number >> 4) & 0xFF);
+            if (!CopyProtection && FmTowns && variable == 214 && bit == 15)
+            {
+                return 0;
+            }
+
             return (Variables[variable] & (1 << bit)) != 0 ? 1 : 0;
         }
 
@@ -776,7 +786,7 @@ public sealed class ScriptEngine
                     int script = Arg(0);
 
                     // ScummVM skips the copy protection as the LucasArts Classic Adventures release did
-                    if (!CopyProtection && script == 201 && CurrentRoom == CopyProtectionRoom)
+                    if (!CopyProtection && !FmTowns && script == 201 && CurrentRoom == CopyProtectionRoom)
                     {
                         script = 205;
                     }

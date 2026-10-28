@@ -24,8 +24,11 @@ public interface IActorWorld
     /// <summary>A costume, or null when there is none.</summary>
     Costume? LoadCostume(int number);
 
-    /// <summary>The SCUMM version the game is: 3 for the EGA, 4 for the VGA CD.</summary>
+    /// <summary>The SCUMM version the game is: 3 for the EGA and FM Towns, 4 for the VGA CD.</summary>
     int Version { get; }
+
+    /// <summary>Whether the game is the EGA release, whose resources are bundled the old way (<c>GF_OLD_BUNDLE</c>).</summary>
+    bool OldBundle { get; }
 }
 
 /// <summary>
@@ -281,9 +284,9 @@ public sealed class Actor(int number, IActorWorld world)
         }
 
         // GF_OLD_BUNDLE: the first 16 colours as they are; otherwise the first 32 the costume's own (setActorCostume)
-        for (int i = 0; i < (_world.Version == 3 ? 16 : 32); i++)
+        for (int i = 0; i < (_world.OldBundle ? 16 : 32); i++)
         {
-            Palette[i] = _world.Version == 3 ? (byte)i : (byte)0xFF;
+            Palette[i] = _world.OldBundle ? (byte)i : (byte)0xFF;
         }
     }
 

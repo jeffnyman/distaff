@@ -52,12 +52,12 @@ public static class CostumeRenderer
     /// <summary>
     /// The colours a figure is drawn with. For the EGA: the actor's first 16, or all grey but black
     /// when the lights do not show actors' colours, the costume's colour byte taking colour 0's.
-    /// For the VGA CD: the actor's colours, each 255 among them the costume's own, or all grey
-    /// but black. Mirrors <c>ClassicCostumeRenderer::setPalette</c>.
+    /// For the VGA CD and FM Towns: the actor's colours, each 255 among them the costume's own, or
+    /// all grey but black. Mirrors <c>ClassicCostumeRenderer::setPalette</c>.
     /// </summary>
     public static byte[] Palette(Costume costume, ReadOnlySpan<byte> actorPalette, bool actorColors = true)
     {
-        if (costume.Version == 4)
+        if (costume.SmallHeader)
         {
             var colors = new byte[costume.ColorCount];
             if (actorColors)
@@ -116,9 +116,9 @@ public static class CostumeRenderer
     private static Rect Paint(Costume costume, CostumeState state, int direction, int x, int y, int scaleX, int scaleY, Drawing? drawing)
     {
         bool toRight = direction != Left || costume.HasOwnLeftPictures;
-        // the EGA's cels count from 72 pixels left of and 100 above the feet; the VGA CD's from the feet
-        int moveX = costume.Version == 4 ? 0 : -72;
-        int moveY = costume.Version == 4 ? 0 : -100;
+        // the EGA's cels count from 72 pixels left of and 100 above the feet (GF_OLD_BUNDLE); the others' from the feet
+        int moveX = costume.SmallHeader ? 0 : -72;
+        int moveY = costume.SmallHeader ? 0 : -100;
         Rect bounds = default;
         for (int limb = 0; limb < Costume.LimbCount; limb++)
         {
@@ -129,7 +129,7 @@ public static class CostumeRenderer
             }
 
             int code = costume.Command(position & ~CostumeState.NoLoop) & 0x7F;
-            if (code == Costume.Hide)
+            if (code == Costume.Hide || (costume.Old256 && code >= Costume.Stop))
             {
                 continue;
             }

@@ -27,6 +27,13 @@ public sealed class ScummEngine : Engine
     /// <summary>A save to start from instead of the boot script, as ScummVM's launcher loads one. Set before <see cref="Initialize"/>.</summary>
     public byte[]? StartingSave { get; set; }
 
+    /// <summary>
+    /// What the boot script is started with (ScummVM's <c>boot_param</c>): for the FM Towns, the
+    /// proficiency level, 0 for Practice, 1 for Standard and 2 for Expert, which ScummVM asks for in
+    /// a dialog of its own (<c>LoomTownsDifficultyDialog</c>). Set before <see cref="Initialize"/>.
+    /// </summary>
+    public int BootParam { get; set; }
+
     /// <summary>The name save files start with (<c>loom-vga.s01</c>), or null for the release's own, as ScummVM names it. Set before <see cref="Initialize"/>.</summary>
     public string? SaveTarget { get; set; }
 
@@ -60,7 +67,7 @@ public sealed class ScummEngine : Engine
         }
         else
         {
-            _world.Boot();
+            _world.Boot(BootParam);
         }
     }
 

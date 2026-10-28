@@ -25,6 +25,7 @@ internal static class Program
         int? run = null;
         string? screenshot = null;
         bool copyProtection = false;
+        int bootParam = 0;
         var clicks = new List<(int Step, int X, int Y)>();
         var keys = new List<(int Step, Key Key, char Ascii)>();
         int scale = 3;
@@ -109,6 +110,10 @@ internal static class Program
                 case "--copy-protection":
                     copyProtection = true;
                     break;
+                case "--difficulty" when i + 1 < args.Length && Array.IndexOf(Difficulties, args[i + 1].ToLowerInvariant()) is >= 0 and var level:
+                    bootParam = level;
+                    i++;
+                    break;
                 case "--objects" when i + 1 < args.Length && args[i + 1] is "none" or "initial" or "all":
                     objects = args[++i];
                     break;
@@ -161,7 +166,7 @@ internal static class Program
             if (run is { } runSteps)
             {
                 var store = new FileSaveStore(savesDirectory);
-                return Run(ResourceLoader.Open(game), runSteps, copyProtection, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, wav, CdTrackFiles.In(gamePath));
+                return Run(ResourceLoader.Open(game), runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, wav, CdTrackFiles.In(gamePath));
             }
 
             if (script is { } scriptNo)
@@ -179,7 +184,7 @@ internal static class Program
                 return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
             }
 
-            return Play(game, release, copyProtection, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, CdTrackFiles.In(gamePath));
+            return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, CdTrackFiles.In(gamePath));
         }
         catch (Exception ex) when (ex is NotSupportedException or InvalidDataException)
         {
@@ -188,12 +193,18 @@ internal static class Program
         }
     }
 
+    /// <summary>
+    /// The FM Towns' proficiency levels, as ScummVM's dialog sets the boot parameter for them
+    /// (<c>LoomTownsDifficultyDialog</c>); the other releases ask in the game.
+    /// </summary>
+    private static readonly string[] Difficulties = ["practice", "standard", "expert"];
+
     private static int Usage()
     {
-        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--copy-protection] [--sound speaker|pcjr|adlib] [--load file] [--saves folder] [--target name]");
+        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--copy-protection] [--difficulty practice|standard|expert] [--sound speaker|pcjr|adlib] [--load file] [--saves folder] [--target name]");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
-        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|adlib] [--wav file.wav] [--trace-actor N] [--copy-protection] [--screenshot file.png] [--zoom N]");
+        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|adlib] [--wav file.wav] [--trace-actor N] [--copy-protection] [--screenshot file.png] [--zoom N]");
         return 2;
     }
 
@@ -204,12 +215,12 @@ internal static class Program
     /// given starts the game as ScummVM's launcher does. The VGA CD's audio plays from its track
     /// file in the game's folder.
     /// </summary>
-    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound,
+    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int bootParam, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound,
         Func<int, ICdTrack?> cdTracks)
     {
         using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen, Saves = new FileSaveStore(savesDirectory) });
         var detected = new DetectedGame("scumm", "loom", "Loom", release.Variant, release.Language, release.Platform);
-        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, StartingSave = load, SaveTarget = target, SoundDevice = sound, CdTracks = cdTracks };
+        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, BootParam = bootParam, StartingSave = load, SaveTarget = target, SoundDevice = sound, CdTracks = cdTracks };
         SDL.SDL3.SDL_HideCursor();
         host.Run(engine);
         return 0;
@@ -251,7 +262,7 @@ internal static class Program
     /// WAV file, the sound is read as a host would, a step's worth after each step, and written in
     /// stereo, the VGA CD's track mixed in.
     /// </summary>
-    private static int Run(ResourceLoader loader, int steps, bool copyProtection, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor,
+    private static int Run(ResourceLoader loader, int steps, bool copyProtection, int bootParam, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor,
         string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, string? wav, Func<int, ICdTrack?> cdTracks)
     {
         var world = new GameWorld(loader, sound: sound, cdTracks: wav is null ? null : cdTracks) { CopyProtection = copyProtection, SaveStore = store, SaveTarget = target };
@@ -279,7 +290,7 @@ internal static class Program
         }
         else
         {
-            world.Boot();
+            world.Boot(bootParam);
         }
 
         int room = -1;

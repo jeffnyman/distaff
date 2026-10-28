@@ -88,7 +88,8 @@ public sealed partial class GameWorld
                 }
             }
 
-            RunInputScript(KeyClickArea, input, 1);
+            // the FM Towns' version 3 marks F5 as a special key (checkExecVerbs)
+            RunInputScript(KeyClickArea, FmTowns && input == 319 ? 0x8005 : input, 1);
             return;
         }
 

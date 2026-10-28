@@ -30,7 +30,7 @@ public class TownsScreenTests
     [Fact]
     public void The_logo_shows_in_the_rooms_colours()
     {
-        if (Run(200) is not { } world)
+        if (Run(150) is not { } world)
         {
             return;
         }
@@ -48,7 +48,7 @@ public class TownsScreenTests
     [Fact]
     public void The_openings_text_shows_in_the_text_layers_colours()
     {
-        if (Run(600) is not { } world)
+        if (Run(580) is not { } world)
         {
             return;
         }
@@ -136,7 +136,7 @@ public class TownsScreenTests
         Assert.Equal((7, 8), (Lit(10, 4, 12), Lit(11, 4, 12)));
     }
 
-    private const string Logo = "457368a8b30a336d", Cliff = "d37983cea3d7e48d";
+    private const string Logo = "a978b0f902ec14fd", Cliff = "a5fa4406e5f2caf3";
 
     private static string Hash(RgbFrame frame)
         => Convert.ToHexStringLower(SHA256.HashData(frame.Pixels.SelectMany(p => new[] { p.R, p.G, p.B }).ToArray()))[..16];

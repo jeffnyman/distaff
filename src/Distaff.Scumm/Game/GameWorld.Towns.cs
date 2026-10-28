@@ -84,6 +84,25 @@ public sealed partial class GameWorld
         Screens.TownsLayer?.FillRect(rect, color);
     }
 
+    // the FM Towns' CD volume, left and right, as its sound player keeps it (_cdaVolLeft, _cdaVolRight)
+    private (int Left, int Right) _cdVolume = (255, 255);
+
+    /// <summary>
+    /// The FM Towns' question to the CD, which its scripts ask where the others start music.
+    /// Mirrors <c>o5_startMusic</c> for FM Towns version 3: 0 asks whether the CD has stopped,
+    /// 254 for the sound playing on it (none yet, until the FM Towns' sounds play), 255 for its
+    /// volume; the rest (pausing, resuming, a track's length) answer 0, as in ScummVM.
+    /// </summary>
+    private int CdQuery(int question) => question switch
+    {
+        0 => Sound.Cd.IsPlaying ? 0 : 1,
+        0xFF => (_cdVolume.Left + _cdVolume.Right + 1) >> 1,
+        _ => 0,
+    };
+
+    /// <summary>Sets the FM Towns' CD volume (<c>Player_Towns_v1::setVolumeCD</c>), which the scripts read back; it is not yet heard.</summary>
+    private void SetCdVolume(int left, int right) => _cdVolume = (left & 0xFF, right & 0xFF);
+
     /// <summary>Clears the FM Towns' text surface and text layer (<c>clearLayer(1)</c> with the text surface).</summary>
     private void ClearTownsText()
     {

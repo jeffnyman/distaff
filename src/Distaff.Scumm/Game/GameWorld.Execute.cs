@@ -287,6 +287,8 @@ public sealed partial class GameWorld
                 Engine.Variables[Vars.MusicTimer] = 0;
                 StartSound(Arg(0));
                 return 0;
+            case "o5_startMusic" when FmTowns:
+                return CdQuery(Arg(0));
             case "o5_startMusic":
                 StartSound(Arg(0));
                 return 0;
@@ -299,7 +301,10 @@ public sealed partial class GameWorld
             case "o5_isSoundRunning":
                 return Arg(0) != 0 && Sound.IsRunning(Arg(0)) ? 1 : 0;
 
-            // resources are loaded on demand here
+            // resources are loaded on demand here; the FM Towns sets its CD's volume, left then right
+            case "o5_resourceRoutines" when FmTowns && instruction.SubOps[0].Code == 35:
+                SetCdVolume(subArguments[0][1], subArguments[0][0]);
+                return 0;
             case "o5_resourceRoutines":
                 return 0;
 
@@ -720,6 +725,13 @@ public sealed partial class GameWorld
 
         ego.StopMoving();
         Camera.X = Camera.DestX = ego.X;
+
+        // the FM Towns' Loom also sets the camera there, as its interpreter does
+        if (FmTowns)
+        {
+            Camera.SetAt(ego.X, Engine.Variables[Vars.CameraMinX], Engine.Variables[Vars.CameraMaxX]);
+        }
+
         FollowActor(ego);
         if (x != -1)
         {

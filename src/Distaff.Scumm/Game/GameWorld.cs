@@ -401,6 +401,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <summary>The SCUMM version the game is: 3 for the EGA, 4 for the VGA CD.</summary>
     public int Version => _loader.Version;
 
+    /// <summary>Whether the game is the EGA release, its resources bundled the old way (<c>GF_OLD_BUNDLE</c>).</summary>
+    public bool OldBundle => _loader.Layout == ResourceLayout.V3Old;
+
     /// <summary>The VGA CD's 256 colours as the game has set them (<c>_currentPalette</c>): the room's palette, as the scripts change it.</summary>
     public Rgb[] CurrentPalette { get; private set; } = new Rgb[256];
 
@@ -501,6 +504,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
             try
             {
                 costume = _loader.Load(ResourceType.Costume, number) is not { } data ? null
+                    : _loader.FmTowns ? Costumes.Costume.ParseTowns(number, data)
                     : _loader.Version == 4 ? Costumes.Costume.ParseV4(number, data) : Costumes.Costume.Parse(number, data);
             }
             catch (InvalidDataException)
@@ -629,7 +633,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     {
         var v = Engine.Variables;
         v[Vars.SoundCard] = Sound.SoundCardValue;
-        v[Vars.VideoMode] = 19;
+        v[Vars.VideoMode] = FmTowns ? 42 : 19;
         if (_loader.Version == 3)
         {
             v[Vars.SoundResourceCount] = 80;

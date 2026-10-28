@@ -664,16 +664,45 @@ chips, and the music on 16 CD audio tracks. Its phases build on both earlier rel
   palette change shows at once over the whole room, where ScummVM's picture layer keeps the
   colours it was drawn in until the room is drawn again.
 
-### Phase 20: scripts, costumes and the interface
+### Phase 20: scripts, costumes and the interface (done)
 
-- The difficulty selection ScummVM shows in place of a boot parameter (`scumm.cpp`).
-- The FM Towns branches of the scripts (`script_v5.cpp`, `script_v4.cpp`, `script.cpp`, the CD
-  query), costumes for `GF_OLD256` (`costume.cpp`), actors, verbs and the distaff, played from
-  the opening to the cliff, and the verb band seen.
+- Costumes (`Costume.ParseTowns`): laid out as the VGA CD's, a 6-byte header and a palette of
+  their own (`ClassicCostumeLoader::loadCostume` for `GF_SMALL_HEADER`), with version 3's
+  animations, each limb's first command a byte; cels count from the feet, not from 72 left and
+  100 above as the EGA's do (`GF_OLD_BUNDLE` in `BaseCostumeRenderer`), and commands 0x79 to
+  0x7B draw nothing (`GF_OLD256` in `drawLimb`). Actors start with 32 colours of the costume's
+  own, as the VGA CD's (`setActorCostume`), and walk as the EGA's (`Actor_v3`). `Costume` and
+  `IActorWorld` now say whether they are the EGA's bundled kind apart from their version.
+- The proficiency level is the boot parameter, which ScummVM asks for in a dialog of its own
+  (`LoomTownsDifficultyDialog`): Practice 0, Standard 1, Expert 2; the boot script keeps it in
+  variable 123. `ScummEngine.BootParam`, and the player's `--difficulty practice|standard|expert`,
+  Practice when not given, as ScummVM's dialog leaves it when closed.
+- The copy protection is skipped as ScummVM skips it for the FM Towns: bit 15 of variable 214
+  reads 0 (`readVar`). The DOS releases' skip (room 69's script 201 started as 205) is theirs
+  alone now, as in ScummVM.
+- The script branches of the FM Towns' version 3 (`script_v5.cpp`, `verbs.cpp`, `string.cpp`,
+  `vars.cpp`): the CD query answers whether the CD has stopped (0) and its volume (255), and 0
+  for the rest, as ScummVM does; the CD's volume is set by `resourceRoutines` 35 and kept for
+  the scripts to read back (`Player_Towns_v1::setVolumeCD`, not yet heard). A new verb leaves a
+  verb that is already there as it is (`SO_VERB_NEW`). A verb's name in a message may be a
+  saved verb's (`convertVerbMessage`). F5 reaches the scripts as 0x8005 (`checkExecVerbs`), and
+  they show the game's own save screen, room 70. `loadRoomWithEgo` sets the camera at the ego as
+  well. The video mode is 42 (`setVideoModeVarToCurrentConfig`).
+- Checked against the FM Towns release: all 162 costumes and their 5564 frames draw; the boot
+  parameter reaches variable 123; the opening plays to Bobbin on the cliff; the copy protection
+  welcomes the player; at Practice level Bobbin follows the leaf to the sanctuary, the Elders
+  meet, he takes the distaff, whose staff of notes the verb band shows in the text layer, and
+  weaves Opening on the egg; F5 shows the save screen. Pictures viewed: the cliff with Bobbin
+  and the nymph, the sanctuary with the distaff and its staff, the save screen, the object
+  pictures the FM Towns shows in the verb band.
+- The opening runs faster than it will with the CD: its scripts wait on the CD, which does not
+  play until phase 21. Not yet seen: speech over the room, which goes by at once in the Elders'
+  scene for now.
 
 ### Phase 21: sound
 
-- The 16 CD tracks (FLAC here; a WAV copy is also available), and the CD query's answers.
+- The 16 CD tracks (FLAC here; a WAV copy is also available), and the CD query's answers: the
+  sound playing on the CD, and the volume heard.
 - `players/player_towns.cpp` (`Player_Towns_v1`) for the effects, on the Towns' FM and PCM
   chips (`audio/softsynth/fmtowns_pc98`).
 

@@ -768,7 +768,8 @@ public sealed partial class GameWorld
                 case 5:
                     {
                         int verb = Engine.ReadVar(value);
-                        var slot = verb != 0 ? Verbs.Skip(1).FirstOrDefault(v => v.VerbId == verb && v.Type == 0 && v.SaveId == 0) : null;
+                        // the FM Towns' version 3 takes a saved verb's name too (convertVerbMessage)
+                        var slot = verb != 0 ? Verbs.Skip(1).FirstOrDefault(v => v.VerbId == verb && v.Type == 0 && (v.SaveId == 0 || FmTowns)) : null;
                         if (slot?.Name is { } name)
                         {
                             output.AddRange(ConvertMessage(name));

@@ -147,6 +147,13 @@ public sealed partial class GameWorld
                     break;
                 case 9:
                     slot = VerbSlotOf(verb, 0);
+
+                    // the FM Towns' version 3 leaves a verb that is already there as it is
+                    if (FmTowns && slot != 0)
+                    {
+                        break;
+                    }
+
                     if (slot == 0)
                     {
                         slot = Array.FindIndex(Verbs, 1, v => v.VerbId == 0);
