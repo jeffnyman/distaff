@@ -77,7 +77,8 @@ internal sealed unsafe class SdlGraphicsDriver : IGraphicsDriver, IDisposable
             }
 
             SdlException.ThrowIfFalse(SDL_SetWindowSize(_window, width * scale, height * scale), "SDL_SetWindowSize");
-            SdlException.ThrowIfFalse(SDL_SetWindowPosition(_window, (int)SDL_WINDOWPOS_CENTERED, (int)SDL_WINDOWPOS_CENTERED), "SDL_SetWindowPosition");
+            // centring is a courtesy: some video drivers (Wayland, offscreen) cannot place windows
+            SDL_SetWindowPosition(_window, (int)SDL_WINDOWPOS_CENTERED, (int)SDL_WINDOWPOS_CENTERED);
         }
     }
 

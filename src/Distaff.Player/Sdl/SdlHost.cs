@@ -76,11 +76,14 @@ public sealed class SdlHost : IHost, IDisposable
     /// <summary>Longest the loop will sleep between ticks, so input stays responsive whatever the engine asks for.</summary>
     public TimeSpan MaxSleep { get; set; } = TimeSpan.FromMilliseconds(50);
 
+    /// <summary>How far behind its schedule the loop may fall before it carries on from now.</summary>
+    private static readonly TimeSpan CatchUpLimit = TimeSpan.FromMilliseconds(250);
+
     /// <summary>
-    /// Runs the engine until it quits, the window is closed, or <paramref name="maxTicks"/> ticks
-    /// have run. Returns the number of ticks executed.
+    /// Runs the engine until it quits, the window is closed, <paramref name="maxTicks"/> ticks have
+    /// run, or <paramref name="duration"/> has passed. Returns the number of ticks executed.
     /// </summary>
-    public long Run(Engine engine, int? maxTicks = null)
+    public long Run(Engine engine, int? maxTicks = null, TimeSpan? duration = null)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -88,7 +91,9 @@ public sealed class SdlHost : IHost, IDisposable
         engine.Initialize();
 
         long ticks = 0;
-        long last = Stopwatch.GetTimestamp();
+        long start = Stopwatch.GetTimestamp();
+        long last = start;
+        var due = TimeSpan.Zero;
         while (true)
         {
             _input.Pump();
@@ -102,19 +107,35 @@ public sealed class SdlHost : IHost, IDisposable
 
             _audio.Pump();
 
-            if (!result.Continue || _input.QuitRequested || (maxTicks.HasValue && ticks >= maxTicks.Value))
+            if (!result.Continue || _input.QuitRequested || (maxTicks.HasValue && ticks >= maxTicks.Value)
+                || (duration.HasValue && Stopwatch.GetElapsedTime(start) >= duration.Value))
             {
                 break;
             }
 
-            // the delay counts from the start of the tick, so the time the tick and the pumps took
-            // is already part of it; sleeping the whole delay on top would slow the game down by
-            // the cost of each frame (noticeable in full screen, where the scaled blit is big)
-            var remaining = result.Delay - Stopwatch.GetElapsedTime(now);
-            if (remaining > TimeSpan.Zero)
+            // Each tick is due when the delays before it have passed since the first, so the time
+            // a tick and the pumps take is part of its delay, and waking late now and then does not
+            // add up. No tick may come early, or the game would run ahead of the sound card and the
+            // audio skip to keep up: sleeps are rounded up, and a long delay is slept in slices with
+            // the input and the audio pumped between them. A host that has fallen far behind (a
+            // debugger, a stalled machine) carries on from now instead of hurrying to catch up.
+            due += result.Delay;
+            var clock = Stopwatch.GetElapsedTime(start);
+            if (clock - due > CatchUpLimit)
+            {
+                due = clock;
+            }
+
+            while (due - Stopwatch.GetElapsedTime(start) is var remaining && remaining > TimeSpan.Zero)
             {
                 var sleep = remaining < MaxSleep ? remaining : MaxSleep;
-                SDL_Delay((uint)Math.Max(1, (int)sleep.TotalMilliseconds));
+                SDL_Delay((uint)Math.Max(1, (int)Math.Ceiling(sleep.TotalMilliseconds)));
+                _input.Pump();
+                _audio.Pump();
+                if (_input.QuitRequested)
+                {
+                    break;
+                }
             }
         }
 

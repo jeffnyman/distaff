@@ -30,6 +30,7 @@ internal static class Program
         var keys = new List<(int Step, Key Key, char Ascii)>();
         int scale = 3;
         bool fullscreen = false;
+        TimeSpan? playFor = null;
         string? load = null;
         var saves = new List<(int Step, string Path)>();
         string savesDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Distaff", "saves");
@@ -83,6 +84,10 @@ internal static class Program
                     break;
                 case "--fullscreen":
                     fullscreen = true;
+                    break;
+                case "--for" when i + 1 < args.Length && double.TryParse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture, out double seconds) && seconds > 0:
+                    playFor = TimeSpan.FromSeconds(seconds);
+                    i++;
                     break;
                 case "--load" when i + 1 < args.Length:
                     load = args[++i];
@@ -184,7 +189,7 @@ internal static class Program
                 return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
             }
 
-            return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, CdTrackFiles.In(gamePath));
+            return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, CdTrackFiles.In(gamePath), playFor);
         }
         catch (Exception ex) when (ex is NotSupportedException or InvalidDataException)
         {
@@ -201,7 +206,7 @@ internal static class Program
 
     private static int Usage()
     {
-        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--copy-protection] [--difficulty practice|standard|expert] [--sound speaker|pcjr|adlib] [--load file] [--saves folder] [--target name]");
+        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--difficulty practice|standard|expert] [--sound speaker|pcjr|adlib] [--load file] [--saves folder] [--target name]");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
         Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|adlib] [--wav file.wav] [--trace-actor N] [--copy-protection] [--screenshot file.png] [--zoom N]");
@@ -216,13 +221,15 @@ internal static class Program
     /// file in the game's folder.
     /// </summary>
     private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int? bootParam, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound,
-        Func<int, ICdTrack?> cdTracks)
+        Func<int, ICdTrack?> cdTracks, TimeSpan? playFor)
     {
         using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen, Saves = new FileSaveStore(savesDirectory) });
         var detected = new DetectedGame("scumm", "loom", "Loom", release.Variant, release.Language, release.Platform);
         using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, BootParam = bootParam, StartingSave = load, SaveTarget = target, SoundDevice = sound, CdTracks = cdTracks };
         SDL.SDL3.SDL_HideCursor();
-        host.Run(engine);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        host.Run(engine, duration: playFor);
+        Console.WriteLine($"played {engine.World.Time.TotalSeconds:F1}s of game time in {clock.Elapsed.TotalSeconds:F1}s");
         return 0;
     }
 

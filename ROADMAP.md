@@ -947,3 +947,24 @@ them.
   pixel to black and in again in 36 stops; and that saves keep the effects.
 - Not ported: ScummVM showing the screen at each stop, which on its display waits for the
   refresh and makes its dissolves slower than they are meant to be.
+
+## The window's pace
+
+The window ran the game at about twice its speed. The host loop slept at most 50 ms between
+ticks (to keep the input lively) but then ran the next tick at once, though a Loom frame waits
+about 101 ms (6 jiffies of 4 quarter-frames). Ahead of the sound card by more than a quarter of
+a second, the audio clocked itself to catch up, and the music and the voices played too fast;
+the recordings the tests and the ScummVM comparison use come from `--run`, which has no such
+loop, and were right.
+
+- `SdlHost.Run` now keeps an absolute schedule: each tick is due when the delays before it have
+  passed since the first, its sleeps rounded up, a long one slept in slices with the input and
+  the audio pumped between them; fallen more than a quarter of a second behind, it carries on
+  from now.
+- `distaff <folder> --for SECONDS` plays in the window for that long and quits, and the player
+  prints the game time played against the time taken. Run with SDL's offscreen video driver and
+  disk audio driver (`SDL_VIDEO_DRIVER=offscreen`, `SDL_AUDIO_DRIVER=disk`,
+  `SDL_AUDIO_DISK_OUTPUT_FILE`), it plays without a window or sound: 20.2 s of game time in
+  20.1 s, and the VGA CD's spoken prompt, as recorded from the window's audio, the same as
+  `--run`'s (correlation 1.0000), at the window's volume of 192.
+- The window is centred where the video driver allows it (offscreen and Wayland do not).
