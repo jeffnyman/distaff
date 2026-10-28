@@ -588,8 +588,62 @@ Then the interface and a playing check:
 
 ## FM Towns
 
-- `resource_v3.cpp` with `GF_OLD256`: 6-byte headers, files not encoded.
-- `gfx_towns.cpp`: the Towns' 256-colour graphics and text layer.
-- `players/player_towns.cpp` (`Player_Towns_v1`) for the effects, and the 16 CD tracks (FLAC
-  here; a WAV copy is also available).
+The FM Towns release is SCUMM version 3 on `ScummEngine_v3` with `GF_OLD256`: the EGA release's
+scripts and object numbers, in 256 colours, with the VGA CD's headers and index, a screen 240
+rows tall, a text layer of its own over the picture, sound effects on the Towns' FM and PCM
+chips, and the music on 16 CD audio tracks. Its phases build on both earlier releases.
+
+### Phase 18: resources and room pictures (done)
+
+- `ScummEngine_v3` takes `ScummEngine_v4::readIndexFile` and its 6-byte headers
+  (`_resourceHeaderSize`); without `GF_USE_KEY`, nothing is encoded. `00.LFL` is laid out as the
+  VGA CD's `000.LFL` (`ResourceIndex.ParseV4`), without the room names: every room's entry says
+  disk 0 at offset 0, and `ScummEngine_v3::readRoomsOffsets` reads none, so each room is at the
+  start of its own file, `NN.LFL`, as in the EGA release. What the index puts in room 0 is in no
+  file (`loadResource` looks for it in the current room). Two files hold no room: `82.LFL` holds
+  only sounds and `99.LFL` is the charset, read as the EGA's (`ScummEngine_v3::loadCharset`).
+- `Room.ParseV4` reads the rooms, which are laid out as the VGA CD's, with the EGA's 18-byte
+  boxes (`getBoxBaseAddr` for version 3). `Room` now says whether its blocks have small headers
+  and whether it is the FM Towns', apart from its SCUMM version. The objects have the EGA's
+  numbers: the cliff's leaf is 154.
+- `gfx.cpp` for `GF_OLD256` (`VgaBitmap`): the palette block counts colours, not bytes
+  (`setPaletteFromPtr`); a room has 2 buffers (`_numZBuffer` for version 3), and its z-plane is
+  none when its first 32 bits are 0, with a 4-byte header otherwise (`getZPlanes`,
+  `decodeMask`). The strips use the FM Towns' own codecs, all down the columns (`NEXT_ROW`):
+  raw pixels (1, `drawStripRaw`), runs (2, `unkDecode8`), 4-bit codes (3, `unkDecode9`), a
+  table of colours (4, `unkDecode10`), and steps (7, `unkDecode11`).
+- `ScriptDecoder` and `ScriptEngine` take whether the scripts are the FM Towns': there,
+  `startMusic` asks about the CD and has a result first (`o5_startMusic` for FM Towns version 3).
+  Read as the other releases', scripts 87, 97, 104 and 110 do not decode.
+- Checked against the FM Towns release: 75 rooms parse and draw, with their 599 object images,
+  53 of them with a z-plane; the strips use codecs 1, 2, 3, 4 and 7 only; the cliff's mask is
+  the EGA's. The index holds 1000 global objects; 162 costumes, 116 scripts and 63 sounds load.
+  All 116 global scripts (9165 instructions) and 879 room, local and object scripts (16875
+  instructions) decode straight to their ends. Pictures viewed: the logo, the cliff, the
+  village.
+
+### Phase 19: the screen
+
+- `gfx_towns.cpp`: the Towns' two layers, the 256-colour picture and the 16-colour text over
+  it (`TownsScreen`, `towns_drawStripToScreen`, `_textPalette`), 320x240 (Loom uses the 40 rows
+  under the 200), `_townsPaletteFlags` and the shadow palette, smooth scrolling, the room fades
+  `roomOps` asks of the layers.
+- The charset and text (`CharsetRendererTownsV3`), the cursor.
+
+### Phase 20: scripts, costumes and the interface
+
 - The difficulty selection ScummVM shows in place of a boot parameter (`scumm.cpp`).
+- The FM Towns branches of the scripts (`script_v5.cpp`, `script_v4.cpp`, `script.cpp`, the CD
+  query), costumes for `GF_OLD256` (`costume.cpp`), actors, verbs and the distaff, played from
+  the opening to the cliff.
+
+### Phase 21: sound
+
+- The 16 CD tracks (FLAC here; a WAV copy is also available), and the CD query.
+- `players/player_towns.cpp` (`Player_Towns_v1`) for the effects, on the Towns' FM and PCM
+  chips (`audio/softsynth/fmtowns_pc98`).
+
+### Phase 22: saves and the whole game
+
+- Saves, the original interface's menu for the FM Towns (`gfx_gui.cpp`), and walkthrough tests
+  from the opening to the end.

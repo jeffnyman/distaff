@@ -81,7 +81,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         _owners = [.. index.ObjectOwners];
         _states = [.. index.ObjectStates];
         _classes = [.. index.ObjectClasses];
-        Engine = new ScriptEngine(this, seed, loader.Version);
+        Engine = new ScriptEngine(this, seed, loader.Version, loader.FmTowns);
         Sound = new SoundSystem(sound, LoadSound, sampleRate, cdTracks);
         Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i, this))];
         Verbs = [.. Enumerable.Range(0, VerbCount).Select(_ => new VerbSlot())];

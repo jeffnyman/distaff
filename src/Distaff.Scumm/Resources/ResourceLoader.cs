@@ -10,7 +10,9 @@ namespace Distaff.Scumm.Resources;
 /// with a 4-byte header whose first word is its size, the header included, and a room file is the
 /// room followed by the costumes, scripts and sounds stored with it (<c>GF_OLD_BUNDLE</c>). In the
 /// VGA CD release a resource's header is a 32-bit size and a 2-letter tag (<c>GF_SMALL_HEADER</c>),
-/// and the rooms and what is stored with them are in a disk file's <c>LF</c> blocks. Mirrors
+/// and the rooms and what is stored with them are in a disk file's <c>LF</c> blocks. The FM Towns
+/// release has the VGA CD's headers and index, and the EGA's room files, not encoded
+/// (<c>GF_OLD256</c>, which leaves out <c>GF_USE_KEY</c>), each room at its file's start. Mirrors
 /// ScummVM's <c>ScummEngine::loadResource</c> and <c>openRoom</c>. Decoded files are cached.
 /// </summary>
 public sealed class ResourceLoader
@@ -41,12 +43,18 @@ public sealed class ResourceLoader
     /// <summary>The SCUMM version the release's scripts are written for: 3, or 4 for the VGA CD.</summary>
     public int Version => Layout == ResourceLayout.V4 ? 4 : 3;
 
+    /// <summary>Whether the release is the FM Towns', whose scripts differ in places.</summary>
+    public bool FmTowns => Layout == ResourceLayout.V3Old256;
+
     /// <summary>The size of every resource's header.</summary>
     public int HeaderSize => Layout == ResourceLayout.V3Old ? OldHeaderSize : SmallHeaderSize;
 
+    /// <summary>Whether each room is in a file of its own, <c>NN.LFL</c>, as in the EGA and FM Towns releases.</summary>
+    private bool RoomFiles => Layout != ResourceLayout.V4;
+
     /// <summary>
     /// Reads the index, from <c>00.LFL</c> or <c>000.LFL</c>, and returns a loader over it. The
-    /// EGA and VGA CD layouts are read; the FM Towns' throws <see cref="NotSupportedException"/>.
+    /// EGA, VGA CD and FM Towns layouts are read; the PC Engine's throws <see cref="NotSupportedException"/>.
     /// </summary>
     public static ResourceLoader Open(IGameContainer game)
     {
@@ -58,27 +66,34 @@ public sealed class ResourceLoader
 
             // 000.LFL is not encoded (getEncByte gives version 4's room 0 no key)
             ResourceLayout.V4 => new(game, ResourceIndex.ParseV4(game.ReadAllBytes("000.LFL")), release.Layout),
-            _ => throw new NotSupportedException($"Loom ({release.Variant}) is not supported yet; only the EGA and VGA CD releases' resources are read."),
+
+            // the FM Towns' index is laid out as the VGA CD's (ScummEngine_v3 takes v4's readIndexFile)
+            ResourceLayout.V3Old256 when release.Platform == "fmtowns" => new(game, ResourceIndex.ParseV4(game.ReadAllBytes("00.LFL")), release.Layout),
+            _ => throw new NotSupportedException($"Loom ({release.Variant}) is not supported; only the EGA, VGA CD and FM Towns releases' resources are read."),
         };
     }
 
-    /// <summary>Whether the file holding a room is there: its own file, or for the VGA CD its disk file, which must hold it.</summary>
+    /// <summary>
+    /// Whether the file holding a room is there: its own file, or for the VGA CD its disk file,
+    /// which must hold it. Room 0's is the index; what the index puts in room 0 is in no file
+    /// (<c>loadResource</c> looks for it in the current room).
+    /// </summary>
     public bool HasRoomFile(int room)
     {
-        if (Layout == ResourceLayout.V3Old)
+        if (RoomFiles)
         {
-            return LflFile.Exists(Game, room);
+            return room > 0 && LflFile.Exists(Game, room);
         }
 
         return room >= 0 && room < Index.RoomDisks.Count && DiskBundle.Exists(Game, Index.RoomDisks[room]) && Disk(Index.RoomDisks[room]).Holds(room);
     }
 
-    /// <summary>The decoded contents of an EGA room file.</summary>
+    /// <summary>The decoded contents of an EGA or FM Towns room file.</summary>
     public ReadOnlyMemory<byte> RoomFile(int room)
     {
         if (!_files.TryGetValue(room, out var data))
         {
-            data = LflFile.Read(Game, room);
+            data = Layout == ResourceLayout.V3Old ? LflFile.Read(Game, room) : Game.ReadAllBytes(LflFile.NameOf(room));
             _files[room] = data;
         }
 
@@ -125,7 +140,7 @@ public sealed class ResourceLoader
     /// <summary>Loads and parses a room, or returns null when the index has no such room.</summary>
     public Room? LoadRoom(int room)
         => Load(ResourceType.Room, room) is not { } data ? null
-            : Layout == ResourceLayout.V3Old ? Room.Parse(room, data) : Room.ParseV4(room, data);
+            : Layout == ResourceLayout.V3Old ? Room.Parse(room, data) : Room.ParseV4(room, data, Layout == ResourceLayout.V3Old256);
 
     /// <summary>A global script's code: the resource after its header (<c>getScriptBaseAddress</c> with <c>_resourceHeaderSize</c>).</summary>
     public ReadOnlyMemory<byte>? LoadScript(int script)
@@ -151,22 +166,22 @@ public sealed class ResourceLoader
     }
 
     /// <summary>
-    /// A charset, or null when its file is missing. These files are not encoded. For the EGA
-    /// release it is <c>99.LFL</c> for charset 0, counting down, and the data follows the size
-    /// word, as <c>ScummEngine_v3::loadCharset</c> reads it. For the VGA CD it is <c>901.LFL</c> for
+    /// A charset, or null when its file is missing. These files are not encoded. For the EGA and
+    /// FM Towns releases it is <c>99.LFL</c> for charset 0, counting down, and the data follows the
+    /// size word, as <c>ScummEngine_v3::loadCharset</c> reads it. For the VGA CD it is <c>901.LFL</c> for
     /// charset 1, counting up, and the data is the size its first 32 bits give and 11 bytes more,
     /// after them, as <c>ScummEngine_v4::loadCharset</c> reads it.
     /// </summary>
     public ReadOnlyMemory<byte>? LoadCharset(int charset)
     {
-        string name = Layout == ResourceLayout.V3Old ? LflFile.NameOf(99 - charset) : $"{900 + charset:D3}.LFL";
+        string name = RoomFiles ? LflFile.NameOf(99 - charset) : $"{900 + charset:D3}.LFL";
         if (!Game.Exists(name))
         {
             return null;
         }
 
         var data = Game.ReadAllBytes(name);
-        if (Layout == ResourceLayout.V3Old)
+        if (RoomFiles)
         {
             if (data.Length < 2)
             {
@@ -190,7 +205,7 @@ public sealed class ResourceLoader
     private string FileOf(ResourceType type, int index)
     {
         int room = Index.Locate(type, index).Room;
-        return Layout == ResourceLayout.V3Old ? LflFile.NameOf(room) : $"room {room} of {DiskBundle.NameOf(Index.RoomDisks[room])}";
+        return RoomFiles ? LflFile.NameOf(room) : $"room {room} of {DiskBundle.NameOf(Index.RoomDisks[room])}";
     }
 
     /// <summary>The decoded file a resource is in and where it starts there.</summary>
@@ -202,9 +217,17 @@ public sealed class ResourceLoader
             return null;
         }
 
+        // the FM Towns' index gives every room its file's start; a file there without a room
+        // (82.LFL holds sounds only, 99.LFL the charset) holds none
+        if (type == ResourceType.Room && Layout == ResourceLayout.V3Old256
+            && RoomFile(location.Room).Span is not [_, _, _, _, (byte)'R', (byte)'O', ..])
+        {
+            return null;
+        }
+
         ReadOnlyMemory<byte> file;
         int offset;
-        if (Layout == ResourceLayout.V3Old)
+        if (RoomFiles)
         {
             file = RoomFile(location.Room);
             offset = location.Offset;

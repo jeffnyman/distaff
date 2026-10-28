@@ -353,7 +353,7 @@ internal static class Program
 
         Console.WriteLine();
         Console.WriteLine($"Script {number}: {code.Length} bytes, in room {loader.Index.Locate(ResourceType.Script, number).Room}");
-        Print(new ScriptDecoder(loader.Version).DecodeReachable(code, [0]).Values, code.Length);
+        Print(new ScriptDecoder(loader.Version, loader.FmTowns).DecodeReachable(code, [0]).Values, code.Length);
         return 0;
     }
 
@@ -366,7 +366,7 @@ internal static class Program
             return 1;
         }
 
-        var decoder = new ScriptDecoder(loader.Version);
+        var decoder = new ScriptDecoder(loader.Version, loader.FmTowns);
         void Room(string title, int offset)
         {
             if (offset == 0)

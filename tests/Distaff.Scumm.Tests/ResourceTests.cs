@@ -228,17 +228,6 @@ public class ResourceTests
         Assert.Null(loader.LoadCharset(1));
     }
 
-    [Fact]
-    public void The_fm_towns_release_is_not_read_yet()
-    {
-        if (GameFolders.Find(GameFolders.FmTowns) is not { } path)
-        {
-            return;
-        }
-
-        Assert.Throws<NotSupportedException>(() => ResourceLoader.Open(new DirectoryGameContainer(path)));
-    }
-
     private static ResourceLoader? Open()
         => GameFolders.Find(GameFolders.Ega) is { } path ? ResourceLoader.Open(new DirectoryGameContainer(path)) : null;
 }

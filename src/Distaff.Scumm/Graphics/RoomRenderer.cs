@@ -5,7 +5,7 @@ namespace Distaff.Scumm.Graphics;
 
 /// <summary>
 /// Draws rooms and their objects: the EGA's in the 16 colour numbers of <see cref="Palettes.Ega"/>,
-/// the VGA CD's in the 256 of their own palette (<see cref="PaletteOf"/>).
+/// the VGA CD's and FM Towns' in the 256 of their own palette (<see cref="PaletteOf"/>).
 /// </summary>
 public static class RoomRenderer
 {
@@ -22,9 +22,9 @@ public static class RoomRenderer
     public static MaskedImage DrawBackground(Room room, byte[]? colorMap = null)
     {
         var image = new MaskedImage(new Surface8(room.Width, room.Height), new Surface8(room.Width, room.Height));
-        if (room.Version == 4)
+        if (room.SmallHeader)
         {
-            VgaBitmap.Draw(room.Data.Span[room.ImageOffset..], 0, room.Width / 8, room.Height, image, 0, 0, ZBuffers(room), colorMap);
+            VgaBitmap.Draw(room.Data.Span[room.ImageOffset..], 0, room.Width / 8, room.Height, image, 0, 0, ZBuffers(room), colorMap, room.Old256);
         }
         else
         {
@@ -36,26 +36,26 @@ public static class RoomRenderer
 
     /// <summary>
     /// How many buffers a VGA CD room draws its pictures and masks into, which its own picture
-    /// sets; the EGA's always have 2, the picture and one mask (<c>_numZBuffer</c>).
+    /// sets; the EGA's and FM Towns' always have 2, the picture and one mask (<c>_numZBuffer</c>).
     /// </summary>
     public static int ZBuffers(Room room)
         => room.Version == 4 ? VgaBitmap.ZBufferCount(room.Data.Span[room.ImageOffset..]) : 2;
 
     /// <summary>
-    /// The colours a room is drawn in: the EGA's 16, or the 256 of a VGA CD room's palette block,
-    /// a byte count and then red, green and blue bytes. Mirrors <c>setPaletteFromPtr</c> for
-    /// <c>GF_SMALL_HEADER</c>.
+    /// The colours a room is drawn in: the EGA's 16, or the 256 of a VGA CD or FM Towns room's
+    /// palette block, a count and then red, green and blue bytes. The count is of bytes, or for
+    /// the FM Towns of colours. Mirrors <c>setPaletteFromPtr</c> for <c>GF_SMALL_HEADER</c>.
     /// </summary>
     public static Rgb[] PaletteOf(Room room)
     {
-        if (room.Version != 4)
+        if (!room.SmallHeader)
         {
             return Palettes.Ega;
         }
 
         var span = room.Data.Span;
         int at = room.BlockOffsets["PA"];
-        int count = BinaryPrimitives.ReadUInt16LittleEndian(span[at..]) / 3;
+        int count = BinaryPrimitives.ReadUInt16LittleEndian(span[at..]) / (room.Old256 ? 1 : 3);
         var palette = new Rgb[256];
         for (int i = 0; i < count && i < palette.Length; i++)
         {
@@ -72,7 +72,7 @@ public static class RoomRenderer
     /// that code block.
     /// </summary>
     public static bool HasImage(Room room, RoomObject obj)
-        => obj.Width > 0 && obj.Height > 0 && (room.Version == 4
+        => obj.Width > 0 && obj.Height > 0 && (room.SmallHeader
             ? obj.ImageOffset > 0 && BinaryPrimitives.ReadInt32LittleEndian(room.Data.Span[obj.ImageOffset..]) > ObjectImageHeader
             : obj.ImageOffset > room.ImageOffset && obj.ImageOffset < room.Objects.Min(o => o.CodeOffset));
 
@@ -83,7 +83,7 @@ public static class RoomRenderer
     /// regardless of state.
     /// </summary>
     public static bool OwnsImage(Room room, RoomObject obj)
-        => HasImage(room, obj) && (room.Version == 4 || EgaBitmap.StripCount(room.Data.Span[obj.ImageOffset..]) == obj.Width / 8);
+        => HasImage(room, obj) && (room.SmallHeader || EgaBitmap.StripCount(room.Data.Span[obj.ImageOffset..]) == obj.Width / 8);
 
     /// <summary>
     /// Draws the room with the objects whose state, given by global object number, makes them
@@ -143,9 +143,9 @@ public static class RoomRenderer
         if (HasImage(room, obj))
         {
             var (x, y) = at ?? (obj.X, obj.Y);
-            if (room.Version == 4)
+            if (room.SmallHeader)
             {
-                VgaBitmap.Draw(room.Data.Span[(obj.ImageOffset + ObjectImageHeader)..], 0, obj.Width / 8, obj.Height, target, x, y, ZBuffers(room), colorMap);
+                VgaBitmap.Draw(room.Data.Span[(obj.ImageOffset + ObjectImageHeader)..], 0, obj.Width / 8, obj.Height, target, x, y, ZBuffers(room), colorMap, room.Old256);
             }
             else
             {

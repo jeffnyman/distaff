@@ -9,7 +9,9 @@ namespace Distaff.Scumm.Graphics;
 /// <c>decodeMask</c> and <c>decompressBitmap</c> for <c>GF_SMALL_HEADER</c> without
 /// <c>GF_16COLOR</c>, with the codecs <c>drawStripRaw</c>, <c>drawStripBasicV</c>,
 /// <c>drawStripBasicH</c> and <c>drawStripComplex</c> (by way of <c>MajMinCodec</c>), and
-/// <c>decompressMaskImg</c>.
+/// <c>decompressMaskImg</c>. The FM Towns release's pictures are drawn as ScummVM draws
+/// <c>GF_OLD256</c> games': with their own codecs (<c>unkDecode8</c> to <c>unkDecode11</c>), raw
+/// pixels down the columns, and one z-plane whose header is 4 bytes.
 /// </summary>
 /// <remarks>
 /// <para>Layout: a 32-bit offset of the first z-plane, then a 32-bit offset per strip; offsets are
@@ -21,6 +23,11 @@ namespace Distaff.Scumm.Graphics;
 /// first colour, each pixel's bits keep the colour (0), read a new one (10), or step it by one
 /// in the current direction (110) or the other (111). 64 to 68 and 104 to 108 also step by -4 to
 /// +3 and repeat runs. Codecs 20 higher are the same with colour 255 left transparent.</para>
+/// <para>The FM Towns' codecs draw down the columns, each column after the last: 2 is runs of a
+/// count less one and a colour; 3 is 4-bit codes, read low bit first, that draw 2 to 5 pixels of
+/// a colour, 1 to 4 colours, or set the high 4 bits the next colours have; 4 is a table of colours
+/// and then bytes that pick from it or, above it, repeat the next byte; 7 steps a colour down or
+/// up by one or reads a new one, as the VGA CD's 14 to 18 do but with the bits in another order.</para>
 /// <para>The mask records the planes as bits: bit 0 for plane 1, bit 1 for plane 2, bit 2 for plane 3.</para>
 /// </remarks>
 public static class VgaBitmap
@@ -51,15 +58,23 @@ public static class VgaBitmap
     /// the first at (<paramref name="x"/>, <paramref name="y"/>), and its z-planes, the first
     /// <paramref name="zBuffers"/> - 1 of them, into the target's mask; strips and rows outside the
     /// target are skipped. Colours are drawn through <paramref name="colorMap"/> when there is one
-    /// (<c>_roomPalette</c>). A plane whose strip has no mask clears its bit there.
+    /// (<c>_roomPalette</c>). A plane whose strip has no mask clears its bit there. With
+    /// <paramref name="old256"/>, the FM Towns' picture: a z-plane whose first 32 bits are 0 is
+    /// none, and leaves the mask as it was.
     /// </summary>
-    public static void Draw(ReadOnlySpan<byte> picture, int firstStrip, int strips, int height, MaskedImage target, int x, int y, int zBuffers, byte[]? colorMap = null)
+    public static void Draw(ReadOnlySpan<byte> picture, int firstStrip, int strips, int height, MaskedImage target, int x, int y, int zBuffers, byte[]? colorMap = null, bool old256 = false)
     {
         int smapLength = Int32(picture, 0);
         var planes = new int[Math.Max(zBuffers, 1)];
         for (int i = 1; i < zBuffers; i++)
         {
             planes[i] = i == 1 ? smapLength : planes[i - 1] + Word(picture, planes[i - 1]);
+        }
+
+        // getZPlanes for GF_OLD256: the plane is there only when its first 32 bits are not 0
+        if (old256 && zBuffers > 1 && Int32(picture, smapLength) == 0)
+        {
+            zBuffers = 1;
         }
 
         for (int i = 0; i < strips; i++)
@@ -82,24 +97,39 @@ public static class VgaBitmap
                 throw new InvalidDataException($"Strip {strip} starts at {offset}, past the end of the picture ({picture.Length} bytes).");
             }
 
-            DrawStrip(picture, offset, height, target.Pixels, left, y, colorMap);
+            DrawStrip(picture, offset, height, target.Pixels, left, y, colorMap, old256);
             for (int plane = 1; plane < zBuffers; plane++)
             {
-                DrawMaskStrip(picture, planes[plane], Word(picture, planes[plane] + 2 + strip * 2), height, target.Mask, left, y, (byte)(1 << (plane - 1)));
+                DrawMaskStrip(picture, planes[plane], Word(picture, planes[plane] + (old256 ? 4 : 2) + strip * 2), height, target.Mask, left, y, (byte)(1 << (plane - 1)));
             }
         }
     }
 
     /// <summary>Decodes one strip by its codec. Mirrors <c>decompressBitmap</c>.</summary>
-    private static void DrawStrip(ReadOnlySpan<byte> picture, int offset, int height, Surface8 target, int left, int top, byte[]? colorMap)
+    private static void DrawStrip(ReadOnlySpan<byte> picture, int offset, int height, Surface8 target, int left, int top, byte[]? colorMap, bool old256)
     {
         byte code = picture[offset];
         int shift = code % 10;
         var strip = new Strip(picture, offset + 1, height, target, left, top, colorMap, code is >= 34 and <= 48 or >= 84 and <= 88 or >= 124 and <= 128);
         switch (code)
         {
+            case 1 when old256:
+                strip.RawColumns();
+                break;
             case 1:
                 strip.Raw();
+                break;
+            case 2:
+                strip.Runs();
+                break;
+            case 3:
+                strip.Nibbles();
+                break;
+            case 4:
+                strip.Table();
+                break;
+            case 7:
+                strip.Steps();
                 break;
             case >= 14 and <= 18 or >= 34 and <= 38:
                 strip.Basic(shift, vertical: true);
@@ -111,7 +141,7 @@ public static class VgaBitmap
                 strip.Complex(shift);
                 break;
             default:
-                throw new InvalidDataException($"Strip codec {code} at {offset} is not one the VGA CD's pictures use.");
+                throw new InvalidDataException($"Strip codec {code} at {offset} is not one the VGA CD's or FM Towns' pictures use.");
         }
     }
 
@@ -189,6 +219,11 @@ public static class VgaBitmap
     {
         private readonly ReadOnlySpan<byte> _source = source;
         private int _at = at;
+
+        // the FM Towns codecs' place down the columns, and their bits (READ_BIT_256)
+        private int _pixel;
+        private int _buffer;
+        private int _mask = 128;
 
         /// <summary>Codec 1: 8 bytes a row. Mirrors <c>drawStripRaw</c>.</summary>
         public void Raw()
@@ -322,6 +357,177 @@ public static class VgaBitmap
                     }
                 }
             }
+        }
+
+        /// <summary>The FM Towns' codec 1: a byte a pixel, down the columns. Mirrors <c>drawStripRaw</c> for <c>GF_OLD256</c>.</summary>
+        public void RawColumns()
+        {
+            while (Down(Take()))
+            {
+            }
+        }
+
+        /// <summary>Codec 2: runs of a count less one and a colour, down the columns. Mirrors <c>unkDecode8</c>.</summary>
+        public void Runs()
+        {
+            while (true)
+            {
+                int run = Take() + 1;
+                byte color = Take();
+                do
+                {
+                    if (!Down(color))
+                    {
+                        return;
+                    }
+                }
+                while (--run != 0);
+            }
+        }
+
+        /// <summary>
+        /// Codec 3: 4-bit codes. 0 to 3 draw 2 to 5 pixels of the next 4 bits' colour, 4 to 7 draw
+        /// 1 to 4 colours of 4 bits each, 8 to 11 set the high 4 bits of the colours to come, and 12
+        /// to 15 do nothing. Mirrors <c>unkDecode9</c>.
+        /// </summary>
+        public void Nibbles()
+        {
+            int high = 0;
+            while (true)
+            {
+                int c = Bits(4);
+                switch (c >> 2)
+                {
+                    case 0:
+                        int color = Bits(4);
+                        for (int i = 0; i < (c & 3) + 2; i++)
+                        {
+                            if (!Down((byte)(high * 16 + color)))
+                            {
+                                return;
+                            }
+                        }
+
+                        break;
+                    case 1:
+                        for (int i = 0; i < (c & 3) + 1; i++)
+                        {
+                            if (!Down((byte)(high * 16 + Bits(4))))
+                            {
+                                return;
+                            }
+                        }
+
+                        break;
+                    case 2:
+                        high = Bits(4);
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Codec 4: a count of colours and the colours, then a byte per pixel that picks one of them
+        /// or, from the count up, repeats the next byte that many times less the count, and once
+        /// more. Mirrors <c>unkDecode10</c>.
+        /// </summary>
+        public void Table()
+        {
+            int count = Take();
+            Span<byte> colors = stackalloc byte[256];
+            for (int i = 0; i < count; i++)
+            {
+                colors[i] = Take();
+            }
+
+            while (true)
+            {
+                byte color = Take();
+                if (color < count)
+                {
+                    if (!Down(colors[color]))
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    int run = color - count + 1;
+                    color = Take();
+                    do
+                    {
+                        if (!Down(color))
+                        {
+                            return;
+                        }
+                    }
+                    while (--run != 0);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Codec 7: a colour, then after each pixel up to three bits: 0 keeps the colour, 1 0 turns
+        /// the step about and takes it, 1 1 0 takes it again, and 1 1 1 reads a new colour from the
+        /// next 8 bits and steps down again. Mirrors <c>unkDecode11</c>.
+        /// </summary>
+        public void Steps()
+        {
+            int inc = 1;
+            byte color = Take();
+            while (true)
+            {
+                if (!Down(color))
+                {
+                    return;
+                }
+
+                int i = 0;
+                while (i < 3 && Bits(1) != 0)
+                {
+                    i++;
+                }
+
+                switch (i)
+                {
+                    case 1:
+                        inc = -inc;
+                        color = (byte)(color - inc);
+                        break;
+                    case 2:
+                        color = (byte)(color - inc);
+                        break;
+                    case 3:
+                        inc = 1;
+                        color = (byte)Bits(8);
+                        break;
+                }
+            }
+        }
+
+        /// <summary>Draws the next pixel down the columns; false once all 8 are full (<c>NEXT_ROW</c>).</summary>
+        private bool Down(byte color)
+        {
+            Put(_pixel / height, _pixel % height, color);
+            return ++_pixel < 8 * height;
+        }
+
+        /// <summary><paramref name="n"/> bits, the first read the lowest, each from a byte's low bit up (<c>READ_N_BITS</c>).</summary>
+        private int Bits(int n)
+        {
+            int value = 0;
+            for (int b = 0; b < n; b++)
+            {
+                if ((_mask <<= 1) == 256)
+                {
+                    _buffer = Take();
+                    _mask = 1;
+                }
+
+                value |= ((_buffer & _mask) != 0 ? 1 : 0) << b;
+            }
+
+            return value;
         }
 
         /// <summary>Tops the bit buffer up by a byte when 8 bits or fewer are left (<c>FILL_BITS</c>).</summary>

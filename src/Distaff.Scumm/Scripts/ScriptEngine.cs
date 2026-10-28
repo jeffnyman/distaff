@@ -48,12 +48,12 @@ public sealed class ScriptEngine
     private readonly Stack<int> _stack = new();
     private bool _discardResult;
 
-    public ScriptEngine(IScriptHost host, int seed = 1, int version = 3)
+    public ScriptEngine(IScriptHost host, int seed = 1, int version = 3, bool fmTowns = false)
     {
         _host = host;
         Version = version;
-        ScriptHeaderSize = version == 4 ? 6 : 4;
-        _decoder = new ScriptDecoder(version);
+        ScriptHeaderSize = version == 4 || fmTowns ? 6 : 4;
+        _decoder = new ScriptDecoder(version, fmTowns);
         _random = new Random(seed);
         for (int i = 0; i < Slots.Length; i++)
         {

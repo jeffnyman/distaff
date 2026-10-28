@@ -8,7 +8,8 @@ namespace Distaff.Scumm.Rooms;
 /// <c>ScummEngine_v3old::setupRoomSubBlocks</c>, <c>resetRoomSubBlocks</c> and
 /// <c>resetRoomObjects</c> for the EGA release, and the <c>GF_SMALL_HEADER</c> paths of
 /// <c>ScummEngine::setupRoomSubBlocks</c>, <c>resetRoomSubBlocks</c> and
-/// <c>ScummEngine_v4::resetRoomObjects</c> for the VGA CD (see <see cref="ParseV4"/>).
+/// <c>ScummEngine_v4::resetRoomObjects</c> for the VGA CD and the FM Towns release, whose rooms
+/// are laid out alike (see <see cref="ParseV4"/>).
 /// </summary>
 /// <remarks>
 /// Header, from the room's size word: width and height at 4 and 6 (words, in pixels), the
@@ -35,12 +36,14 @@ public sealed class Room
     /// Offsets are of each block's data, after its header, as <c>findResourceData</c> gives them; an
     /// object's are of its blocks' starts.
     /// </summary>
-    private Room(int number, ReadOnlyMemory<byte> data, int blockHeaderSize)
+    private Room(int number, ReadOnlyMemory<byte> data, int blockHeaderSize, bool old256)
     {
         var span = data.Span;
         Number = number;
         Data = data;
-        Version = 4;
+        Version = old256 ? 3 : 4;
+        SmallHeader = true;
+        Old256 = old256;
         var single = new Dictionary<string, int>();
         var codes = new List<int>();
         var images = new Dictionary<int, int>();
@@ -98,7 +101,8 @@ public sealed class Room
 
         BoxOffset = single.GetValueOrDefault("BX");
         WalkBoxes = BoxOffset == 0 ? WalkBoxes.Empty
-            : WalkBoxes.Parse(data, BoxOffset, BoxOffset - blockHeaderSize + BinaryPrimitives.ReadInt32LittleEndian(span[(BoxOffset - blockHeaderSize)..]), WalkBoxes.BoxSizeV4);
+            : WalkBoxes.Parse(data, BoxOffset, BoxOffset - blockHeaderSize + BinaryPrimitives.ReadInt32LittleEndian(span[(BoxOffset - blockHeaderSize)..]),
+                old256 ? WalkBoxes.BoxSize : WalkBoxes.BoxSizeV4);
         ScaleSlots = single.TryGetValue("SA", out int scales)
             ? ScaleSlot.ReadRoomSlots(span.Slice(scales, BinaryPrimitives.ReadInt32LittleEndian(span[(scales - blockHeaderSize)..]) - blockHeaderSize))
             : new Dictionary<int, ScaleSlot>();
@@ -173,8 +177,14 @@ public sealed class Room
 
     public int Number { get; }
 
-    /// <summary>The SCUMM version of the release the room is from: 3 for the EGA, 4 for the VGA CD.</summary>
+    /// <summary>The SCUMM version of the release the room is from: 3 for the EGA and FM Towns, 4 for the VGA CD.</summary>
     public int Version { get; } = 3;
+
+    /// <summary>Whether the room is a chain of blocks with 6-byte headers, as in the VGA CD and FM Towns releases (<c>GF_SMALL_HEADER</c>).</summary>
+    public bool SmallHeader { get; }
+
+    /// <summary>Whether the room is from the FM Towns release, whose pictures are drawn as ScummVM's <c>GF_OLD256</c> games' are.</summary>
+    public bool Old256 { get; }
 
     /// <summary>
     /// Where each block a VGA CD room has one of starts, by tag, after its header: <c>HD</c>,
@@ -236,8 +246,8 @@ public sealed class Room
 
     public static Room Parse(int number, ReadOnlyMemory<byte> data) => new(number, data);
 
-    /// <summary>Parses a VGA CD room, from its <c>RO</c> block's header.</summary>
-    public static Room ParseV4(int number, ReadOnlyMemory<byte> data) => new(number, data, SmallHeaderSize);
+    /// <summary>Parses a VGA CD room, or with <paramref name="old256"/> an FM Towns one, from its <c>RO</c> block's header.</summary>
+    public static Room ParseV4(int number, ReadOnlyMemory<byte> data, bool old256 = false) => new(number, data, SmallHeaderSize, old256);
 
     /// <summary>The code from an offset up to where the next piece of the room starts; empty for offset 0.</summary>
     private ReadOnlyMemory<byte> CodeAt(int offset)

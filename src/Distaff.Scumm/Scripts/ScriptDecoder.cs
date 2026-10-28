@@ -23,8 +23,10 @@ namespace Distaff.Scumm.Scripts;
 /// <para>Two layouts depend on values: <c>doSentence</c> stops after its verb when that is the
 /// constant 0xFE (when it is a variable, the full layout is assumed), and <c>expression</c>'s
 /// sub-operation 6 runs a whole instruction of its own.</para>
+/// <para>The FM Towns release has one layout of its own: <c>startMusic</c> asks about the CD,
+/// with a result first.</para>
 /// </remarks>
-public sealed class ScriptDecoder(int version = 3)
+public sealed class ScriptDecoder(int version = 3, bool fmTowns = false)
 {
     private const byte Param1 = 0x80, Param2 = 0x40, Param3 = 0x20;
 
@@ -37,6 +39,9 @@ public sealed class ScriptDecoder(int version = 3)
 
     /// <summary>The SCUMM version whose layouts are decoded: 3 or 4.</summary>
     public int Version { get; } = version;
+
+    /// <summary>Whether the scripts are the FM Towns release's.</summary>
+    public bool FmTowns { get; } = fmTowns;
 
     /// <summary>The sub-operation numbers of <c>actorOps</c> in small-header games. Mirrors <c>convertTable</c> in <c>o5_actorOps</c>.</summary>
     private static readonly byte[] ActorOpsConvertTable = [1, 0, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20];
@@ -145,6 +150,12 @@ public sealed class ScriptDecoder(int version = 3)
         {
             // no operands
             case "o5_stopObjectCode" or "o5_breakHere" or "o5_stopMusic" or "o5_endCutscene" or "o3_waitForSentence":
+                break;
+
+            // the FM Towns' CD query (o5_startMusic for FM Towns version 3): result, then one variable or byte
+            case "o5_startMusic" when FmTowns:
+                Result(ref r);
+                Byte1(ref r);
                 break;
 
             // one variable or byte
