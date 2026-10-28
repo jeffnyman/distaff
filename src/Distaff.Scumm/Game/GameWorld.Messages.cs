@@ -91,7 +91,7 @@ public sealed partial class GameWorld
     private int _charsetColor;
     private bool _haveActorSpeechMsg;
 
-    // the charset renderer's pen (_top, _left, _startLeft, _right, _center, _color, _shadowType, _firstChar)
+    // the charset renderer's pen (_top, _left, _startLeft, _right, _center, _color, _shadowType, _firstChar, _disableOffsX)
     private int _textTop;
     private int _textLeft;
     private int _startLeft;
@@ -100,6 +100,7 @@ public sealed partial class GameWorld
     private byte _textColor;
     private ShadowType _shadow;
     private bool _firstChar;
+    private bool _disableOffsX;
 
     // the rectangle drawn since the first character (_str), and where speech was drawn (_hasMask, _textScreenID)
     private Rect _str;
@@ -285,7 +286,7 @@ public sealed partial class GameWorld
             _nextLeft = Math.Max(0, _nextLeft - StringWidth(0, _charsetBuffer.AsSpan(_charsetBufPos)) / 2);
         }
 
-        _firstChar = !_keepText;
+        _disableOffsX = _firstChar = !_keepText;
         int c;
         while (true)
         {
@@ -330,7 +331,8 @@ public sealed partial class GameWorld
 
     /// <summary>
     /// Mirrors <c>newLine</c> for version 3: back to the slot's left, centred again, down the
-    /// slot's line height or the font's; the FM Towns' always the font's.
+    /// slot's line height or the font's; the FM Towns' always the font's. Version 4's next character
+    /// starts the line without its x offset.
     /// </summary>
     private void NewLine()
     {
@@ -341,6 +343,10 @@ public sealed partial class GameWorld
         }
 
         _nextTop += TextSlots[0].Height != 0 && !FmTowns ? TextSlots[0].Height : _font?.Height ?? 8;
+        if (_loader.Version > 3)
+        {
+            _disableOffsX = true;
+        }
     }
 
     /// <summary>
@@ -357,7 +363,7 @@ public sealed partial class GameWorld
         _textRight = slot.Right;
         _textCenter = slot.Center;
         SetColor(slot.Color);
-        _firstChar = true;
+        _disableOffsX = _firstChar = true;
 
         bool shadowModeFlag = Screens.Find(_textTop)?.Number == VirtScreenNumber.Main;
         int fontHeight = _font?.Height ?? 8;
@@ -530,7 +536,8 @@ public sealed partial class GameWorld
     /// <summary>
     /// Draws a version 4 character at the pen and moves it on. Mirrors
     /// <c>CharsetRendererClassic::printChar</c>: the text colour is the colour map's colour 1; the
-    /// character's offsets move the pen while it is drawn; nothing past the slot's right edge or
+    /// character's offsets move the pen while it is drawn, but for the x offset of a string's or a
+    /// line's first character drawn (<c>_disableOffsX</c>); nothing past the slot's right edge or
     /// left of the screen; there are no shadows.
     /// </summary>
     private void PrintCharClassic(int chr, bool ignoreCharsetMask, VirtScreen vs, Surface8 front)
@@ -547,13 +554,15 @@ public sealed partial class GameWorld
         }
 
         _textTop += glyph.OffsetY;
-        _textLeft += glyph.OffsetX;
+        _textLeft += _disableOffsX ? 0 : glyph.OffsetX;
         if (_textLeft + glyph.Width > _textRight + 1 || _textLeft < 0)
         {
             _textLeft += glyph.Width;
             _textTop -= glyph.OffsetY;
             return;
         }
+
+        _disableOffsX = false;
 
         if (_firstChar)
         {

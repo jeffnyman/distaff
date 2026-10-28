@@ -30,6 +30,29 @@ internal sealed class Walkthrough(GameWorld world)
            && !World.Engine.IsScriptRunning(World.Engine.Variables[Vars.SentenceScript])
            && World.Actors[World.Engine.Variables[Vars.Ego]].Moving == 0 && World.Camera.X == World.Camera.LastX;
 
+    /// <summary>
+    /// Writes a section's save to the folder the DISTAFF_EXPORT_SAVES environment variable names,
+    /// when it names one, as <c>release-NN-Section.sNN</c>: for loading in ScummVM, or in the player.
+    /// </summary>
+    public static byte[] Export(string release, Action<Walkthrough> section, byte[] save)
+    {
+        var folder = Environment.GetEnvironmentVariable("DISTAFF_EXPORT_SAVES");
+        if (!string.IsNullOrEmpty(folder))
+        {
+            Directory.CreateDirectory(folder);
+            lock (Exported)
+            {
+                int n = Exported.TryGetValue(release, out int last) ? last + 1 : 1;
+                Exported[release] = n;
+                File.WriteAllBytes(Path.Combine(folder, $"{release}-{n:D2}-{section.Method.Name}.s{n:D2}"), save);
+            }
+        }
+
+        return save;
+    }
+
+    private static readonly Dictionary<string, int> Exported = [];
+
     /// <summary>Steps until the player has had control for a few steps running.</summary>
     public Walkthrough Ready(int max = Patience)
     {

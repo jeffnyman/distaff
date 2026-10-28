@@ -560,7 +560,7 @@ public class VgaWalkthroughTests
 
         int first = world.MessageLog.Count;
         section(w);
-        return new Played(world, world.Save(section.Method.Name, new DateTime(2026, 10, 27)), first);
+        return new Played(world, Walkthrough.Export("loom-vga", section, world.Save(section.Method.Name, new DateTime(2026, 10, 27))), first);
     }
 
     /// <summary>What was said in the section.</summary>

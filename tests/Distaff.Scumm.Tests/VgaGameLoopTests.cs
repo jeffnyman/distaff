@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Distaff.Scumm.Game;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Scripts;
+using Distaff.Scumm.Sound;
 using Distaff.Scumm.Storage;
 
 namespace Distaff.Scumm.Tests;
@@ -9,6 +10,25 @@ namespace Distaff.Scumm.Tests;
 /// <summary>The VGA CD release running: its scripts, text, palette, CD timer and actors. Tests against the game data pass without checking when it is absent.</summary>
 public class VgaGameLoopTests
 {
+    /// <summary>
+    /// The VGA CD names no DOS sound device, and ScummVM gives it the system's default MIDI device,
+    /// which the sound card variable calls 3 whatever device Distaff plays on; ScummVM warns on
+    /// loading a save whose variable differs.
+    /// </summary>
+    [Theory]
+    [InlineData(SoundDevice.Speaker)]
+    [InlineData(SoundDevice.AdLib)]
+    public void The_sound_card_variable_is_scummvms_default(SoundDevice device)
+    {
+        if (GameFolders.Find(GameFolders.Vga) is not { } path)
+        {
+            return;
+        }
+
+        var world = new GameWorld(ResourceLoader.Open(new DirectoryGameContainer(path)), sound: device);
+        Assert.Equal(3, world.Engine.Variables[Vars.SoundCard]);
+    }
+
     /// <summary>
     /// The game boots to the proficiency screen (room 69), the scripts having picked charset 1:
     /// its three choices drawn in the VGA font, in the room's palette.
@@ -211,8 +231,8 @@ public class VgaGameLoopTests
         public int Execute(ScriptEngine engine, Instruction instruction, IReadOnlyList<int> arguments, IReadOnlyList<int[]> subArguments) => 0;
     }
 
-    private const string ProficiencyScreen = "2dd53cf928a17bed", BobbinOnTheCliff = "3cdf8e8514652f77";
-    private const string LeafIcon = "86fa1cda77b3bfb5", DistaffTaken = "b0c9d47811b18ce6", EggOpened = "5ecac3ed1624160f";
+    private const string ProficiencyScreen = "c21f6ae5cda06f4a", BobbinOnTheCliff = "3cdf8e8514652f77";
+    private const string LeafIcon = "e7957c3dfd9dd795", DistaffTaken = "8b1e3477ea1b51eb", EggOpened = "992cbfe0a9372df9";
 
     // the objects of the VGA CD, numbered apart from the EGA's: the cliff (2), the village (3), the
     // tents (5), the path (7), outside the sanctuary (8), the sanctuary (9)

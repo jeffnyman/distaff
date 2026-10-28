@@ -636,8 +636,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     private void ResetVariables()
     {
         var v = Engine.Variables;
-        // the FM Towns' sound driver is neither of the DOS ones (setSoundCardVarToCurrentConfig)
-        v[Vars.SoundCard] = FmTowns ? 3 : Sound.SoundCardValue;
+        // the FM Towns' sound driver is neither of the DOS ones, and the VGA CD names none, so ScummVM
+        // takes the system's default MIDI device for it (setupMusic, setSoundCardVarToCurrentConfig)
+        v[Vars.SoundCard] = FmTowns || _loader.Version == 4 ? 3 : Sound.SoundCardValue;
         v[Vars.VideoMode] = FmTowns ? 42 : 19;
         if (_loader.Version == 3)
         {

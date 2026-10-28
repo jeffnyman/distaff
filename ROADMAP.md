@@ -800,3 +800,32 @@ Part 2, the effects (done):
   credits for the FM Towns conversion and its CD music.
 - Not covered: the Standard and Expert levels, and a save made while a looping CD sound plays
   (the tests play without the CD's tracks).
+
+## Checked against ScummVM
+
+ScummVM 2026.4.0, run on the same game data, against the thirty saves the walkthroughs make (ten
+for each release), which the tests write to the folder `DISTAFF_EXPORT_SAVES` names.
+
+- Distaff's saves in ScummVM: every one loads, in the room it was made in, with the same drafts
+  known. Its window, taken at 6x and read back a pixel at a time, was compared with
+  `distaff --run 60 --load` on the same save. Every still pixel matches; what differs is
+  ScummVM's mouse cursor, things that move all the time (the Loom's glow, the floating rocks
+  in the void, the swans, the forge's fire, sparkles), caught at another moment, and the
+  rounded bottom corners of the Windows 11 window.
+- ScummVM's saves here: ScummVM, loading each, wrote an autosave (version 124) after six
+  seconds, and Distaff loaded every one and drew the same screen. ScummVM writes no autosave at
+  the end of the EGA and FM Towns (the credits' scripts clear the main menu key, which version 3
+  saves need, `canSaveGameStateCurrently`).
+- The FM Towns' colours match after green is cut to 5 bits: ScummVM asks for RGB555 for the FM
+  Towns, as Distaff draws, but takes any 16-bit format the backend offers, and its OpenGL
+  backend offered RGB565, which keeps one more bit of green from the palette.
+- Fixed on the way:
+  - The VGA CD's sound card variable is 3 whatever device plays: the release names no DOS music
+    device, and ScummVM gives it the system's default MIDI device, which
+    `setSoundCardVarToCurrentConfig` calls 3. Saves with the speaker's 0 made ScummVM warn of
+    incompatible sound settings on loading.
+  - Version 4 text skips the x offset of a string's first character, and of a line's after a
+    new line (`_disableOffsX`): the distaff's note letters, the proficiency screen and other
+    text the VGA font draws stood a pixel left of ScummVM's.
+- Not compared: sound, and how frames run after a load (the scripts redraw the distaff's notes
+  some steps after it in both).
