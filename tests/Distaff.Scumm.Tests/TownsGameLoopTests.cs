@@ -1,8 +1,10 @@
 using System.Security.Cryptography;
 using Distaff.Audio;
 using Distaff.Scumm.Costumes;
+using Distaff.Scumm.Detection;
 using Distaff.Scumm.Game;
 using Distaff.Scumm.Graphics;
+using Distaff.Scumm.Hosting;
 using Distaff.Scumm.Input;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Saves;
@@ -76,6 +78,116 @@ public class TownsGameLoopTests
         world.Step();
         Assert.Equal(level, world.Engine.Variables[123]);
         Assert.Equal(42, world.Engine.Variables[Vars.VideoMode]);
+    }
+
+    /// <summary>
+    /// Started with neither a boot parameter nor a save, the FM Towns asks for the proficiency level
+    /// before it boots, as ScummVM does: ScummVM's two lines over its three buttons, Practice
+    /// lit; nothing runs until a button is clicked, and the game then boots with that level.
+    /// </summary>
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 0)]
+    [InlineData(2, 2)]
+    public void The_proficiency_level_is_asked_for_first(int button, int level)
+    {
+        if (OpenEngine() is not ({ } host, { } engine))
+        {
+            return;
+        }
+
+        using (engine)
+        {
+            host.Run(engine, 10);
+            Assert.NotNull(engine.Chooser);
+            Assert.Equal(0, engine.World.CurrentRoomNumber);
+            Assert.Equal((320, 240), (host.Graphics.LastFrame!.Width, host.Graphics.LastFrame.Height));
+            Assert.Equal(ChooserShown, Hash(host.Graphics.LastFrame));
+
+            var r = engine.Chooser.ButtonRect(button);
+            host.Input.Push(InputEvent.MouseDown(MouseButton.Left, r.X + 4, r.Y + 4));
+            host.Continue(engine, 3);
+            Assert.Null(engine.Chooser);
+            Assert.Equal(level, engine.World.Engine.Variables[123]);
+        }
+    }
+
+    /// <summary>
+    /// The level's initial picks it, Return the lit button (Practice, or the one the arrow keys move to),
+    /// and Escape closes the dialog as ScummVM's does, booting at Practice.
+    /// </summary>
+    [Theory]
+    [InlineData(Key.S, 1)]
+    [InlineData(Key.P, 0)]
+    [InlineData(Key.E, 2)]
+    [InlineData(Key.Return, 0)]
+    [InlineData(Key.Down, 2)]
+    [InlineData(Key.Up, 1)]
+    [InlineData(Key.Escape, 0)]
+    public void A_key_picks_the_proficiency_level(Key key, int level)
+    {
+        if (OpenEngine() is not ({ } host, { } engine))
+        {
+            return;
+        }
+
+        using (engine)
+        {
+            host.Run(engine, 2);
+            host.Input.PushKey(key);
+            if (key is Key.Up or Key.Down)
+            {
+                host.Input.PushKey(Key.Return);
+            }
+
+            host.Continue(engine, 3);
+            Assert.Null(engine.Chooser);
+            Assert.Equal(level, engine.World.Engine.Variables[123]);
+        }
+    }
+
+    /// <summary>A boot parameter, or a save to start from, is not asked about, as in ScummVM.</summary>
+    [Fact]
+    public void A_boot_parameter_or_a_save_skips_the_question()
+    {
+        if (OpenEngine(bootParam: 2) is not ({ } host, { } engine))
+        {
+            return;
+        }
+
+        byte[] save;
+        using (engine)
+        {
+            host.Run(engine, 3);
+            Assert.Null(engine.Chooser);
+            Assert.Equal(2, engine.World.Engine.Variables[123]);
+            host.Continue(engine, 300);
+            save = engine.World.Save("level", new DateTime(2026, 10, 28));
+        }
+
+        var (other, fromSave) = OpenEngine(startingSave: save)!.Value;
+        using (fromSave)
+        {
+            other.Run(fromSave, 3);
+            Assert.Null(fromSave.Chooser);
+            Assert.Equal(2, fromSave.World.Engine.Variables[123]);
+        }
+    }
+
+    private static (HeadlessHost Host, ScummEngine Engine)? OpenEngine(int? bootParam = null, byte[]? startingSave = null)
+    {
+        if (GameFolders.Find(GameFolders.FmTowns) is not { } path)
+        {
+            return null;
+        }
+
+        var host = new HeadlessHost();
+        var engine = new ScummEngine(host, new DirectoryGameContainer(path), new DetectedGame("scumm", "loom", "Loom", "FM Towns"))
+        {
+            BootParam = bootParam,
+            StartingSave = startingSave,
+        };
+        return (host, engine);
     }
 
     /// <summary>
@@ -272,7 +384,7 @@ public class TownsGameLoopTests
 
     private const int Known = 122;
     private const int CliffToVillage = 153, Leaf = 154, VillageToTents = 161, TentsToPath = 201, PathToSanctuary = 252, SanctuaryDoor = 254, Egg = 270, Distaff = 271;
-    private const string TheDistaff = "165020946ec95022";
+    private const string TheDistaff = "165020946ec95022", ChooserShown = "9699e17cf0b59777";
 
     private static string Hash(RgbFrame frame)
         => Convert.ToHexStringLower(SHA256.HashData(frame.Pixels.SelectMany(p => new[] { p.R, p.G, p.B }).ToArray()))[..16];

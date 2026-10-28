@@ -15,6 +15,7 @@ namespace Distaff.Scumm;
 public sealed class ScummEngine : Engine
 {
     private GameWorld? _world;
+    private DifficultyChooser? _chooser;
 
     public ScummEngine(IHost host, IGameContainer game, DetectedGame detected)
         : base(host, game, detected)
@@ -28,11 +29,15 @@ public sealed class ScummEngine : Engine
     public byte[]? StartingSave { get; set; }
 
     /// <summary>
-    /// What the boot script is started with (ScummVM's <c>boot_param</c>): for the FM Towns, the
-    /// proficiency level, 0 for Practice, 1 for Standard and 2 for Expert, which ScummVM asks for in
-    /// a dialog of its own (<c>LoomTownsDifficultyDialog</c>). Set before <see cref="Initialize"/>.
+    /// What the boot script is started with (ScummVM's <c>boot_param</c>), or null for none: for the
+    /// FM Towns, the proficiency level, 0 for Practice, 1 for Standard and 2 for Expert. Without it
+    /// and without a starting save, the FM Towns asks for the level first, as ScummVM does in a
+    /// dialog of its own (<see cref="DifficultyChooser"/>). Set before <see cref="Initialize"/>.
     /// </summary>
-    public int BootParam { get; set; }
+    public int? BootParam { get; set; }
+
+    /// <summary>The proficiency level dialog, while it is up.</summary>
+    public DifficultyChooser? Chooser => _chooser;
 
     /// <summary>The name save files start with (<c>loom-vga.s01</c>), or null for the release's own, as ScummVM names it. Set before <see cref="Initialize"/>.</summary>
     public string? SaveTarget { get; set; }
@@ -48,7 +53,8 @@ public sealed class ScummEngine : Engine
 
     public override void Initialize()
     {
-        _world = new GameWorld(ResourceLoader.Open(Game), Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate, CdTracks)
+        var loader = ResourceLoader.Open(Game);
+        _world = new GameWorld(loader, Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate, CdTracks)
         {
             CopyProtection = CopyProtection,
             SaveStore = Host.Saves,
@@ -65,9 +71,14 @@ public sealed class ScummEngine : Engine
         {
             _world.Load(save);
         }
+        else if (BootParam is null && loader.FmTowns)
+        {
+            var font = loader.LoadCharset(0) is { } data ? Charset.Parse(data) : null;
+            _chooser = new DifficultyChooser(font, GameWorld.ScreenWidth, _world.ScreenHeight);
+        }
         else
         {
-            _world.Boot(BootParam);
+            _world.Boot(BootParam ?? 0);
         }
     }
 
@@ -94,6 +105,11 @@ public sealed class ScummEngine : Engine
     public override TickResult Tick(TimeSpan elapsed)
     {
         var world = World;
+        if (_chooser is { } chooser)
+        {
+            return Choose(world, chooser);
+        }
+
         while (Host.Input.TryRead(out var input))
         {
             switch (input.Type)
@@ -122,5 +138,40 @@ public sealed class ScummEngine : Engine
 
         Host.Graphics.Present(world.Frame());
         return world.QuitRequested ? TickResult.Quit : TickResult.After(world.StepLength);
+    }
+
+    /// <summary>The proficiency level dialog: the mouse and keys go to it until a level is chosen, and the game then boots with it.</summary>
+    private TickResult Choose(GameWorld world, DifficultyChooser chooser)
+    {
+        while (chooser.Chosen is null && Host.Input.TryRead(out var input))
+        {
+            switch (input.Type)
+            {
+                case InputEventType.Quit:
+                    return TickResult.Quit;
+                case InputEventType.MouseMove:
+                    chooser.MoveMouse(input.X, input.Y);
+                    break;
+                case InputEventType.MouseDown when input.Button == MouseButton.Left:
+                    chooser.Click(input.X, input.Y);
+                    break;
+                case InputEventType.KeyDown:
+                    chooser.KeyDown(input.Key);
+                    break;
+            }
+        }
+
+        if (chooser.Chosen is { } level)
+        {
+            _chooser = null;
+            world.Boot(level);
+            Host.Graphics.Present(world.Frame());
+        }
+        else
+        {
+            Host.Graphics.Present(chooser.Frame());
+        }
+
+        return TickResult.After(world.StepLength);
     }
 }

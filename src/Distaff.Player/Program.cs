@@ -25,7 +25,7 @@ internal static class Program
         int? run = null;
         string? screenshot = null;
         bool copyProtection = false;
-        int bootParam = 0;
+        int? bootParam = null;
         var clicks = new List<(int Step, int X, int Y)>();
         var keys = new List<(int Step, Key Key, char Ascii)>();
         int scale = 3;
@@ -215,7 +215,7 @@ internal static class Program
     /// given starts the game as ScummVM's launcher does. The VGA CD's audio plays from its track
     /// file in the game's folder.
     /// </summary>
-    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int bootParam, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound,
+    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int? bootParam, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound,
         Func<int, ICdTrack?> cdTracks)
     {
         using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen, Saves = new FileSaveStore(savesDirectory) });
@@ -262,7 +262,7 @@ internal static class Program
     /// WAV file, the sound is read as a host would, a step's worth after each step, and written in
     /// stereo, the VGA CD's track mixed in.
     /// </summary>
-    private static int Run(ResourceLoader loader, int steps, bool copyProtection, int bootParam, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor,
+    private static int Run(ResourceLoader loader, int steps, bool copyProtection, int? bootParam, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor,
         string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, string? wav, Func<int, ICdTrack?> cdTracks)
     {
         var world = new GameWorld(loader, sound: sound, cdTracks: wav is null ? null : cdTracks) { CopyProtection = copyProtection, SaveStore = store, SaveTarget = target };
@@ -290,7 +290,7 @@ internal static class Program
         }
         else
         {
-            world.Boot(bootParam);
+            world.Boot(bootParam ?? 0);
         }
 
         int room = -1;

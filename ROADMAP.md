@@ -829,3 +829,15 @@ for each release), which the tests write to the folder `DISTAFF_EXPORT_SAVES` na
     text the VGA font draws stood a pixel left of ScummVM's.
 - Not compared: sound, and how frames run after a load (the scripts redraw the distaff's notes
   some steps after it in both).
+
+## The FM Towns' proficiency level
+
+The FM Towns release takes its proficiency level from the boot parameter and never asks for it.
+ScummVM asks in a dialog of its own (`LoomTownsDifficultyDialog`, from `ScummEngine::init`) when
+it has neither a save to load nor a boot parameter, and Distaff's window now does the same
+(`DifficultyChooser`, shown by `ScummEngine` before it boots): ScummVM's two lines and its three
+buttons in its order, Standard (1), Practice (0) and Expert (2), drawn in the game's own font with
+an arrow for the mouse. A click, a button's initial, or the arrow keys and Return pick a level;
+Escape closes it as ScummVM's dialog closes, at Practice. `--difficulty`, or a save given with
+`--load`, skips it; the headless `--run` still boots at Practice unless told otherwise.
+`TownsGameLoopTests` pins the dialog's screen and each way of choosing.
