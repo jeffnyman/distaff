@@ -89,6 +89,45 @@ public class SoundTests
         Assert.Equal(referenceHash, Convert.ToHexStringLower(SHA256.HashData(MemoryMarshal.AsBytes(samples.AsSpan()))));
     }
 
+    /// <summary>
+    /// A load sets the game's time to the save's play time, and the sound goes on from there: the
+    /// steps after it render what they play, not the time jumped over. Rendering that (as the self
+    /// clock once did, taking the jump for sound no host had read) ran the FM Towns' CD music on by
+    /// the save's whole play time, so that it came back partway into its track where ScummVM starts
+    /// it again from the beginning, and used up the sounds the load started.
+    /// </summary>
+    [Fact]
+    public void A_load_renders_no_sound_for_the_time_it_jumps()
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        var world = new GameWorld(loader);
+        world.Boot();
+        Run(world, 100, []);
+        world.Click(160, 92);
+        Run(world, 200, []);
+        var save = world.Save("later", new DateTime(2026, 10, 28));
+
+        var loaded = new GameWorld(loader);
+        loaded.Boot();
+        loaded.Step();
+        long before = loaded.Sound.Output.FramesRendered;
+        loaded.Load(save);
+        Assert.True(loaded.Time > TimeSpan.FromSeconds(20));
+        var from = loaded.Time;
+        for (int i = 0; i < 20; i++)
+        {
+            loaded.Step();
+        }
+
+        // the self clock keeps the sound with the game when nothing reads it, from the load on
+        long played = (long)((loaded.Time - from).TotalSeconds * GameWorld.DefaultSampleRate);
+        Assert.InRange(loaded.Sound.Output.FramesRendered - before, played - 44100 / 4, played);
+    }
+
     private static string Hash(List<short> samples)
         => Convert.ToHexStringLower(SHA256.HashData(MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(samples))))[..16];
 

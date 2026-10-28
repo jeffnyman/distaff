@@ -855,9 +855,27 @@ for each release), which the tests write to the folder `DISTAFF_EXPORT_SAVES` na
     ticks a second: the player starts a sound on its next tick, and the notes' edges fall a sample
     either way of where they would by where that tick lies. Where ScummVM's start lands is where
     its mixer thread happens to be when the script's call comes, so it is not Distaff's to match.
+  - FM Towns, effects: the scripts start no FM or PCM sound by themselves where a section save
+    leaves the game (the opening's sound 17 is silent in both), so the saves were made inside
+    Dyeing at the hetchel: after its last note is clicked, the note sounds (Euphony, sound 2)
+    and the dye pot answers (PCM, sound 24) with no more input. Loaded in ScummVM with `-x1`,
+    at full volume (256: at the 255 the comparison had used, ScummVM's sound is 255/256 of
+    `tools/towns-reference`'s), the PCM sound agrees to 99.8% of its samples, the rest single
+    samples a step of the sampled sound apart, about every 576; rendered alone after the right
+    lead-in, ScummVM's own player gives what Distaff's does. The note agrees in level and
+    shape (correlation 0.9992), starting a frame (0.1 s) later in ScummVM, which loads at the
+    end of a frame and runs the scripts that play it after the next frame's wait, where
+    Distaff's step after a load does both; the CD music, restarted by the load, is identical.
+  - Fixed on the way: a load sets the game's time to the save's play time, and the self clock,
+    which keeps the sound with the game when the host reads none, took the jump for sound
+    nobody had read and rendered it all at once. On the FM Towns that ran the CD music on by
+    the save's whole play time, so that it came back partway into its track (93 seconds into
+    track 10 from a save at 522 seconds) where ScummVM starts it from the beginning, and it
+    used up the sounds the load started. It happened in the window too, starting from a save
+    or loading one played longer. `ClockedSource.Resync` now moves the clock to the save's
+    time, and `distaff --run --load --wav` records from the load on, not from game time 0.
 - Not compared: how frames run after a load (the scripts redraw the distaff's notes some steps
-  after it in both), and the FM Towns' FM and PCM sound effects in the game (the players are
-  checked against ScummVM's own, `tools/towns-reference`).
+  after it in both).
 
 ## The FM Towns' proficiency level
 

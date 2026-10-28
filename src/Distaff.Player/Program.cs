@@ -293,6 +293,9 @@ internal static class Program
         if (load is not null)
         {
             var info = world.Load(File.ReadAllBytes(load));
+
+            // the recording starts with the save's play time
+            framesRead = (long)(world.Time.TotalSeconds * GameWorld.DefaultSampleRate);
             Console.WriteLine($"loaded \"{info.Name}\" (save version {info.Version}, {info.PlayTime.TotalSeconds:F0}s played): room {world.CurrentRoomNumber}");
         }
         else

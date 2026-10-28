@@ -60,13 +60,24 @@ public sealed partial class GameWorld
     {
         var (info, state) = SaveFile.Read(file, _owners.Length, _loader.Version, FmTowns);
         Restore(state);
-        Time = info.PlayTime;
+        SetPlayTime(info.PlayTime);
 
         // the script the save was made in is the current one, for terminateSaveMenuScript (_currentScript)
         int saved = state.CurrentScript < ScriptEngine.SlotCount ? state.CurrentScript : -1;
         Engine.ContinueAfterLoad(saved, saved >= 0 ? Engine.Slots[saved].Offset : 0);
         _loadFromLauncher = true;
         return info;
+    }
+
+    /// <summary>
+    /// The game's time becomes the save's play time. The sound plays on from where it is: the time
+    /// jumped over is not sound that went unheard, which the self clock would render to catch up
+    /// (running the FM Towns' CD music on by the save's whole play time).
+    /// </summary>
+    private void SetPlayTime(TimeSpan time)
+    {
+        Time = time;
+        Sound.Output.Resync(time);
     }
 
     /// <summary>
@@ -240,7 +251,7 @@ public sealed partial class GameWorld
                     }
 
                     Restore(state);
-                    Time = info.PlayTime;
+                    SetPlayTime(info.PlayTime);
                     int saved = state.CurrentScript < ScriptEngine.SlotCount ? state.CurrentScript : -1;
                     if (state.CurrentRoom != SaveRoom)
                     {

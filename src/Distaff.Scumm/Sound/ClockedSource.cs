@@ -15,6 +15,9 @@ public sealed class ClockedSource : IAudioSource
     private readonly IAudioSource _inner;
     private readonly int _sampleRate;
     private long _framesRendered;
+
+    /// <summary>The frame engine time 0 falls on: engine time jumps on a load, and the audio does not.</summary>
+    private long _origin;
     private bool _selfClocked;
     private short[]? _discard;
 
@@ -36,10 +39,17 @@ public sealed class ClockedSource : IAudioSource
         Interlocked.Add(ref _framesRendered, interleavedStereo.Length / 2);
     }
 
+    /// <summary>
+    /// Engine time has jumped to <paramref name="engineTime"/> (a load sets the save's): the audio
+    /// rendered so far ends there, and nothing is rendered to catch up with the jump.
+    /// </summary>
+    public void Resync(TimeSpan engineTime)
+        => _origin = (long)(engineTime.TotalSeconds * _sampleRate) - FramesRendered;
+
     /// <summary>Renders whatever audio engine time has passed without the host reading it.</summary>
     public void Update(TimeSpan engineTime)
     {
-        long expected = (long)(engineTime.TotalSeconds * _sampleRate);
+        long expected = (long)(engineTime.TotalSeconds * _sampleRate) - _origin;
         long rendered = FramesRendered;
 
         if (_selfClocked)
