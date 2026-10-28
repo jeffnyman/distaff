@@ -460,6 +460,22 @@ public class TownsWalkthroughTests
         Assert.Equal(51, played.World.CurrentRoomNumber);
     }
 
+    /// <summary>
+    /// From the waterspout's room, before the waterspout is calmed, the way back along the log
+    /// takes Bobbin back up the dock (script 107). The log takes him out again, and the way
+    /// through goes on: Un-Twisting calms the waterspout and the log takes him to the shore.
+    /// </summary>
+    [Fact]
+    public void The_log_takes_bobbin_back_to_the_dock()
+    {
+        if (Island.Value is not { } before || Play(before, BackToTheDock) is not { } played)
+        {
+            return;
+        }
+
+        Assert.Equal(15, played.World.CurrentRoomNumber);
+    }
+
     private static void DistaffMistakes(Walkthrough w)
     {
         w.WalkTo(200, 130).Ready();
@@ -475,6 +491,26 @@ public class TownsWalkthroughTests
 
         // a note typed that Bobbin has not learned yet
         w.Click(Loom).Key(Key.G, 'g').Wait(100).Ready(20000);
+    }
+
+    private static void BackToTheDock(Walkthrough w)
+    {
+        // as the way through leaves the island, as far as the waterspout
+        w.Click(WheelOut).InRoom(5).Ready().Click(TentsToVillage).InRoom(3).Ready().Click(VillageToCliff).InRoom(2).Ready();
+        w.Click(Sky).Click(Sky).Spin(Opening).Ready(20000);
+        w.Click(CliffToVillage).InRoom(3).Ready().Click(VillageToDock).InRoom(10).Ready();
+        w.Click(Clam).Spin(Opening).Ready(20000);
+        w.WalkTo(182, 53).Ready(20000);
+        w.Click(DockWater).InRoom(13).Ready(20000);
+        w.Use(Waterspout).Ready(20000);
+
+        // the way back along the log, before the waterspout is calmed, takes Bobbin back to the
+        // dock (script 107); the log takes him out again, and Un-Twisting calms it as on the way through
+        w.Exit(WaterspoutToDock, 10, 20000);
+        w.WalkTo(182, 53).Ready(20000);
+        w.Click(DockWater).InRoom(13).Ready(20000);
+        w.Click(Waterspout).Spin(Twisting, backwards: true).Ready(20000);
+        w.Click(WaterspoutOut).InRoom(15).Ready(20000);
     }
 
     private static void OutToSea(Walkthrough w)
@@ -805,6 +841,7 @@ public class TownsWalkthroughTests
     private const int SanctuaryOut = 267, Egg = 270, Distaff = 271;
     private const int DockWater = 295, Clam = 296;
     private const int WaterspoutOut = 323, Waterspout = 325;
+    private const int WaterspoutToDock = 324;
     private const int WheelOut = 807, Wheel = 810, Straw = 809;
     private const int Darkness = 822, GravestoneOut = 825;
 

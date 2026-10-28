@@ -52,6 +52,7 @@ public class CoverageReport
             tests.Dyeing_on_wool_that_is_already_dyed();
             tests.The_caves_other_passages();
             tests.A_draft_on_the_dead_one();
+            tests.The_log_takes_bobbin_back_to_the_dock();
         }
         finally
         {

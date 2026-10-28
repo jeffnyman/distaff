@@ -951,13 +951,18 @@ clicking there); the detour looks at the crystal and the bell first.
     ledge over the pool from below it, where the pool's way out leaves him.
   - A draft on the Dead One across the rift (`A_draft_on_the_dead_one`, script 103): Cygna
     answers that that side of the Pattern is beyond the threads' reach.
+  - The log back to the dock (`The_log_takes_bobbin_back_to_the_dock`, script 107): in the
+    waterspout's room, before it is calmed, the way back along the log takes Bobbin up the dock
+    again, wading out of the water; script 107 leaves the dock's water untouchable until he has
+    walked to the dock's end, from where the log takes him out again and the way through goes on.
 - Left unplayed: the glassmaker's greeting in the chalice's room (script 67), which looks
   unreachable: it comes from looking at the crystal there or walking into its box 0, and the
   room makes both possible only for a visitor who comes from the graveyard, where Goodmold has
   always greeted him first (bit 3513). The other global scripts never started are the
   interface's or unused: the save room's (4), the sounds stopped (38), the demo's save message
-  (43), a helper nothing calls (24), the ending's input (115), an older draft check (9), and two
-  cutscenes whose way in was not looked for (51 and 107). And most objects' answers to looks and
+  (43), a helper nothing calls (24), the ending's input (115), an older draft check (9), and the
+  log's ride out to the waterspout (51), a copy of the one the dock's water starts (52), the
+  same instruction for instruction, which nothing starts. And most objects' answers to looks and
   drafts they do not take: 411 entries of 151 objects, by the coverage report.
 
 ## Screen transitions
