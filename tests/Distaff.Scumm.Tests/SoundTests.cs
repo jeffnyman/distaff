@@ -60,6 +60,53 @@ public class SoundTests
     }
 
     /// <summary>
+    /// A save keeps the AdLib's music and where it is (<c>Player_AD::saveLoadWithSerializer</c>),
+    /// and a load starts it again there: the title's music sounds from the load's first moment, as
+    /// loud as played on from the save, its notes coming and going with it (the chip's notes are
+    /// struck again and its timer begins afresh, so not to the sample). ScummVM, loading the same save, plays the same samples as
+    /// Distaff; loading a save of its own made at the same place it varies by a sample from one
+    /// run to the next, which Distaff does not.
+    /// </summary>
+    [Fact]
+    public void The_adlib_music_plays_on_from_a_save()
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        var world = new GameWorld(loader, sound: SoundDevice.AdLib);
+        world.Boot();
+        Run(world, 60, []);
+        world.Click(160, 92);
+        Run(world, 120, []);
+        var save = world.Save("mid", new DateTime(2026, 10, 28));
+        var played = new List<short>();
+        Run(world, 50, played);
+
+        var (_, state) = Saves.SaveFile.Read(save, loader.Index.ObjectOwners.Count, 3);
+        Assert.Equal(PlayerAd.SaveStateSize, state.SoundEngineData.Length);
+        Assert.Equal(25, BitConverter.ToInt32(state.SoundEngineData, 0));
+
+        var loaded = new GameWorld(loader, sound: SoundDevice.AdLib);
+        loaded.Load(save);
+        var resumed = new List<short>();
+        Run(loaded, 50, resumed);
+
+        static double Rms(IEnumerable<short> s) => Math.Sqrt(s.Average(x => (double)x * x));
+        Assert.True(Rms(resumed.Take(4410)) > 100, "the music sounds at once");
+        Assert.InRange(Rms(resumed) / Rms(played), 0.9, 1.1);
+        // the notes as they come and go: the loudness of every 50 milliseconds, which the chip's
+        // phase, begun afresh at the load, leaves alone
+        int windows = Math.Min(played.Count, resumed.Count) / 2205;
+        double[] Envelope(List<short> x) => [.. Enumerable.Range(0, windows).Select(w => Rms(x.Skip(w * 2205).Take(2205)))];
+        double[] p = Envelope(played), r = Envelope(resumed);
+        double pm = p.Average(), rm = r.Average();
+        double c = p.Zip(r, (x, y) => (x - pm) * (y - rm)).Sum() / Math.Sqrt(p.Sum(x => (x - pm) * (x - pm)) * r.Sum(y => (y - rm) * (y - rm)));
+        Assert.True(c > 0.8, $"the notes' loudness agrees to {c:F2}");
+    }
+
+    /// <summary>
     /// The music plays at ScummVM's music volume, 192 of 256 unless set (<c>music_volume</c>),
     /// which each player takes as ScummVM's does: the speaker's and the PCjr's volume table is
     /// built from it, so their music is 192/255 of its loudness at full volume; the AdLib's

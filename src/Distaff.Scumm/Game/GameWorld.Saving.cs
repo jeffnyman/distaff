@@ -6,6 +6,7 @@ using Distaff.Scumm.Resources;
 using Distaff.Scumm.Rooms;
 using Distaff.Scumm.Saves;
 using Distaff.Scumm.Scripts;
+using Distaff.Scumm.Sound;
 using Distaff.Scumm.Storage;
 using Distaff.Scumm.View;
 
@@ -495,6 +496,11 @@ public sealed partial class GameWorld
         {
             CaptureTowns(s);
         }
+        else if (Sound.Player is PlayerAd adLib)
+        {
+            // the AdLib's music and effects, and where the music is (Player_AD::saveLoadWithSerializer)
+            s.SoundEngineData = adLib.SaveState();
+        }
         (s.EgoPositioned, s.ScreenEffectFlag, s.ScreenB, s.ScreenH) = (_egoPositioned ? 1 : 0, _screenEffectFlag ? 1 : 0, ViewTop, ViewTop + ViewHeight);
         (s.DoEffect, s.SwitchRoomEffect, s.NewEffect, s.SwitchRoomEffect2) = (_doEffect ? 1 : 0, _switchRoomEffect, _newEffect, _switchRoomEffect2);
 
@@ -685,6 +691,11 @@ public sealed partial class GameWorld
             var r = s.TownsCurStringRect;
             _curStringRect = s.HasTownsData ? Rect.FromBounds(r[0], r[1], r[2], r[3]) : Rect.FromBounds(-1, -1, -1, -1);
             TownsPlayer.LoadState(s.SoundEngineData);
+        }
+        else if (Sound.Player is PlayerAd adLib)
+        {
+            // the AdLib's music starts again where the save left it, and its effects with it
+            adLib.LoadState(s.SoundEngineData, LoadSound);
         }
 
         // initScreens with the save's bands clears them; nothing drawn over the room is left

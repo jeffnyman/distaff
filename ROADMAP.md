@@ -1185,6 +1185,34 @@ sound settings, so each recording starts from a save made with the card it plays
 192 are 192/255 as loud as at full volume, and that the AdLib's is quieter; the title music's
 pinned hashes were taken again, at 255 as before.
 
+## Sound after a load
+
+The AdLib's music now plays on from a save. ScummVM's `Player_AD` keeps in the save, from version
+96 on, the music and the three effects playing and the music's timers and place
+(`saveLoadWithSerializer`), and a load starts the music again and winds it on, its notes silent,
+to that place (`musicSeekTo`, `_isSeeking`), then starts the effects again. Distaff had kept
+nothing there for the AdLib (ScummVM, finding the block empty, restored no music either), so a
+load was silent until the scripts started the music again. `PlayerAd.SaveState` and `LoadState`
+now write and read the 36 bytes, and the save and the load take them as the FM Towns' player's.
+
+- A save made in the title's music, loaded in ScummVM and in Distaff (ScummVM at its default
+  volumes, the AdLib): the two play the same samples for 10 seconds. A save ScummVM made of its
+  own at the same place, which holds the same 36 bytes: Distaff plays it as the first, sample
+  for sample; ScummVM plays it to within a sample of its own playing of the first (correlation
+  0.985), its AdLib's timer running on a thread of its own, so where a load falls against it
+  varies from run to run.
+- `SoundTests` checks that a save made in the music holds it and that a load sounds it at once,
+  as loud as played on and with the notes' loudness coming and going with it (the chip's timer
+  begins afresh at the load, so its waveform drifts in phase from the music played on); without
+  the load's restart the test fails.
+
+After a load on the FM Towns, the note the scripts start came 0.1 seconds after the CD music the
+load starts again in one ScummVM recording, and 0.05 seconds in another of the same save: ScummVM
+starts the CD at once on its audio thread and the note at the frame's end through its synth's
+buffers, by however long that is in real time. Distaff starts both in the same step, as the
+scripts and the load do in ScummVM's own order (`scummLoop_handleSaveLoad`, then
+`runAllScripts`), and the difference is not ScummVM's to copy.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above
@@ -1202,8 +1230,8 @@ Known differences, not fixed:
 
 5. (Done: the music and effects play at ScummVM's volumes; see "The music and effects volumes".)
 6. The VGA CD's restart does not show the dissolve out (effect 134) first.
-7. After a load, sounds the scripts start come one frame (0.1 s) sooner, against the CD music the load restarts, than in ScummVM.
-8. The music is not sought back to where it was after a load.
+7. (Not a difference: ScummVM's own gap after a load varies from run to run; see "Sound after a load".)
+8. (Done: the AdLib's music plays on from a save; see "Sound after a load".)
 9. The VGA CD's CD timer stops while its menu is up; ScummVM's stops only once it has counted.
 10. No subtitles setting: the text is always drawn, as ScummVM does by default.
 23. (Done: the text speed is ScummVM's setting; see "The text speed".)

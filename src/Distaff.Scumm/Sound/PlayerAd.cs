@@ -61,6 +61,9 @@ public sealed class PlayerAd : MusicPlayer
     private int _mdvdrState;
     private int _curOffset;
     private int _nextEventTimer;
+
+    /// <summary>Whether the music is being wound on to where a save left it, its notes kept silent meanwhile (<c>_isSeeking</c>).</summary>
+    private bool _isSeeking;
     private int _sfxTimer = 4;
     private byte _rndSeed = 1;
 
@@ -288,7 +291,7 @@ public sealed class PlayerAd : MusicPlayer
         if (r is >= 0xB0 and <= 0xB8)
         {
             int channel = r - 0xB0;
-            bool mute = _hwChannels[channel].SfxOwner is not null ? _sfxVolume == 0 : _musicVolume == 0;
+            bool mute = _hwChannels[channel].SfxOwner is not null ? _sfxVolume == 0 : _musicVolume == 0 || _isSeeking;
             if (mute)
             {
                 v &= ~0x20;
@@ -315,6 +318,102 @@ public sealed class PlayerAd : MusicPlayer
             }
 
             for (int i = 0; i < _hwChannels.Length; i++)
+            {
+                WriteReg(0xB0 + i, ReadReg(0xB0 + i));
+            }
+        }
+    }
+
+    /// <summary>
+    /// What a save keeps of the player: the music and the three effects playing (-1 for none),
+    /// then the music's timers and where it is. Mirrors <c>Player_AD::saveLoadWithSerializer</c>
+    /// from save version 96 on, its numbers little-endian.
+    /// </summary>
+    public byte[] SaveState()
+    {
+        lock (_sync)
+        {
+            var data = new byte[SaveStateSize];
+            int[] values = [_musicResource, _sfx[0].Resource, _sfx[1].Resource, _sfx[2].Resource, _engineMusicTimer, _musicTimer, _internalMusicTimer, _curOffset, _nextEventTimer];
+            for (int i = 0; i < values.Length; i++)
+            {
+                BitConverter.TryWriteBytes(data.AsSpan(i * 4, 4), values[i]);
+            }
+
+            return data;
+        }
+    }
+
+    /// <summary>The bytes <see cref="SaveState"/> writes.</summary>
+    public const int SaveStateSize = 9 * 4;
+
+    /// <summary>
+    /// Plays on from a save's state: the music starts again and is wound on, silent, to where
+    /// the save left it, with its timers as they were; then the effects start again. Mirrors the
+    /// loading half of <c>Player_AD::saveLoadWithSerializer</c> and <c>musicSeekTo</c>. A save
+    /// without the state leaves the player as it is.
+    /// </summary>
+    /// <param name="data">What <see cref="SaveState"/> wrote.</param>
+    /// <param name="resource">A sound's data as <see cref="StartSound"/> takes it, or null.</param>
+    public void LoadState(byte[] data, Func<int, byte[]?> resource)
+    {
+        if (data.Length < SaveStateSize)
+        {
+            return;
+        }
+
+        int Read(int i) => BitConverter.ToInt32(data, i * 4);
+        lock (_sync)
+        {
+            int music = Read(0);
+            if (music != -1 && resource(music) is { } musicData)
+            {
+                StartSound(music, musicData);
+            }
+
+            int startOffset = _curOffset;
+            (_engineMusicTimer, _musicTimer, _internalMusicTimer, _nextEventTimer) = (Read(4), Read(5), Read(6), Read(8));
+            if (_musicData is not null && _musicResource != -1)
+            {
+                MusicSeekTo(Read(7));
+            }
+            else
+            {
+                _curOffset = startOffset;
+            }
+
+            for (int i = 1; i < 4; i++)
+            {
+                if (Read(i) != -1 && resource(Read(i)) is { } sfxData)
+                {
+                    StartSound(Read(i), sfxData);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Winds the music on to a place in it, its commands run and its notes kept silent; then the
+    /// notes that are on sound again. An end of the track on the way stops the winding. Mirrors
+    /// <c>musicSeekTo</c>.
+    /// </summary>
+    private void MusicSeekTo(int position)
+    {
+        _isSeeking = true;
+        while (_curOffset != position)
+        {
+            if (ParseCommand() || _musicData is null || _musicResource == -1)
+            {
+                break;
+            }
+
+            ParseVLQ();
+        }
+
+        _isSeeking = false;
+        for (int i = 0; i < _voiceChannels.Length; i++)
+        {
+            if (_voiceChannels[i].LastEvent != 0)
             {
                 WriteReg(0xB0 + i, ReadReg(0xB0 + i));
             }
