@@ -40,6 +40,41 @@ public sealed class SoundSystem : IDisposable
             : new PlayerV2(sampleRate, device == SoundDevice.Pcjr));
         _mix = new AudioMix(Player, Cd);
         Output = new ClockedSource(_mix, sampleRate);
+        SyncVolumes();
+    }
+
+    private int _musicVolume = Hosting.AudioVolume.Default, _sfxVolume = Hosting.AudioVolume.Default;
+
+    /// <summary>The music's volume, 0 to 256: ScummVM's <c>music_volume</c>, 192 unless set.</summary>
+    public int MusicVolume
+    {
+        get => _musicVolume;
+        set
+        {
+            _musicVolume = Hosting.AudioVolume.Clamp(value);
+            SyncVolumes();
+        }
+    }
+
+    /// <summary>The sound effects' volume, 0 to 256: ScummVM's <c>sfx_volume</c>, 192 unless set.</summary>
+    public int SfxVolume
+    {
+        get => _sfxVolume;
+        set
+        {
+            _sfxVolume = Hosting.AudioVolume.Clamp(value);
+            SyncVolumes();
+        }
+    }
+
+    /// <summary>
+    /// The volumes go where ScummVM's settings take them (<c>syncSoundSettings</c>): to the player,
+    /// which plays at them itself, and the music's to the mixer's music, which the CD plays as.
+    /// </summary>
+    private void SyncVolumes()
+    {
+        Player.SetVolumes(_musicVolume, _sfxVolume);
+        Cd.MusicVolume = _musicVolume;
     }
 
     private readonly AudioMix _mix;

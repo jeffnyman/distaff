@@ -27,10 +27,12 @@ public sealed class SdlHostOptions
     public int SampleRate { get; init; } = 44100;
 
     /// <summary>
-    /// Master volume, 0 to <see cref="AudioVolume.Unity"/>; the default is ScummVM's level.
-    /// Ctrl+Alt+Up and Ctrl+Alt+Down change it while playing and Ctrl+Alt+M mutes.
+    /// Master volume over everything the game plays, 0 to <see cref="AudioVolume.Unity"/>, full by
+    /// default: the game's music and effects play at ScummVM's volumes of their own
+    /// (<c>SoundSystem.MusicVolume</c> and <c>SfxVolume</c>). Ctrl+Alt+Up and Ctrl+Alt+Down change
+    /// it while playing and Ctrl+Alt+M mutes.
     /// </summary>
-    public int Volume { get; init; } = AudioVolume.Default;
+    public int Volume { get; init; } = AudioVolume.Unity;
 
     public ILog Log { get; init; } = NullLog.Instance;
 

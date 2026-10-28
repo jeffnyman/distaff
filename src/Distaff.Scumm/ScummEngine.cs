@@ -31,6 +31,12 @@ public sealed class ScummEngine : Engine
     /// <summary>How fast the game's lines go by, 0 to 9, as ScummVM's text speed (<see cref="GameWorld.TextSpeed"/>). Set before <see cref="Initialize"/>.</summary>
     public int TextSpeed { get; set; } = GameWorld.DefaultTextSpeed;
 
+    /// <summary>The music's and the sound effects' volumes, 0 to 256, as ScummVM's settings (192 unless set). Set before <see cref="Initialize"/>.</summary>
+    public int MusicVolume { get; set; } = AudioVolume.Default;
+
+    /// <inheritdoc cref="MusicVolume"/>
+    public int SfxVolume { get; set; } = AudioVolume.Default;
+
     /// <summary>A save to start from instead of the boot script, as ScummVM's launcher loads one. Set before <see cref="Initialize"/>.</summary>
     public byte[]? StartingSave { get; set; }
 
@@ -97,6 +103,8 @@ public sealed class ScummEngine : Engine
             world.SaveTarget = SaveTarget;
         }
 
+        world.Sound.MusicVolume = MusicVolume;
+        world.Sound.SfxVolume = SfxVolume;
         return world;
     }
 

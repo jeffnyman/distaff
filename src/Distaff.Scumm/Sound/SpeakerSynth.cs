@@ -78,6 +78,15 @@ public abstract class SpeakerSynth : MusicPlayer
         }
     }
 
+    /// <summary>The music volume builds the volume table; there are no effects of their own.</summary>
+    public override void SetVolumes(int music, int sfx)
+    {
+        lock (Sync)
+        {
+            SetVolume(music);
+        }
+    }
+
     /// <summary>Builds the volume table for a volume of 0 to 255. Mirrors <c>Player_V2::setMusicVolume</c>.</summary>
     public void SetVolume(int volume)
     {

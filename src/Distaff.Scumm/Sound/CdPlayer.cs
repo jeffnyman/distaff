@@ -34,6 +34,9 @@ public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : 
     // the channel's volume on each side, from 0 to 256 (the mixer's _volL and _volR)
     private int _volumeLeft = 256, _volumeRight = 256;
 
+    // the CD's own volume and balance, and the mixer's music volume they are taken at
+    private int _volume = 255, _balance, _musicVolume = 256;
+
     /// <summary>Whether a part of a track is playing (<c>pollCD</c>).</summary>
     public bool IsPlaying
     {
@@ -106,18 +109,39 @@ public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : 
 
     /// <summary>
     /// Sets the CD's volume, 0 to 255, and balance, -127 (left) to 127 (right), which stay for
-    /// what plays after (<c>AudioCDManager::setVolume</c> and <c>setBalance</c>). Mirrors the
-    /// mixer's <c>Channel::updateChannelVolumes</c> at full music volume: the side away from the
-    /// balance is turned down by it.
+    /// what plays after (<c>AudioCDManager::setVolume</c> and <c>setBalance</c>).
     /// </summary>
     public void SetVolume(int volume, int balance)
     {
-        int vol = 256 * Math.Clamp(volume, 0, 255);
         lock (_lock)
         {
-            _volumeLeft = balance > 0 ? (127 - balance) * vol / (255 * 127) : vol / 255;
-            _volumeRight = balance < 0 ? (127 + balance) * vol / (255 * 127) : vol / 255;
+            (_volume, _balance) = (Math.Clamp(volume, 0, 255), balance);
+            UpdateVolumes();
         }
+    }
+
+    /// <summary>The mixer's volume for music, 0 to 256, which the CD plays at (<c>kMusicSoundType</c>).</summary>
+    public int MusicVolume
+    {
+        set
+        {
+            lock (_lock)
+            {
+                _musicVolume = Math.Clamp(value, 0, 256);
+                UpdateVolumes();
+            }
+        }
+    }
+
+    /// <summary>
+    /// The CD's volume at the music volume, each side's: the side away from the balance is
+    /// turned down by it. Mirrors the mixer's <c>Channel::updateChannelVolumes</c>.
+    /// </summary>
+    private void UpdateVolumes()
+    {
+        int vol = _musicVolume * _volume;
+        _volumeLeft = _balance > 0 ? (127 - _balance) * vol / (255 * 127) : vol / 255;
+        _volumeRight = _balance < 0 ? (127 + _balance) * vol / (255 * 127) : vol / 255;
     }
 
     /// <summary>Stops the track (<c>stopCD</c>).</summary>

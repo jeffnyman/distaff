@@ -73,9 +73,22 @@ public sealed class PlayerTowns : MusicPlayer
         _intf.SetSoundEffectChanMask(-1);
         SetVolumeCd(255, 255);
 
-        // syncSoundSettings, at the full music and effects volumes
-        _intf.SetMusicVolume(TownsFmSynth.MaxMixerVolume);
-        _intf.SetSoundEffectVolume(TownsFmSynth.MaxMixerVolume);
+        // at the full music and effects volumes until the settings give theirs (syncSoundSettings)
+        SetVolumes(TownsFmSynth.MaxMixerVolume, TownsFmSynth.MaxMixerVolume);
+    }
+
+    /// <summary>
+    /// The music volume goes to the FM music, the effects volume to the sampled sounds. Mirrors
+    /// <c>Player_Towns_v1::setMusicVolume</c> (the Euphony driver's, <c>setMusicVolume</c>) and
+    /// <c>Player_Towns::setSfxVolume</c> (<c>setSoundEffectVolume</c>).
+    /// </summary>
+    public override void SetVolumes(int music, int sfx)
+    {
+        lock (_sync)
+        {
+            _intf.SetMusicVolume(music);
+            _intf.SetSoundEffectVolume(sfx);
+        }
     }
 
     /// <summary>The sound playing on the CD, or 0 (<c>_cdaCurrentSound</c>).</summary>

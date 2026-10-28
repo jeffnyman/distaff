@@ -1155,6 +1155,36 @@ redraw). Every release now starts at 3, as ScummVM does.
   setting at 9, that a load puts the setting back, and that a speed the scripts write in a room
   becomes the setting.
 
+## The music and effects volumes
+
+ScummVM plays the music and the sound effects at volumes of their own, 192 of 256 unless set
+(`music_volume`, `sfx_volume`), and hands them to each player as it takes them
+(`syncSoundSettings`); Distaff had played everything at full volume and turned the window's
+whole output down to 192, so its recordings and its AdLib were louder than ScummVM's. Now the
+sound system keeps the two volumes (`SoundSystem.MusicVolume` and `SfxVolume`, the player's
+`--music-volume` and `--sfx-volume`) and gives them where ScummVM does
+(`MusicPlayer.SetVolumes`):
+
+- the speaker and the PCjr build their volume table from the music volume
+  (`Player_V2::setMusicVolume`);
+- the AdLib turns its operators down by the music volume, or the effects' for a channel an
+  effect has, each to 255, and writes every operator's level and note again (`setupVolume`);
+- the FM Towns gives the music volume to its FM music and the effects' to its sampled sounds
+  (`Player_Towns_v1::setMusicVolume`, `Player_Towns::setSfxVolume`);
+- the CD plays at the mixer's music volume times its own (`kMusicSoundType`,
+  `Channel::updateChannelVolumes`).
+
+The window's master volume is now full by default, still turned with Ctrl+Alt+Up and Down.
+Recorded at ScummVM's own defaults (the comparison's 255s taken out), from the same saves or the
+opening, the two agree in loudness everywhere: the EGA's AdLib title music (1.005 of ScummVM's,
+correlation 0.990), its speaker (1.000, note for note), the VGA CD's opening (1.000, identical),
+the FM Towns' opening CD music (identical, every sample) and its sampled sound 24 (1.000). A save
+made with one sound card loaded in ScummVM set to another stops at its warning of incompatible
+sound settings, so each recording starts from a save made with the card it plays on.
+`SoundTests` checks that the music is silent at volume 0, that the speaker's and the PCjr's at
+192 are 192/255 as loud as at full volume, and that the AdLib's is quieter; the title music's
+pinned hashes were taken again, at 255 as before.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above
@@ -1170,7 +1200,7 @@ Not yet checked against ScummVM:
 
 Known differences, not fixed:
 
-5. The music's volume when recorded headless and in the AdLib player: 255, where ScummVM plays at 192 (the window already plays at 192).
+5. (Done: the music and effects play at ScummVM's volumes; see "The music and effects volumes".)
 6. The VGA CD's restart does not show the dissolve out (effect 134) first.
 7. After a load, sounds the scripts start come one frame (0.1 s) sooner, against the CD music the load restarts, than in ScummVM.
 8. The music is not sought back to where it was after a load.

@@ -21,4 +21,7 @@ public abstract class MusicPlayer(int sampleRate) : MonoAudioSource(sampleRate)
 
     /// <summary>Whether a sound plays or waits to. Mirrors <c>getSoundStatus</c>.</summary>
     public abstract bool IsPlaying(int number);
+
+    /// <summary>The music and effects volumes, 0 to 256, as the settings give them. Mirrors <c>setMusicVolume</c> and <c>setSfxVolume</c>.</summary>
+    public abstract void SetVolumes(int music, int sfx);
 }

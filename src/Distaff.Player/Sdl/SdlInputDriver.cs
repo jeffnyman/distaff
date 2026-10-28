@@ -218,7 +218,7 @@ internal sealed unsafe class SdlInputDriver : IInputDriver
             }
             else
             {
-                _audio.Volume = _volumeBeforeMute > 0 ? _volumeBeforeMute : AudioVolume.Default;
+                _audio.Volume = _volumeBeforeMute > 0 ? _volumeBeforeMute : AudioVolume.Unity;
             }
         }
         else

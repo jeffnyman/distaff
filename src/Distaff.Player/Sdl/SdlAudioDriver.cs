@@ -27,7 +27,7 @@ internal sealed unsafe class SdlAudioDriver : IAudioDriver, IDisposable
 
     public TimeSpan TargetLatency { get; set; } = TimeSpan.FromMilliseconds(80);
 
-    public int Volume { get; set; } = AudioVolume.Default;
+    public int Volume { get; set; } = AudioVolume.Unity;
 
     public void Start(IAudioSource source)
     {

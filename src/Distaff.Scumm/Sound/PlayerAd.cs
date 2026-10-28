@@ -48,7 +48,7 @@ public sealed class PlayerAd : MusicPlayer
     private readonly VoiceChannel[] _voiceChannels = [new(), new(), new(), new(), new(), new(), new(), new(), new()];
     private readonly SfxSlot[] _sfx = [new(), new(), new()];
     private readonly int[] _instrumentOffset = new int[16];
-    private readonly int _musicVolume = MaxVolume, _sfxVolume = MaxVolume;
+    private int _musicVolume = MaxVolume, _sfxVolume = MaxVolume;
 
     private int _nextTick;
     private int _numHWChannels = 9;
@@ -296,6 +296,29 @@ public sealed class PlayerAd : MusicPlayer
         }
 
         _opl.WriteRegister(r, v & 0xFF);
+    }
+
+    /// <summary>
+    /// The music and effects volumes, each to 255, and every operator's level and every note
+    /// written again at them. Mirrors <c>Player_AD::setupVolume</c>, which <c>setMusicVolume</c>
+    /// calls with the settings' music and effects volumes.
+    /// </summary>
+    public override void SetVolumes(int music, int sfx)
+    {
+        lock (_sync)
+        {
+            _musicVolume = Math.Clamp(music, 0, MaxVolume);
+            _sfxVolume = Math.Clamp(sfx, 0, MaxVolume);
+            foreach (int offset in OperatorOffsetTable)
+            {
+                WriteReg(0x40 + offset, ReadReg(0x40 + offset));
+            }
+
+            for (int i = 0; i < _hwChannels.Length; i++)
+            {
+                WriteReg(0xB0 + i, ReadReg(0xB0 + i));
+            }
+        }
     }
 
     private byte ReadReg(int r) => r is >= 0 and < 256 ? _registers[r] : (byte)0;

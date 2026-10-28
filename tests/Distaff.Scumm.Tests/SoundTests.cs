@@ -33,9 +33,9 @@ public class SoundTests
     /// pinned for each device.
     /// </summary>
     [Theory]
-    [InlineData(SoundDevice.Speaker, "c96207c9ed4bfa4d")]
-    [InlineData(SoundDevice.Pcjr, "98553b4499d400bb")]
-    [InlineData(SoundDevice.AdLib, "f0a3c52c7c6b7eb5")]
+    [InlineData(SoundDevice.Speaker, "12fdde4a7ecf765b")]
+    [InlineData(SoundDevice.Pcjr, "b6d0b1d66966526b")]
+    [InlineData(SoundDevice.AdLib, "886e7bc1dba85688")]
     public void The_title_music_plays_from_the_title_on(SoundDevice device, string firstSeconds)
     {
         if (Open() is not { } loader)
@@ -57,6 +57,49 @@ public class SoundTests
         Assert.True(world.Sound.IsRunning(25));
         Assert.Contains(audio, s => s != 0);
         Assert.Equal(firstSeconds, Hash(audio));
+    }
+
+    /// <summary>
+    /// The music plays at ScummVM's music volume, 192 of 256 unless set (<c>music_volume</c>),
+    /// which each player takes as ScummVM's does: the speaker's and the PCjr's volume table is
+    /// built from it, so their music is 192/255 of its loudness at full volume; the AdLib's
+    /// operators are turned down by it. At 0 the music is silent (effects have a volume of their own). Recorded from the same save,
+    /// ScummVM's music at its default volume and Distaff's agree in loudness on every device.
+    /// </summary>
+    [Theory]
+    [InlineData(SoundDevice.Speaker)]
+    [InlineData(SoundDevice.Pcjr)]
+    [InlineData(SoundDevice.AdLib)]
+    public void The_music_plays_at_the_music_volume(SoundDevice device)
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        double Loudness(int volume)
+        {
+            var world = new GameWorld(loader, sound: device);
+            Assert.Equal(192, world.Sound.MusicVolume);
+            world.Sound.MusicVolume = volume;
+
+            // the AdLib plays the click on the proficiency screen (sound 9) as an effect, at the effects' volume
+            world.Sound.SfxVolume = 0;
+            var audio = new List<short>();
+            world.Boot();
+            Run(world, 100, []);
+            world.Click(160, 92);
+            Run(world, 200, audio);
+            return Math.Sqrt(audio.Average(x => (double)x * x));
+        }
+
+        double full = Loudness(255), normal = Loudness(192);
+        Assert.Equal(0, Loudness(0));
+        Assert.True(normal < full * 0.8, $"{normal} at 192, {full} at 255");
+        if (device != SoundDevice.AdLib)
+        {
+            Assert.Equal(192.0 / 255, normal / full, 2);
+        }
     }
 
     /// <summary>
