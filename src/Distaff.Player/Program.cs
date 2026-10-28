@@ -308,7 +308,7 @@ internal static class Program
         }
 
         int room = -1;
-        for (int step = 0; step < steps && !world.QuitRequested; step++)
+        for (int step = 0; step < steps && !world.QuitRequested && !world.RestartRequested; step++)
         {
             foreach (var click in clicks.Where(c => c.Step == step))
             {

@@ -29,7 +29,7 @@ public sealed partial class GameWorld
         CtrlCancel = 15, CtrlArrowUp = 16, CtrlArrowDown = 17, CtrlPath = 18, CtrlOuterBox = 26, CtrlInnerBox = 27;
 
     // the game's strings the interface takes its words from (getGUIString, getPlainEngineString)
-    private const int GsPause = 4, GsQuitPrompt = 6, GsSave = 7, GsLoad = 8, GsPlay = 9, GsCancel = 10, GsQuit = 11, GsOk = 12,
+    private const int GsPause = 4, GsRestart = 5, GsQuitPrompt = 6, GsSave = 7, GsLoad = 8, GsPlay = 9, GsCancel = 10, GsQuit = 11, GsOk = 12,
         GsInsertSaveDisk = 13, GsMustName = 14, GsGameNotLoaded = 16, GsSaving = 17, GsLoading = 18, GsNamePrompt = 19, GsSelectLoadPrompt = 20;
 
     // what a save or load from the menu leaves for the scripts (GAME_PROPER_SAVE, GAME_PROPER_LOAD)
@@ -69,13 +69,13 @@ public sealed partial class GameWorld
     public bool ConfirmExit { get; set; }
 
     /// <summary>Whether the menu or a banner is up, and the game waits.</summary>
-    public bool InInterface => _menuActive || _banner is not null;
+    public bool InInterface => _menuActive || _banner is not null || _oldBanner is not null;
 
     /// <summary>Whether the menu is open (<c>_mainMenuIsActive</c>).</summary>
     public bool MenuActive => _menuActive;
 
     /// <summary>The words of the banner shown, or null.</summary>
-    public string? BannerText => _banner?.Text;
+    public string? BannerText => _banner?.Text ?? _oldBanner?.Text;
 
     /// <summary>The save slots the menu lists, as it labels them (<c>_savegameNames</c>).</summary>
     public IReadOnlyList<string> SavegameLabels => _savegameNames;
@@ -91,13 +91,19 @@ public sealed partial class GameWorld
     }
 
     /// <summary>A banner waiting for a key or a click: its words, the rows it covers and what they held, and what comes after.</summary>
-    private sealed record Banner(string Text, bool OverMenu, int SaveTop, byte[][] Rows, Action<(Key Key, char Ascii, KeyModifiers Modifiers)?> Then);
+    private sealed record Banner(string Text, bool OverMenu, int SaveTop, byte[][] Rows, Action<(Key Key, char Ascii, KeyModifiers Modifiers)?> Then)
+    {
+        /// <summary>The quarter-frames left before the banner goes by itself, or -1 to wait for a key.</summary>
+        public int WaitTime { get; set; } = -1;
+    }
 
     /// <summary>
-    /// A key while the VGA CD runs with its original interface. Mirrors the part of
+    /// A key while the game runs with its original interface. Mirrors the part of
     /// <c>processKeyboard</c> before the keys reach the game: the pause key shows the pause banner
-    /// with the cursor off, and the menu key (variable 50, which the game sets to F5) opens the
-    /// menu. Returns whether the key was taken.
+    /// with the cursor off; the restart key (variable 42), or F8 on the FM Towns, asks whether to
+    /// restart; on the VGA CD the menu key (variable 50, which the game sets to F5) opens the menu;
+    /// Alt+I on version 3 and Ctrl+R on version 4 switch the screen between snapping to the camera
+    /// and scrolling. Returns whether the key was taken.
     /// </summary>
     private bool InterfaceKey(Key key, KeyModifiers modifiers, char ascii)
     {
@@ -107,13 +113,27 @@ public sealed partial class GameWorld
         {
             int oldCursorState = CursorState;
             CursorState = 0;
-            ShowBanner(GuiString(GsPause), _ => CursorState = oldCursorState);
+            ShowOldStyleBanner(GuiString(GsPause), 12, -1, _ => CursorState = oldCursorState);
             return true;
         }
 
-        if (code != 0 && code == Engine.Variables[MainMenuKey] && modifiers == KeyModifiers.None)
+        int restartKey = Engine.Variables[Vars.RestartKey];
+        if ((restartKey != 0 && code == restartKey) || (FmTowns && key == Key.F8 && modifiers == KeyModifiers.None))
+        {
+            QueryRestart();
+            return true;
+        }
+
+        if (_loader.Version == 4 && code != 0 && code == Engine.Variables[MainMenuKey] && modifiers == KeyModifiers.None)
         {
             ShowMainMenu();
+            return true;
+        }
+
+        if ((_loader.Version == 3 && key == Key.I && modifiers == KeyModifiers.Alt)
+            || (_loader.Version == 4 && key == Key.R && modifiers == KeyModifiers.Ctrl))
+        {
+            ToggleSnapScroll();
             return true;
         }
 
@@ -146,6 +166,14 @@ public sealed partial class GameWorld
             }
         }
 
+        if (_oldBanner is { } oldBanner)
+        {
+            var (bannerClick, bannerKey) = (_guiClick, _guiKey);
+            (_guiClick, _guiKey) = (null, null);
+            OldStyleBannerStep(oldBanner, quarterFrames, bannerClick, bannerKey);
+            return;
+        }
+
         if (_guiWait > 0)
         {
             _guiWait -= quarterFrames;
@@ -167,6 +195,10 @@ public sealed partial class GameWorld
             if (click is not null || key is not null)
             {
                 EndBanner(banner, key);
+            }
+            else if (banner.WaitTime > 0 && (banner.WaitTime -= quarterFrames) <= 0)
+            {
+                EndBanner(banner, null);
             }
 
             return;
@@ -763,7 +795,7 @@ public sealed partial class GameWorld
     /// covered come back and what follows is done with the key. The sound pauses meanwhile. Mirrors
     /// <c>showBannerAndPause</c> for version 4, which <c>showOldStyleBannerAndPause</c> is for Loom VGA.
     /// </summary>
-    private void ShowBanner(string text, Action<(Key Key, char Ascii, KeyModifiers Modifiers)?> then)
+    private void ShowBanner(string text, Action<(Key Key, char Ascii, KeyModifiers Modifiers)?> then, int waitTime = -1)
     {
         bool overMenu = _menuActive;
         if (!overMenu)
@@ -793,7 +825,7 @@ public sealed partial class GameWorld
 
         SetUpControl(0, 7, 0, 15, 8, 15, 8, 0, 0, startX, startY, roundedWidth + 164, 1 - height, text, true, true);
         DrawControl(0, false);
-        _banner = new Banner(text, overMenu, saveTop, rows, then);
+        _banner = new Banner(text, overMenu, saveTop, rows, then) { WaitTime = waitTime };
         _guiClick = null;
         _guiKey = null;
     }

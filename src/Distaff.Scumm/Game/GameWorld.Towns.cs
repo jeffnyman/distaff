@@ -61,6 +61,7 @@ public sealed partial class GameWorld
         Rgb[] textColors = [.. TownsTextPalette.Select(To15Bit)];
         var frame = Screens.ComposeTowns(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, ShownLeft,
             Math.Min(ViewHeight, CurrentRoom?.Height ?? 0), DisplayPalette(), textColors);
+        DrawOldStyleBanner(frame, textColors);
         (_shownTownsFrame, _shownStep) = (frame, Steps);
         if (cursor)
         {

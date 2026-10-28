@@ -1045,3 +1045,37 @@ player's `--no-smooth-scroll` turns it off) ports it from `gfx_towns.cpp` and `S
   room and its objects there, without what was last drawn over them), the catch-up ScummVM
   falls into when its screen updates are slow (`_refreshNeedCatchUp`), and the semi-smooth
   scrolling of the opening's fast camera (`semi_smooth_scroll`, off by default).
+
+## Banners on the EGA and the FM Towns
+
+The pause key had paused the EGA and the FM Towns without its banner, and the restart key's
+question was asked on none of the releases. Now the keys of `processKeyboard` that the original
+interface keeps go through `InterfaceKey` on every release, and version 3's banners are drawn as
+ScummVM draws them (`showOldStyleBannerAndPause`, `GameWorld.Banners`):
+
+- A band 12 rows high across the screen, its top and bottom rows in the banner's colour, the
+  words in charset 0 in that colour from two rows down. The EGA's is black at row 80, the words
+  centred, drawn over the screen. The FM Towns' is in colour 8, 12 rows above the main band's
+  middle (`initScreens`), the words from the left of a box their width (at least 100) wide around
+  the middle, and it takes the text layer's place there (`towns_swapVirtScreenArea`), in its
+  colours. The game and its sound wait until a key or a click (`waitForBannerInput`), or the
+  banner's time is up; what was clicked or pressed meanwhile goes (`clearClickedStatus`).
+- The pause key (variable 43, the space bar) shows the game's string 4, "Game paused. Press
+  SPACEBAR to continue.", in colour 12 with the cursor off.
+- The restart key (variable 42: F8 on the EGA and the VGA CD; the FM Towns' 0x8008, which
+  ScummVM takes as F8 there) asks the game's string 5 but for its last letter, which is the
+  answer that restarts (`queryRestart`): "Are you sure you want to restart? (Y or N)". The VGA
+  CD asks in its own banner. A restart, or a script's `o5_systemOps` 1 (2 and 3 quit), sets
+  `RestartRequested`, and `ScummEngine` starts a new world and boots it with the boot parameter
+  it was first given or the FM Towns' dialog chose (`restart`, `_bootParam`). The VGA CD's
+  dissolve out before it (effect 134) is not shown.
+- Alt+I on version 3 (Ctrl+R on version 4) switches the screen between snapping to the camera
+  and scrolling, saying "Screen reposition instantly" or "Screen reposition by Scrolling"
+  ("Horizontal Screen Snap" or "Scroll") in colour 9 for 90 quarter-frames, and sets variable 26
+  (`VAR_CAMERA_FAST_X`) to match; the camera snaps while it is on (`_snapScroll`).
+- `BannerTests` checks the pause banner on the EGA and the FM Towns, its place, edges and box,
+  the game standing still under it and going on after; F8's question answered N and Y on both;
+  Alt+I's banner, its 90 quarter-frames and the camera's variable; and a restart through the
+  engine back to the proficiency screen. Viewed, not compared with ScummVM's window.
+- A key pressed while a screen effect shows is taken at once, and its banner shows once the
+  effect has; ScummVM takes keys between frames, after the effect, which looks the same.

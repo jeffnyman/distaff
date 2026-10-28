@@ -57,20 +57,11 @@ public sealed class ScummEngine : Engine
     public override void Initialize()
     {
         var loader = ResourceLoader.Open(Game);
-        _world = new GameWorld(loader, Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate, CdTracks)
-        {
-            CopyProtection = CopyProtection,
-            SmoothScrolling = SmoothScrolling,
-            SaveStore = Host.Saves,
-        };
-        if (SaveTarget is not null)
-        {
-            _world.SaveTarget = SaveTarget;
-        }
-
+        _world = NewWorld(loader);
         Host.Graphics.SetMode(GameWorld.ScreenWidth, _world.ScreenHeight);
         Host.Graphics.SetTitle($"Distaff - {Detected.Title}");
         StartAudio(_world);
+        _bootParam = BootParam ?? 0;
         if (StartingSave is { } save)
         {
             _world.Load(save);
@@ -82,8 +73,40 @@ public sealed class ScummEngine : Engine
         }
         else
         {
-            _world.Boot(BootParam ?? 0);
+            _world.Boot(_bootParam);
         }
+    }
+
+    /// <summary>The boot script's parameter, as given or as the proficiency dialog chose it, which a restart boots with again (<c>_bootParam</c>).</summary>
+    private int _bootParam;
+
+    private GameWorld NewWorld(ResourceLoader loader)
+    {
+        var world = new GameWorld(loader, Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate, CdTracks)
+        {
+            CopyProtection = CopyProtection,
+            SmoothScrolling = SmoothScrolling,
+            SaveStore = Host.Saves,
+        };
+        if (SaveTarget is not null)
+        {
+            world.SaveTarget = SaveTarget;
+        }
+
+        return world;
+    }
+
+    /// <summary>
+    /// The game starts again, as <c>restart</c> has it: its sounds stop, everything it had goes,
+    /// and the boot script runs again with the boot parameter it was first given.
+    /// </summary>
+    private void Restart()
+    {
+        Host.Audio.Stop();
+        _world!.Sound.Dispose();
+        _world = NewWorld(ResourceLoader.Open(Game));
+        StartAudio(_world);
+        _world.Boot(_bootParam);
     }
 
     public override void Dispose()
@@ -123,11 +146,8 @@ public sealed class ScummEngine : Engine
                 case InputEventType.MouseMove:
                     world.MoveMouse(input.X, input.Y);
                     break;
-                case InputEventType.MouseDown when input.Button is MouseButton.Left or MouseButton.Right && !world.Paused:
+                case InputEventType.MouseDown when input.Button is MouseButton.Left or MouseButton.Right:
                     world.Click(input.X, input.Y, right: input.Button == MouseButton.Right);
-                    break;
-                case InputEventType.KeyDown when world.Paused:
-                    world.Paused = false;
                     break;
                 case InputEventType.KeyDown:
                     world.KeyDown(input.Key, input.Modifiers, input.Ascii);
@@ -135,9 +155,11 @@ public sealed class ScummEngine : Engine
             }
         }
 
-        if (!world.Paused)
+        world.Step();
+        if (world.RestartRequested)
         {
-            world.Step();
+            Restart();
+            world = World;
         }
 
         Host.Graphics.Present(world.Frame());
@@ -168,6 +190,7 @@ public sealed class ScummEngine : Engine
         if (chooser.Chosen is { } level)
         {
             _chooser = null;
+            _bootParam = level;
             world.Boot(level);
             Host.Graphics.Present(world.Frame());
         }

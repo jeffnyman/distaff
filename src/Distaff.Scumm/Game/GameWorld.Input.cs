@@ -114,8 +114,8 @@ public sealed partial class GameWorld
     /// with the original interface keeps: the pause key pauses, the period ends the line being
     /// shown, Escape skips the cutscene and hands the game its cutscene key, F1 to F9 are 315 on,
     /// Ctrl with a letter is the letter's control code, and any other character goes to the
-    /// game. The restart key's question is not asked. The VGA CD's menu and banners take keys
-    /// first (<see cref="InterfaceKey"/>), and every key while one is up.
+    /// game. The interface's keys come first (<see cref="InterfaceKey"/>): the pause banner, the
+    /// restart key's question, the VGA CD's menu; a banner or the menu takes every key while up.
     /// </summary>
     public void KeyDown(Input.Key key, Input.KeyModifiers modifiers, char ascii)
     {
@@ -125,12 +125,11 @@ public sealed partial class GameWorld
             return;
         }
 
-        if (_loader.Version == 4 && InterfaceKey(key, modifiers, ascii))
+        if (InterfaceKey(key, modifiers, ascii))
         {
             return;
         }
 
-        int pauseKey = Engine.Variables[Vars.PauseKey];
         if (key == Input.Key.Escape)
         {
             Engine.AbortCutscene();
@@ -143,10 +142,6 @@ public sealed partial class GameWorld
         else if (ascii == 0)
         {
             return;
-        }
-        else if (pauseKey != 0 && ascii == pauseKey)
-        {
-            Paused = true;
         }
         else if (ascii == '.')
         {
@@ -161,9 +156,6 @@ public sealed partial class GameWorld
             _input = ascii;
         }
     }
-
-    /// <summary>Whether the game is paused by its pause key; any key goes on (<c>showOldStyleBannerAndPause</c>, without its banner).</summary>
-    public bool Paused { get; set; }
 
     /// <summary>Mirrors <c>runInputScript</c>.</summary>
     private void RunInputScript(int area, int value, int mode)

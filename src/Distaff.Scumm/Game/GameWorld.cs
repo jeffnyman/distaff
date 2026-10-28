@@ -252,7 +252,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
             }
 
             Camera.Move(Engine.Variables[Vars.CameraMinX], Engine.Variables[Vars.CameraMaxX],
-                Engine.Variables[Vars.CameraFastX] != 0, Camera.Mode == CameraMode.FollowActor ? () => Actors[Camera.Follows].X : null);
+                Engine.Variables[Vars.CameraFastX] != 0 || _snapScroll, Camera.Mode == CameraMode.FollowActor ? () => Actors[Camera.Follows].X : null);
         }
 
         if (CurrentRoomNumber != 0)
@@ -327,7 +327,11 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// Verbs are not drawn yet.
     /// </summary>
     public Surface8 Screen()
-        => Screens.Compose(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, Camera.Left, Math.Min(ViewHeight, CurrentRoom?.Height ?? 0));
+    {
+        var screen = Screens.Compose(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, Camera.Left, Math.Min(ViewHeight, CurrentRoom?.Height ?? 0));
+        DrawOldStyleBanner(screen);
+        return screen;
+    }
 
     /// <summary>
     /// What was drawn over the room goes where the room is drawn again: everything when the camera

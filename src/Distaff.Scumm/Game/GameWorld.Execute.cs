@@ -322,7 +322,16 @@ public sealed partial class GameWorld
                 return 0;
 
             case "o5_systemOps":
-                QuitRequested = true;
+                // 1 restarts, 2 and 3 quit
+                if (Arg(0) == 1)
+                {
+                    RestartRequested = true;
+                }
+                else
+                {
+                    QuitRequested = true;
+                }
+
                 engine.BreakHere();
                 return 0;
 
