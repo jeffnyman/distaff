@@ -33,9 +33,9 @@ public class SoundTests
     /// pinned for each device.
     /// </summary>
     [Theory]
-    [InlineData(SoundDevice.Speaker, "941c45d94654e6c9")]
-    [InlineData(SoundDevice.Pcjr, "73a3a199f573a056")]
-    [InlineData(SoundDevice.AdLib, "acac7160e3fa5592")]
+    [InlineData(SoundDevice.Speaker, "c96207c9ed4bfa4d")]
+    [InlineData(SoundDevice.Pcjr, "98553b4499d400bb")]
+    [InlineData(SoundDevice.AdLib, "f0a3c52c7c6b7eb5")]
     public void The_title_music_plays_from_the_title_on(SoundDevice device, string firstSeconds)
     {
         if (Open() is not { } loader)
@@ -68,7 +68,7 @@ public class SoundTests
         long read = (long)(world.Time.TotalSeconds * GameWorld.DefaultSampleRate);
         for (int i = 0; i < steps; i++)
         {
-            world.Step();
+            world.StepFrame();
             long due = (long)(world.Time.TotalSeconds * GameWorld.DefaultSampleRate);
             var buffer = new short[(due - read) * 2];
             world.Sound.Output.Read(buffer);

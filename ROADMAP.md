@@ -464,8 +464,8 @@ Then the interface and a playing check:
   flask, counts the owls, reads the gravestone, sees in the dark tent with Night Vision, turns
   the straw to gold, opens the sky (f learned), opens the clam, and untwists the waterspout. The
   leaf's icon, the distaff once taken and the egg opened are pinned, with the cursor's shape.
-  Not compared with ScummVM's output; screen transitions (`dissolveEffect`) are not ported, on
-  the EGA either.
+  Not compared with ScummVM's output; screen transitions (`dissolveEffect`) were ported later
+  (see "Screen transitions" below).
 
 ### Phase 15: CD audio (done)
 
@@ -834,9 +834,11 @@ for each release), which the tests write to the folder `DISTAFF_EXPORT_SAVES` na
     every 50 ms frame for 15 seconds), the two within 3 samples of each other throughout.
   - EGA, AdLib: correlation 0.997 over 15 seconds, the same MAME OPL as ScummVM's default.
   - VGA CD: the spoken proficiency prompt and both segments of the title music identical
-    (correlation 1.0000), but the second segment starts 274 ms sooner than in ScummVM, whose
-    room-change transition (`transitionEffect`, set by `o4_oldRoomEffect`) takes that long; Distaff
-    switches rooms at once.
+    (correlation 1.0000), but the second segment started 274 ms sooner than in ScummVM: the room
+    change between them dissolves out and in (`dissolveEffect`), which Distaff did not yet do.
+    With the transitions ported it starts 198 ms sooner: ScummVM's dissolve stops 36 times for a
+    quarter-frame each, as Distaff does, but each stop shows the screen (`updateScreen`), which
+    waits for the display's refresh.
   - FM Towns: the opening's CD music bit-identical (every sample for 30 seconds), through the
     FLAC decoder and the CD volume curve.
   - ScummVM runs its music at its default volume, 192 of 255: on the speaker and the CD that is
@@ -912,3 +914,36 @@ clicking there); the detour looks at the crystal and the bell first.
   caves' other passages (scripts 77, 80 and 84), a draft on the Dead One at the rift (script
   103), and most objects' answers to drafts they do not
   take.
+
+## Screen transitions
+
+Room changes now show the effects the scripts ask for (`o4_oldRoomEffect`, `fadeOut`, `fadeIn`,
+`dissolveEffect`). Loom uses three: 128 dissolves, pixel by pixel on the VGA CD and in blocks of
+8 by 4 on the EGA and the FM Towns (`dissolveEffectSelector`); 129 blacks the room out at once
+(unseen, as the frame then draws the new room); 0 does nothing. The EGA dissolves new rooms in
+(0x0080) and blacks the old out (0x8100), the VGA CD dissolves out and in (0x8080), and the FM
+Towns does as the EGA. The iris, the box wipes and the scrolls are not ported: Loom does not use
+them.
+
+- ScummVM draws an effect on the screen as it goes and stops a quarter-frame each time it shows
+  it (18 times a dissolve), the game waiting. Distaff keeps the screen as each stop shows it, and
+  the steps after the frame show them one at a time, each for its quarter-frame, while the
+  sound and the CD's timer go on; the frame then ends, so the sounds it asked for start after
+  the effect, as in ScummVM (`scummLoop_handleSound` after `scummLoop_handleEffects`). Clicks and
+  keys made while a new room dissolves in are dropped (`clearClickedStatus`).
+- The dissolve's order is random. ScummVM takes it from the game's own random numbers; Distaff's
+  are not ScummVM's, so the dissolve keeps a generator of its own, seeded as the world is, and
+  the scripts' numbers are as before.
+- An effect starts from the screen last shown, or, with no host looking (the tests), from the
+  room as drawn before it changes.
+- Saves keep the effects set and the screen's state (`_switchRoomEffect`, `_switchRoomEffect2`,
+  `_newEffect`, `_doEffect`, `_screenEffectFlag`); Distaff's saves wrote them as constants before.
+- `GameWorld.Frames` counts the game's frames, not the steps that show an effect. Tests that
+  play a number of frames step through an effect as part of its frame (`StepFrame`), and every
+  screen they pin is as before; the walkthrough waits out an effect before it acts. The title
+  music's first seconds are pinned again, as the effect into the logo now takes its time.
+- `EffectTests` checks that the EGA's dissolve shows each block of the old room or the new, more
+  of the new at each of its 18 stops, a quarter-frame apart; that the VGA CD's goes out pixel by
+  pixel to black and in again in 36 stops; and that saves keep the effects.
+- Not ported: ScummVM showing the screen at each stop, which on its display waits for the
+  refresh and makes its dissolves slower than they are meant to be.

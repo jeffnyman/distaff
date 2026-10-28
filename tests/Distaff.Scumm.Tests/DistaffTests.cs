@@ -94,7 +94,7 @@ public class DistaffTests
         var colors = new List<byte>();
         for (int i = 0; i < 8; i++)
         {
-            world.Step();
+            world.StepFrame();
             colors.Add(world.CursorColor);
         }
 
@@ -183,14 +183,14 @@ public class DistaffTests
     /// <summary>Runs from where the world is to <paramref name="until"/> steps, clicking at the steps given.</summary>
     private static void Play(GameWorld world, (int Step, int X, int Y)[] clicks, int until)
     {
-        while (world.Steps < until)
+        while (world.Frames < until)
         {
-            foreach (var (_, x, y) in clicks.Where(c => c.Step == world.Steps))
+            foreach (var (_, x, y) in clicks.Where(c => c.Step == world.Frames))
             {
                 world.Click(x, y);
             }
 
-            world.Step();
+            world.StepFrame();
         }
     }
 
@@ -198,7 +198,7 @@ public class DistaffTests
     {
         for (int i = 0; i < steps; i++)
         {
-            world.Step();
+            world.StepFrame();
         }
     }
 

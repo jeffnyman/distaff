@@ -39,22 +39,32 @@ public sealed partial class GameWorld
     /// </summary>
     public RgbFrame Frame(bool cursor = true)
     {
+        if (InEffect)
+        {
+            return _effectFrames.Peek().Frame;
+        }
+
         if (!FmTowns)
         {
             var screen = Screen();
+            var colors = DisplayPalette();
+            (_shownScreen, _shownColors, _shownStep) = (screen, colors, Steps);
             if (cursor)
             {
+                screen = screen.Clone();
                 DrawCursor(screen);
             }
 
-            return RgbFrame.FromIndexed(screen, DisplayPalette());
+            return RgbFrame.FromIndexed(screen, colors);
         }
 
         Rgb[] textColors = [.. TownsTextPalette.Select(To15Bit)];
         var frame = Screens.ComposeTowns(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, Camera.Left,
             Math.Min(ViewHeight, CurrentRoom?.Height ?? 0), DisplayPalette(), textColors);
+        (_shownTownsFrame, _shownStep) = (frame, Steps);
         if (cursor)
         {
+            frame = frame.Clone();
             foreach (var (x, y) in CursorPixels(frame.Width, frame.Height))
             {
                 frame[x, y] = textColors[_cursorColor & 0x0F];

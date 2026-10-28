@@ -480,7 +480,8 @@ public sealed partial class GameWorld
         {
             CaptureTowns(s);
         }
-        (s.EgoPositioned, s.ScreenEffectFlag, s.ScreenB, s.ScreenH) = (_egoPositioned ? 1 : 0, 1, ViewTop, ViewTop + ViewHeight);
+        (s.EgoPositioned, s.ScreenEffectFlag, s.ScreenB, s.ScreenH) = (_egoPositioned ? 1 : 0, _screenEffectFlag ? 1 : 0, ViewTop, ViewTop + ViewHeight);
+        (s.DoEffect, s.SwitchRoomEffect, s.NewEffect, s.SwitchRoomEffect2) = (_doEffect ? 1 : 0, _switchRoomEffect, _newEffect, _switchRoomEffect2);
 
         for (int i = 0; i < ScummState.ActorCount; i++)
         {
@@ -637,6 +638,9 @@ public sealed partial class GameWorld
 
         SetColor(s.CharsetRendererColor);
         _egoPositioned = s.EgoPositioned != 0;
+        (_doEffect, _switchRoomEffect, _newEffect, _switchRoomEffect2, _screenEffectFlag) = (s.DoEffect != 0, s.SwitchRoomEffect, s.NewEffect, s.SwitchRoomEffect2, s.ScreenEffectFlag != 0);
+        _effectFrames.Clear();
+        _display = null;
 
         (UserPut, CursorState, _currentCursor) = (s.UserPut, s.CursorState, s.CurrentCursor & 3);
         _cursorAnimateIndex = s.CursorAnimateIndex;

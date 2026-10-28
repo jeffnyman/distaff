@@ -83,6 +83,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         _states = [.. index.ObjectStates];
         _classes = [.. index.ObjectClasses];
         Engine = new ScriptEngine(this, seed, loader.Version, loader.FmTowns);
+        _effectRandom = new Random(seed);
         Sound = new SoundSystem(sound, LoadSound, sampleRate, cdTracks,
             loader.FmTowns ? cd => new PlayerTowns(sampleRate, cd, PlayCdTrack, StopCdSound, s => Sound!.Stop(s)) : null);
         Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i, this))];
@@ -139,6 +140,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <summary>The steps run so far.</summary>
     public int Steps { get; private set; }
 
+    /// <summary>The game's frames run: the steps, but for those that show a screen effect.</summary>
+    public int Frames { get; private set; }
+
     /// <summary>The game time the steps so far have taken.</summary>
     public TimeSpan Time { get; private set; }
 
@@ -152,7 +156,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// The time the next step takes: its ticks of 4 quarter-frames each (<c>waitForTimer(delta * 4)</c>),
     /// at the DOS timer's rate, or 240 a second on the FM Towns (<c>setTimerAndShakeFrequency</c>).
     /// </summary>
-    public TimeSpan StepLength => TimeSpan.FromSeconds(StepTicks * 4 / (FmTowns ? 240.0 : TimerFrequency));
+    public TimeSpan StepLength => InEffect
+        ? TimeSpan.FromSeconds(_effectFrames.Peek().QuarterFrames / QuarterFrameRate)
+        : TimeSpan.FromSeconds(StepTicks * 4 / (FmTowns ? 240.0 : TimerFrequency));
 
     /// <summary>The world instructions with no subsystem yet, as the scripts ran them.</summary>
     public IReadOnlyList<string> Unhandled => _unhandled;
@@ -182,6 +188,13 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// </summary>
     public void Step()
     {
+        if (InEffect)
+        {
+            StepEffect();
+            Steps++;
+            return;
+        }
+
         if (InInterface)
         {
             InterfaceStep();
@@ -191,6 +204,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
         int delta = StepTicks;
         Time += StepLength;
+        Frames++;
         Engine.Variables[Vars.Timer] = delta;
         Engine.Variables[Vars.TimerTotal] += delta;
         Engine.Variables[Vars.Timer1] += delta;
@@ -252,20 +266,45 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         Camera.LastX = Camera.X;
         PlayActorSounds();
 
-        // scummLoop_handleEffects: colour cycling, from version 4 on
+        // scummLoop_handleEffects: colour cycling, from version 4 on, and the effect that shows a new room
         if (_loader.Version == 4)
         {
             CyclePalette();
         }
 
-        // scummLoop_handleSound: the sounds asked for go to the player
+        if (CurrentRoomNumber != 0 && _doEffect)
+        {
+            _doEffect = false;
+            FadeIn(_newEffect);
+            _clearClicks = true;
+        }
+
+        // an effect drawn this frame is shown before it ends, and its sounds start after it
+        if (!InEffect)
+        {
+            EndFrame();
+        }
+
+        Steps++;
+    }
+
+    /// <summary>The frame's end: the sounds asked for go to the player (<c>scummLoop_handleSound</c>), and the screen is drawn again in full.</summary>
+    private void EndFrame()
+    {
+        // clearClickedStatus after the effect: what was clicked or pressed while it showed goes
+        if (_clearClicks)
+        {
+            _input = 0;
+            _clearClicks = false;
+        }
+
         Sound.ProcessQueue();
         Sound.Update(Time);
         AnimateCursor();
 
         // drawDirtyScreenParts: what was drawn in the text and verb bands shows in the FM Towns' text layer
         Screens.FlushTownsLayer();
-        Steps++;
+        _display = null;
     }
 
     /// <summary>
@@ -532,11 +571,20 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     {
         StopTalk();
 
-        // fadeOut: the FM Towns' version 3 clears the text over the room band
+        // fadeOut: the FM Towns' version 3 clears the text over the room band, then the room is hidden
         if (FmTowns)
         {
             Screens.TextSurface.FillRect(new Rect(0, ViewTop, ScreenWidth, ViewHeight), 0);
         }
+
+        // the room as it shows, for the effect that will show the new one over it
+        if (_switchRoomEffect == 128)
+        {
+            Display();
+        }
+
+        FadeOut(_switchRoomEffect2);
+        _newEffect = _switchRoomEffect;
 
         Engine.LeaveRoomScript();
 
@@ -602,6 +650,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
         _egoPositioned = false;
         RunEntryScript();
+        _doEffect = true;
     }
 
     /// <summary>Mirrors <c>runExitScript</c>.</summary>

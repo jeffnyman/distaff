@@ -40,9 +40,9 @@ internal sealed class Walkthrough(GameWorld world)
     /// <summary>The object Bobbin points at, for the distaff (variable 103 on the EGA).</summary>
     public int Pointed => 103 + Shift;
 
-    /// <summary>Whether the player can act and Bobbin waits: control on, the cursor shown, no cutscene, no message, no sentence running, the ego standing and the camera still.</summary>
+    /// <summary>Whether the player can act and Bobbin waits: no screen effect showing, control on, the cursor shown, no cutscene, no message, no sentence running, the ego standing and the camera still.</summary>
     public bool InControl
-        => World.UserPut > 0 && World.CursorState > 0 && World.Engine.CutsceneLevel == 0 && World.HaveMessage == 0
+        => !World.InEffect && World.UserPut > 0 && World.CursorState > 0 && World.Engine.CutsceneLevel == 0 && World.HaveMessage == 0
            && !World.Engine.IsScriptRunning(World.Engine.Variables[Vars.SentenceScript])
            && World.Actors[World.Engine.Variables[Vars.Ego]].Moving == 0 && World.Camera.X == World.Camera.LastX;
 

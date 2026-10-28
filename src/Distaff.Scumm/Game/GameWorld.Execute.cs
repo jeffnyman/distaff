@@ -125,10 +125,17 @@ public sealed partial class GameWorld
                 RedrawRoom();
                 return 0;
             case "o4_oldRoomEffect":
-                // the FM Towns' effect 4 clears the text surface and the text layer (o4_oldRoomEffect)
-                if (FmTowns && instruction.SubOps[0].Code == 3 && subArguments[0][0] == 4)
+                if (instruction.SubOps[0].Code == 3)
                 {
-                    ClearTownsText();
+                    // the FM Towns' effect 4 clears the text surface and the text layer
+                    if (FmTowns && subArguments[0][0] == 4)
+                    {
+                        ClearTownsText();
+                    }
+                    else
+                    {
+                        OldRoomEffect(subArguments[0][0]);
+                    }
                 }
 
                 return 0;

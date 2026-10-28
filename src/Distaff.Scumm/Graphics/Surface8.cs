@@ -66,6 +66,14 @@ public sealed class Surface8
         }
     }
 
+    /// <summary>A copy of the surface.</summary>
+    public Surface8 Clone()
+    {
+        var copy = new Surface8(Width, Height);
+        Pixels.CopyTo(copy.Pixels, 0);
+        return copy;
+    }
+
     public void CopyFrom(Surface8 other)
     {
         if (other.Width != Width || other.Height != Height)

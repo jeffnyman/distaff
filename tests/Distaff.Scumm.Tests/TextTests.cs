@@ -105,7 +105,7 @@ public class TextTests
     {
         for (int i = 0; i < steps; i++)
         {
-            world.Step();
+            world.StepFrame();
         }
     }
 

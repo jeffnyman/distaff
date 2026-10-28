@@ -75,7 +75,7 @@ public class TownsGameLoopTests
 
         var world = new GameWorld(loader);
         world.Boot(level);
-        world.Step();
+        world.StepFrame();
         Assert.Equal(level, world.Engine.Variables[123]);
         Assert.Equal(42, world.Engine.Variables[Vars.VideoMode]);
     }
@@ -206,7 +206,7 @@ public class TownsGameLoopTests
         world.Boot();
         for (int i = 0; i < 10; i++)
         {
-            world.Step();
+            world.StepFrame();
         }
 
         Assert.Equal("Welcome to the Age of the Great Guilds.", world.MessageText);
@@ -363,7 +363,7 @@ public class TownsGameLoopTests
         string folder = GameFolders.Find(GameFolders.FmTowns)!;
         var world = new GameWorld(loader, cdTracks: CdTrackFiles.In(folder));
         world.Boot();
-        world.Step();
+        world.StepFrame();
         var player = (PlayerTowns)world.Sound.Player;
         Assert.Equal((2, 0, 9259), world.CdTrack);
         Assert.Equal((29, (192, 192), 192), (player.CurrentCdSound, player.CdVolume, player.CurrentCdVolume));
@@ -384,7 +384,7 @@ public class TownsGameLoopTests
 
     private const int Known = 122;
     private const int CliffToVillage = 153, Leaf = 154, VillageToTents = 161, TentsToPath = 201, PathToSanctuary = 252, SanctuaryDoor = 254, Egg = 270, Distaff = 271;
-    private const string TheDistaff = "165020946ec95022", ChooserShown = "9699e17cf0b59777";
+    private const string TheDistaff = "af818c6c536ef1fd", ChooserShown = "9699e17cf0b59777";
 
     private static string Hash(RgbFrame frame)
         => Convert.ToHexStringLower(SHA256.HashData(frame.Pixels.SelectMany(p => new[] { p.R, p.G, p.B }).ToArray()))[..16];

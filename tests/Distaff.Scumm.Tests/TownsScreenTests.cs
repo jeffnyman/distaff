@@ -153,7 +153,7 @@ public class TownsScreenTests
         world.Boot();
         for (int i = 0; i < steps; i++)
         {
-            world.Step();
+            world.StepFrame();
         }
 
         return world;
