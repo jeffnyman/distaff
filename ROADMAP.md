@@ -845,8 +845,19 @@ for each release), which the tests write to the folder `DISTAFF_EXPORT_SAVES` na
     the mixer's music volume (Distaff plays at full volume, 4/3 louder), and `Player_AD` scales
     each operator's level by it, which makes ScummVM's AdLib about four times quieter. With
     ScummVM's music and effects volumes at 255, the levels agree within 1%.
+  - EGA, PCjr: from a save made as the title starts (loaded in ScummVM with `-x1`, so nothing
+    is clicked), the title music agrees note for note and in level (RMS within 0.2%), sample for
+    sample for its first seconds, then by note only. ScummVM records the same twice over, so the
+    difference is Distaff's to explain: the game starts sound 25 once and does nothing else to the
+    player, and `tools/pcjr-reference`, which builds ScummVM's own `Player_V2`, renders the music
+    alone exactly as `PlayerV2` does (`SoundTests` pins both, PCjr and speaker). Each recording is
+    that rendering, to the sample over 20 seconds, started at some point among the player's 236
+    ticks a second: the player starts a sound on its next tick, and the notes' edges fall a sample
+    either way of where they would by where that tick lies. Where ScummVM's start lands is where
+    its mixer thread happens to be when the script's call comes, so it is not Distaff's to match.
 - Not compared: how frames run after a load (the scripts redraw the distaff's notes some steps
-  after it in both), the FM Towns' FM and PCM sound effects, and the PCjr.
+  after it in both), and the FM Towns' FM and PCM sound effects in the game (the players are
+  checked against ScummVM's own, `tools/towns-reference`).
 
 ## The FM Towns' proficiency level
 

@@ -59,6 +59,36 @@ public class SoundTests
         Assert.Equal(firstSeconds, Hash(audio));
     }
 
+    /// <summary>
+    /// The title's music (sound 25) played alone for 25 seconds, read 1024 frames at a time, is
+    /// sample for sample what ScummVM's own <c>Player_V2</c> renders (<c>tools/pcjr-reference</c>
+    /// builds it to play the same sound; the hashes are the SHA-256 of its output). In the game the
+    /// music starts wherever the game's call lands among the player's 236 ticks a second, which in
+    /// ScummVM is where its mixer happens to be: recordings of the two from the same save agree to
+    /// the sample for some seconds and then by note and level only, and each is this rendering
+    /// started at some point between ticks.
+    /// </summary>
+    [Theory]
+    [InlineData(true, "674b284b7fb1391895e457d85531bf2300ddd258b1df79b5b49d1db1cdff9fd2")]
+    [InlineData(false, "6aea8a24ae8044138c047eaccf1f0ecede348bec8c6d91f0e6ec32fbf7160f0d")]
+    public void The_title_music_renders_as_scummvms_player_v2(bool pcjr, string referenceHash)
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        var player = new PlayerV2(GameWorld.DefaultSampleRate, pcjr);
+        player.StartSound(25, loader.LoadSound(25)!.Speaker.ToArray());
+        var samples = new short[25 * 44100 * 2];
+        for (int o = 0; o < samples.Length; o += 2048)
+        {
+            player.Read(samples.AsSpan(o, Math.Min(2048, samples.Length - o)));
+        }
+
+        Assert.Equal(referenceHash, Convert.ToHexStringLower(SHA256.HashData(MemoryMarshal.AsBytes(samples.AsSpan()))));
+    }
+
     private static string Hash(List<short> samples)
         => Convert.ToHexStringLower(SHA256.HashData(MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(samples))))[..16];
 

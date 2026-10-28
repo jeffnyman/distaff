@@ -41,7 +41,7 @@ and loaded here.
 | `src/Distaff.Audio` | Decoders for CD audio tracks kept as files: FLAC, its own, and Ogg Vorbis, on [NVorbis](https://github.com/NVorbis/NVorbis). The interpreter takes tracks through an interface (`ICdTrack`) and carries no decoder of its own. |
 | `src/Distaff.Player` | The `distaff` player: an SDL window (`Sdl`, from Maniacal), and the headless tools. |
 | `tests/Distaff.Scumm.Tests` | Unit tests, and tests that run against the real game data when it is present, the player's window among them (SDL offscreen, to check that it keeps the game's pace). |
-| `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`, `port_sound_tables.py`), and `opl-reference` and `towns-reference`, which build ScummVM's OPL2 emulator and its FM Towns sound to check the ports against. |
+| `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`, `port_sound_tables.py`), and `opl-reference`, `pcjr-reference` and `towns-reference`, which build ScummVM's OPL2 emulator, its PC speaker and PCjr player and its FM Towns sound to check the ports against. |
 
 The host contract is part of `Distaff.Scumm`: the engine base class, the graphics, input and audio
 drivers it is given and a headless host (`Hosting`, `Input`), screen surfaces and PNG writing
