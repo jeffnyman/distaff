@@ -83,7 +83,8 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         _states = [.. index.ObjectStates];
         _classes = [.. index.ObjectClasses];
         Engine = new ScriptEngine(this, seed, loader.Version, loader.FmTowns);
-        Sound = new SoundSystem(sound, LoadSound, sampleRate, cdTracks);
+        Sound = new SoundSystem(sound, LoadSound, sampleRate, cdTracks,
+            loader.FmTowns ? cd => new PlayerTowns(sampleRate, cd, PlayCdTrack, StopCdSound) : null);
         Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i, this))];
         Verbs = [.. Enumerable.Range(0, VerbCount).Select(_ => new VerbSlot())];
         // version 4 has no charset 0; its scripts pick one before any text (initCharset)
@@ -147,8 +148,11 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <summary>The ticks the next step waits (<c>VAR_TIMER_NEXT</c>, at least 1).</summary>
     public int StepTicks => Math.Max(1, Engine.Variables[Vars.TimerNext]);
 
-    /// <summary>The time the next step takes: its ticks of 4 quarter-frames each (<c>waitForTimer(delta * 4)</c>).</summary>
-    public TimeSpan StepLength => TimeSpan.FromSeconds(StepTicks * 4 / TimerFrequency);
+    /// <summary>
+    /// The time the next step takes: its ticks of 4 quarter-frames each (<c>waitForTimer(delta * 4)</c>),
+    /// at the DOS timer's rate, or 240 a second on the FM Towns (<c>setTimerAndShakeFrequency</c>).
+    /// </summary>
+    public TimeSpan StepLength => TimeSpan.FromSeconds(StepTicks * 4 / (FmTowns ? 240.0 : TimerFrequency));
 
     /// <summary>The world instructions with no subsystem yet, as the scripts ran them.</summary>
     public IReadOnlyList<string> Unhandled => _unhandled;
@@ -204,9 +208,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         UpdateMouseVariables();
         HandleSaveLoad();
 
-        // updateMusicTimer: the CD's timer for the VGA CD (GF_AUDIOTRACKS); the player's otherwise, in quarter-frames of 240 a second
+        // updateMusicTimer: the CD's timer for the VGA CD and FM Towns (GF_AUDIOTRACKS); the player's otherwise, in quarter-frames of 240 a second
         AdvanceCdTimer(delta * 4);
-        Engine.Variables[Vars.MusicTimer] = _loader.Version == 4 ? _cdMusicTimer : (int)(Sound.Player.MusicTimer * TimerFrequency / 240.0);
+        Engine.Variables[Vars.MusicTimer] = _loader.Version == 4 || FmTowns ? _cdMusicTimer : (int)(Sound.Player.MusicTimer * TimerFrequency / 240.0);
 
         Engine.RunAllScripts();
         CheckExecVerbs();
@@ -632,7 +636,8 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     private void ResetVariables()
     {
         var v = Engine.Variables;
-        v[Vars.SoundCard] = Sound.SoundCardValue;
+        // the FM Towns' sound driver is neither of the DOS ones (setSoundCardVarToCurrentConfig)
+        v[Vars.SoundCard] = FmTowns ? 3 : Sound.SoundCardValue;
         v[Vars.VideoMode] = FmTowns ? 42 : 19;
         if (_loader.Version == 3)
         {

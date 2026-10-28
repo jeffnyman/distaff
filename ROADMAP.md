@@ -695,16 +695,50 @@ chips, and the music on 16 CD audio tracks. Its phases build on both earlier rel
   weaves Opening on the egg; F5 shows the save screen. Pictures viewed: the cliff with Bobbin
   and the nymph, the sanctuary with the distaff and its staff, the save screen, the object
   pictures the FM Towns shows in the verb band.
-- The opening runs faster than it will with the CD: its scripts wait on the CD, which does not
-  play until phase 21. Not yet seen: speech over the room, which goes by at once in the Elders'
-  scene for now.
+- Until phase 21 the CD does not play, and the CD query answers that it has stopped. (Phase 21
+  found the opening keeps its pace with the CD playing, and the Elders' speech shows for its
+  time; walking toward the sanctuary's door starts their scene, which the walkthrough's wait for
+  control had passed over.)
 
 ### Phase 21: sound
 
-- The 16 CD tracks (FLAC here; a WAV copy is also available), and the CD query's answers: the
-  sound playing on the CD, and the volume heard.
-- `players/player_towns.cpp` (`Player_Towns_v1`) for the effects, on the Towns' FM and PCM
-  chips (`audio/softsynth/fmtowns_pc98`).
+Part 1, the CD (done):
+
+- `FlacTrack` in `Distaff.Audio`: a FLAC decoder of its own (RFC 9639), no package: the stream
+  information, frames and their headers, constant, verbatim, fixed and linear-prediction
+  subframes, Rice-coded residuals with escapes, wasted bits, and the three stereo
+  decorrelations. The file is read whole and decoded a frame at a time; a seek finds its frame
+  by the frame headers alone, each checked by its CRC-8. Samples are scaled so that the CD
+  player's rounding gives back the 16-bit samples, as ScummVM's FLAC stream has them. Track
+  files are looked for as `.flac` and `.fla` before `.ogg`, as ScummVM does (`STREAM_FILEFORMATS`).
+- `PlayerTowns` (`Player_Towns_v1` for version 3): a sound's type, its 14th byte, says what it is.
+  Type 2 plays part of a CD track: its volume, unless the scripts gave the sound one
+  (`resourceRoutines` 36, and its note with 37), then the track, how many times (255 for ever)
+  and its start and end in minutes, seconds and frames (`playCdaTrack`); a sound already playing
+  on the CD goes on. Stopping it, or all sounds, stops the CD and its timer (`stopCDSound`).
+  The CD query answers the sound playing on the CD (254) and its volume (255).
+- The CD's volume (`setVolumeCD`) is heard as ScummVM's Towns audio sets its CD channel: half
+  of each side's, of which 6 bits count, the louder to the power of 1.5 over 255, the balance
+  toward it (`intf_setOutputVolume`, `updateOutputVolumeInternal`), applied as the mixer applies
+  a channel's volume and balance (`Channel::updateChannelVolumes`). `CdPlayer.SetVolume`.
+- The FM Towns' timer runs at 240 a second, not the DOS timer's rate
+  (`setTimerAndShakeFrequency`), and its music timer is the CD's, as the VGA CD's
+  (`GF_AUDIOTRACKS`). The sound card variable is 3 (`setSoundCardVarToCurrentConfig`).
+- Checked against the FM Towns release: the FLAC decoder gives track 1 sample for sample as the
+  WAV copy of the CD has it, over the 7073792 frames the file holds (a frame short of what its
+  stream information says; the WAV's last 2788 are silence), and seeks land on their samples.
+  The boot plays the overture, sound 29, from track 2 at volume 192, which the CD channel takes
+  as 169 of 255: what is heard is the track's samples at that volume. A recording of the opening
+  has the CD's music throughout. Track 7 plays under the Elders' meeting, whose lines show
+  under the room for their time each, in each Elder's colour.
+- The PCM and FM sounds are silent yet.
+
+Part 2, the effects:
+
+- `players/player_towns.cpp` (`Player_Towns_v1`) for the 38 sampled sounds on the Towns' PCM
+  chip and the 8 pieces of music on its FM chip (Euphony), on ScummVM's emulation of the chips
+  (`audio/softsynth/fmtowns_pc98`: `towns_audio.cpp`, `towns_pc98_fmsynth.cpp`,
+  `towns_euphony.cpp`).
 
 ### Phase 22: saves and the whole game
 

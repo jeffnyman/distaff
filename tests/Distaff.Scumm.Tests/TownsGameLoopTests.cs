@@ -1,10 +1,12 @@
 using System.Security.Cryptography;
+using Distaff.Audio;
 using Distaff.Scumm.Costumes;
 using Distaff.Scumm.Game;
 using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Input;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Scripts;
+using Distaff.Scumm.Sound;
 
 namespace Distaff.Scumm.Tests;
 
@@ -152,6 +154,41 @@ public class TownsGameLoopTests
         w.Key(Key.F5, '\0').Wait(50);
         Assert.Equal(70, world.CurrentRoomNumber);
         Assert.Contains(world.MessageLog, m => m.StartsWith("Insert save-load disk in Drive A."));
+    }
+
+    /// <summary>
+    /// The boot starts sound 29, which plays the overture from the CD: track 2 from its start for
+    /// 9259 CD frames, once, at the sound's volume of 192 on each side, which the Towns' audio
+    /// makes the CD channel's 169 of 255. What is heard is the track's samples at that volume.
+    /// </summary>
+    [Fact]
+    public void The_overture_plays_from_the_cd()
+    {
+        if (TownsResourceTests.Open() is not { } loader)
+        {
+            return;
+        }
+
+        string folder = GameFolders.Find(GameFolders.FmTowns)!;
+        var world = new GameWorld(loader, cdTracks: CdTrackFiles.In(folder));
+        world.Boot();
+        world.Step();
+        var player = (PlayerTowns)world.Sound.Player;
+        Assert.Equal((2, 0, 9259), world.CdTrack);
+        Assert.Equal((29, (192, 192), 192), (player.CurrentCdSound, player.CdVolume, player.CurrentCdVolume));
+        Assert.True(world.Sound.Cd.IsPlaying && world.Sound.IsRunning(29));
+
+        var heard = new short[4410 * 2];
+        world.Sound.Cd.Read(heard);
+        using var track = new FlacTrack(File.OpenRead(Path.Combine(folder, "Track2.flac")));
+        var decoded = new float[4410 * 2];
+        track.Read(decoded);
+        Assert.Equal(decoded.Select(f => (short)((int)MathF.Floor(f * 32767f + 0.5f) * 169 / 256)), heard);
+
+        world.Sound.Stop(29);
+        Assert.False(world.Sound.Cd.IsPlaying);
+        Assert.Null(world.CdTrack);
+        Assert.Equal(0, player.CurrentCdSound);
     }
 
     private const int Known = 122;

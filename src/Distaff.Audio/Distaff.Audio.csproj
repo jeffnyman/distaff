@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Decoders for the CD audio tracks Loom's CD releases play from files: Ogg Vorbis.</Description>
+    <Description>Decoders for the CD audio tracks Loom's CD releases play from files: FLAC, and Ogg Vorbis.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Distaff.Scumm\Distaff.Scumm.csproj" />

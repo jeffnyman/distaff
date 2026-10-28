@@ -31,6 +31,9 @@ public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : 
     private float _prevLeft, _prevRight, _nextLeft, _nextRight;
     private long _step, _frac;
 
+    // the channel's volume on each side, from 0 to 256 (the mixer's _volL and _volR)
+    private int _volumeLeft = 256, _volumeRight = 256;
+
     /// <summary>Whether a part of a track is playing (<c>pollCD</c>).</summary>
     public bool IsPlaying
     {
@@ -98,6 +101,22 @@ public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : 
             {
                 _playing = NextFrame(out _prevLeft, out _prevRight) && NextFrame(out _nextLeft, out _nextRight);
             }
+        }
+    }
+
+    /// <summary>
+    /// Sets the CD's volume, 0 to 255, and balance, -127 (left) to 127 (right), which stay for
+    /// what plays after (<c>AudioCDManager::setVolume</c> and <c>setBalance</c>). Mirrors the
+    /// mixer's <c>Channel::updateChannelVolumes</c> at full music volume: the side away from the
+    /// balance is turned down by it.
+    /// </summary>
+    public void SetVolume(int volume, int balance)
+    {
+        int vol = 256 * Math.Clamp(volume, 0, 255);
+        lock (_lock)
+        {
+            _volumeLeft = balance > 0 ? (127 - balance) * vol / (255 * 127) : vol / 255;
+            _volumeRight = balance < 0 ? (127 + balance) * vol / (255 * 127) : vol / 255;
         }
     }
 
@@ -170,8 +189,8 @@ public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : 
         int i = 0;
         while (i < frames && _playing && NextFrame(out float left, out float right))
         {
-            output[i * 2] = ToSample(left);
-            output[i * 2 + 1] = ToSample(right);
+            output[i * 2] = Scale(ToSample(left), _volumeLeft);
+            output[i * 2 + 1] = Scale(ToSample(right), _volumeRight);
             i++;
         }
 
@@ -186,8 +205,8 @@ public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : 
         while (i < frames && _playing)
         {
             float t = _frac / 65536f;
-            output[i * 2] = ToSample(_prevLeft + (_nextLeft - _prevLeft) * t);
-            output[i * 2 + 1] = ToSample(_prevRight + (_nextRight - _prevRight) * t);
+            output[i * 2] = Scale(ToSample(_prevLeft + (_nextLeft - _prevLeft) * t), _volumeLeft);
+            output[i * 2 + 1] = Scale(ToSample(_prevRight + (_nextRight - _prevRight) * t), _volumeRight);
             i++;
             _frac += _step;
             while (_frac >= 1 << 16 && _playing)
@@ -246,6 +265,9 @@ public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : 
         _decodedAt = 0;
         return _decodedCount > 0;
     }
+
+    /// <summary>A sample at a channel's volume, as the mixer takes it (<c>(sample * vol) / kMaxMixerVolume</c>).</summary>
+    private static short Scale(short sample, int volume) => volume == 256 ? sample : (short)(sample * volume / 256);
 
     /// <summary>A decoded sample as 16 bits, rounded and clipped as <c>ov_read</c> does.</summary>
     private static short ToSample(float value) => (short)Math.Clamp((int)MathF.Floor(value * 32767f + 0.5f), short.MinValue, short.MaxValue);

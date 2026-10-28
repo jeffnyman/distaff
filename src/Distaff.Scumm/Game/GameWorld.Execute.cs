@@ -302,8 +302,8 @@ public sealed partial class GameWorld
                 return Arg(0) != 0 && Sound.IsRunning(Arg(0)) ? 1 : 0;
 
             // resources are loaded on demand here; the FM Towns sets its CD's volume, left then right
-            case "o5_resourceRoutines" when FmTowns && instruction.SubOps[0].Code == 35:
-                SetCdVolume(subArguments[0][1], subArguments[0][0]);
+            case "o5_resourceRoutines" when FmTowns && instruction.SubOps[0].Code is 35 or 36 or 37:
+                TownsSoundOps(instruction.SubOps[0].Code, subArguments[0]);
                 return 0;
             case "o5_resourceRoutines":
                 return 0;
@@ -362,7 +362,7 @@ public sealed partial class GameWorld
     /// A sound's data as the device plays it: the speaker and PCjr block, or the AdLib block after
     /// its 4-byte header (<c>readSoundResourceSmallHeader</c>). Some index entries point past their
     /// room file, and the Roland Upgrade's sounds are single blocks; these play nothing. The FM
-    /// Towns' sounds are not played yet.
+    /// Towns' player takes the whole resource.
     /// </summary>
     private byte[]? LoadSound(int number)
     {
@@ -370,7 +370,8 @@ public sealed partial class GameWorld
         {
             try
             {
-                data = !_loader.FmTowns && _loader.Index.Locate(ResourceType.Sound, number).IsPresent && _loader.LoadSound(number) is { } resource
+                data = _loader.FmTowns ? _loader.Load(ResourceType.Sound, number)?.ToArray()
+                    : _loader.Index.Locate(ResourceType.Sound, number).IsPresent && _loader.LoadSound(number) is { } resource
                     ? Sound.Device == SoundDevice.AdLib ? resource.AdLib[4..].ToArray() : resource.Speaker.ToArray()
                     : null;
             }

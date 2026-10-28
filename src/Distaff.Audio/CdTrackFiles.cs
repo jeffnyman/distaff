@@ -11,6 +11,8 @@ public static class CdTrackFiles
 {
     private static readonly (string Extension, Func<Stream, ICdTrack> Open)[] Decoders =
     [
+        (".flac", s => new FlacTrack(s)),
+        (".fla", s => new FlacTrack(s)),
         (".ogg", s => new VorbisTrack(s)),
     ];
 

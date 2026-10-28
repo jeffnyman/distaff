@@ -16,7 +16,8 @@ public enum SoundDevice
 /// <c>isSoundRunning</c>). The PC speaker and the PCjr play the sounds' first block with
 /// <see cref="PlayerV2"/>, the AdLib their second with <see cref="PlayerAd"/> on an emulated
 /// OPL2, MAME's, as ScummVM picks by default (<c>setupMusic</c>). Ported by way of Maniacal.
-/// The VGA CD's voices and music come from its CD track instead (<see cref="Cd"/>), mixed in.
+/// The VGA CD's voices and music come from its CD track instead (<see cref="Cd"/>), mixed in. The
+/// FM Towns has a player of its own, which plays its music from the CD's tracks.
 /// </summary>
 public sealed class SoundSystem : IDisposable
 {
@@ -27,14 +28,15 @@ public sealed class SoundSystem : IDisposable
     /// <param name="load">A sound's data as the device plays it, or null when there is none.</param>
     /// <param name="sampleRate">The output's rate.</param>
     /// <param name="cdTracks">Opens a track of the CD from the game's folder, or gives null; none leaves the CD silent.</param>
-    public SoundSystem(SoundDevice device, Func<int, byte[]?> load, int sampleRate, Func<int, ICdTrack?>? cdTracks = null)
+    /// <param name="player">Makes a player of the release's own, given the CD, in place of the device's.</param>
+    public SoundSystem(SoundDevice device, Func<int, byte[]?> load, int sampleRate, Func<int, ICdTrack?>? cdTracks = null, Func<CdPlayer, MusicPlayer>? player = null)
     {
         _load = load;
         Device = device;
-        Player = device == SoundDevice.AdLib
-            ? new PlayerAd(sampleRate, new Opl.MameOpl(sampleRate))
-            : new PlayerV2(sampleRate, device == SoundDevice.Pcjr);
         Cd = new CdPlayer(cdTracks, sampleRate);
+        Player = player?.Invoke(Cd) ?? (device == SoundDevice.AdLib
+            ? new PlayerAd(sampleRate, new Opl.MameOpl(sampleRate))
+            : new PlayerV2(sampleRate, device == SoundDevice.Pcjr));
         _mix = new AudioMix(Player, Cd);
         Output = new ClockedSource(_mix, sampleRate);
     }

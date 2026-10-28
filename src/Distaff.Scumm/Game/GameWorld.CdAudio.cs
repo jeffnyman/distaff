@@ -53,6 +53,14 @@ public sealed partial class GameWorld
         _cdTimerRunning = true;
     }
 
+    /// <summary>The FM Towns' CD sound stops, and the timer with it (<c>stopCD</c> and <c>stopCDTimer</c> in <c>stopCDSound</c>).</summary>
+    private void StopCdSound()
+    {
+        Sound.Cd.Stop();
+        CdTrack = null;
+        _cdTimerRunning = false;
+    }
+
     /// <summary>
     /// After a load, plays again the part the save says was playing. Mirrors
     /// <c>SoundCD::restoreCDAudioAfterLoad</c> for a game that starts no CD sound by number: a part
