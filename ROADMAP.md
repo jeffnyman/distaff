@@ -1052,8 +1052,9 @@ player's `--no-smooth-scroll` turns it off) ports it from `gfx_towns.cpp` and `S
   up to 184 pixels behind, the messenger's room waits 1.7 seconds for it to end, and her first
   words come at 32.9 seconds instead of 29.3. ScummVM's window, captured through the opening
   (no clicks; Practice as the boot parameter), shows her words, the Elders' and the climb at the
-  smooth timings, its start a little over 2 seconds behind and drifting about 0.15 seconds by
-  then (its dissolves are slower, as found for the VGA CD), and cannot be fitted to the others
+  smooth timings, its start a little over 2 seconds behind (a drift of about 0.15 seconds by
+  then, put down here to ScummVM's slower dissolves, was the text speed: with ScummVM's, below,
+  every capture fits one start of about 2 seconds), and cannot be fitted to the others
   (it would have to start 5.8 seconds behind). ScummVM takes at most a pixel each time it
   updates the screen, so how fast its scroll runs depends on the machine; Distaff's is the
   pixel every 16 milliseconds it aims at.
@@ -1131,8 +1132,28 @@ the same room, with the same drafts learned and used.
 The text speed differs. ScummVM keeps it as a setting of its own (`talkspeed`, 6 when unset): at
 boot it puts 9 - 6 = 3 in variable 37 (`VAR_CHARINC`) in place of the boot script's value, and
 again after every load (`syncSoundSettings`). Distaff keeps the scripts' value: 5 on the EGA and
-the VGA CD, 2 on the FM Towns. So lines stay up longer in Distaff on the EGA and VGA CD, and less
+the VGA CD, 2 on the FM Towns. So lines stayed up longer in Distaff on the EGA and VGA CD, and less
 long on the FM Towns, than in ScummVM by default.
+
+## The text speed
+
+Distaff now keeps the text speed as ScummVM does (`GameWorld.TextSpeed`, the player's
+`--text-speed 0-9`, 6 by default as ScummVM's `talkspeed` when unset): variable 37
+(`VAR_CHARINC`, the ticks each character adds to a line's time) holds 9 less the setting from the
+start; a write by the scripts before the first room, as the boot script's, takes the setting
+instead (`writeVar`, the user's override); a speed of 0 to 9 written later becomes the setting;
+and a load puts the setting back whatever the save held (`syncSoundSettings` on the load's full
+redraw). Every release now starts at 3, as ScummVM does.
+
+- With it the FM Towns' opening fits ScummVM's captures with one start of about 2 seconds: the
+  messenger's "The High Council awaits" had needed a start of at least 2.19 seconds, more than
+  the logo's dissolve allows, and now fits from 0.39.
+- Five tests had pinned moments by the old speeds; at the old speed (4 for the EGA and VGA CD, 7
+  for the FM Towns) all five pass as before, so the speed was all that moved them. The two that
+  wanted a line on screen now wait for it; the three screens are pinned anew, each looked at.
+- `TextTests` checks that every release starts at 3 whatever its boot script asks, at 0 with the
+  setting at 9, that a load puts the setting back, and that a speed the scripts write in a room
+  becomes the setting.
 
 ## What is left
 
@@ -1155,7 +1176,7 @@ Known differences, not fixed:
 8. The music is not sought back to where it was after a load.
 9. The VGA CD's CD timer stops while its menu is up; ScummVM's stops only once it has counted.
 10. No subtitles setting: the text is always drawn, as ScummVM does by default.
-23. The text speed: ScummVM's default puts 3 in variable 37 (`VAR_CHARINC`) at boot and after every load, where Distaff keeps the boot script's 5 (EGA, VGA CD) or 2 (FM Towns), so lines last a different time.
+23. (Done: the text speed is ScummVM's setting; see "The text speed".)
 11. Not ported on the VGA CD: the text speed keys ('+' and '-'), the mouse wheel on the save list, and Ctrl+C and Alt+X to quit.
 
 Not ported, by choice:

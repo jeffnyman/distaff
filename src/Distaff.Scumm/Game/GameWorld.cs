@@ -82,7 +82,8 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         _owners = [.. index.ObjectOwners];
         _states = [.. index.ObjectStates];
         _classes = [.. index.ObjectClasses];
-        Engine = new ScriptEngine(this, seed, loader.Version, loader.FmTowns);
+        Engine = new ScriptEngine(this, seed, loader.Version, loader.FmTowns) { CharIncWriting = WriteCharInc };
+        TextSpeed = DefaultTextSpeed;
         _effectRandom = new Random(seed);
         Sound = new SoundSystem(sound, LoadSound, sampleRate, cdTracks,
             loader.FmTowns ? cd => new PlayerTowns(sampleRate, cd, PlayCdTrack, StopCdSound, s => Sound!.Stop(s)) : null);

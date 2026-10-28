@@ -28,6 +28,9 @@ public sealed class ScummEngine : Engine
     /// <summary>Whether the FM Towns' picture scrolls smoothly, as ScummVM has it by default (<see cref="GameWorld.SmoothScrolling"/>). Set before <see cref="Initialize"/>.</summary>
     public bool SmoothScrolling { get; set; } = true;
 
+    /// <summary>How fast the game's lines go by, 0 to 9, as ScummVM's text speed (<see cref="GameWorld.TextSpeed"/>). Set before <see cref="Initialize"/>.</summary>
+    public int TextSpeed { get; set; } = GameWorld.DefaultTextSpeed;
+
     /// <summary>A save to start from instead of the boot script, as ScummVM's launcher loads one. Set before <see cref="Initialize"/>.</summary>
     public byte[]? StartingSave { get; set; }
 
@@ -86,6 +89,7 @@ public sealed class ScummEngine : Engine
         {
             CopyProtection = CopyProtection,
             SmoothScrolling = SmoothScrolling,
+            TextSpeed = TextSpeed,
             SaveStore = Host.Saves,
         };
         if (SaveTarget is not null)

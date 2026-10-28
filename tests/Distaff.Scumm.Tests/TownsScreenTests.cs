@@ -48,9 +48,15 @@ public class TownsScreenTests
     [Fact]
     public void The_openings_text_shows_in_the_text_layers_colours()
     {
-        if (Run(580) is not { } world)
+        if (Run(560) is not { } world)
         {
             return;
+        }
+
+        // as long as the lines before it last, at the text speed (ScummVM's 6 by default)
+        for (int i = 0; i < 200 && world.MessageText != "Never seen one so bright before."; i++)
+        {
+            world.StepFrame();
         }
 
         Assert.Equal(2, world.CurrentRoomNumber);
@@ -136,8 +142,7 @@ public class TownsScreenTests
         Assert.Equal((7, 8), (Lit(10, 4, 12), Lit(11, 4, 12)));
     }
 
-    // the cliff's frame is reached later with the smooth scrolling, the messenger at another point of her flight
-    private const string Logo = "a978b0f902ec14fd", Cliff = "0f6e49e94151884f";
+    private const string Logo = "a978b0f902ec14fd", Cliff = "ab885438fdfa2099";
 
     private static string Hash(RgbFrame frame)
         => Convert.ToHexStringLower(SHA256.HashData(frame.Pixels.SelectMany(p => new[] { p.R, p.G, p.B }).ToArray()))[..16];

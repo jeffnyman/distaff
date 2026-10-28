@@ -176,7 +176,7 @@ public class DistaffTests
         }
     }
 
-    private const string TheDistaff = "c8d2056ad0421b1e";
+    private const string TheDistaff = "cebef2b885bb8a28";
 
     private static string Hash(Surface8 surface) => Convert.ToHexStringLower(SHA256.HashData(surface.Pixels))[..16];
 

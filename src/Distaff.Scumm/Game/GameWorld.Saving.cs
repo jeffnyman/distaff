@@ -79,6 +79,9 @@ public sealed partial class GameWorld
         Time = time;
         Sound.Output.Resync(time);
         ResetScroll();
+
+        // the load's full redraw brings the settings back (syncSoundSettings): the text speed is the setting's, not the save's
+        Engine.Variables[Vars.CharInc] = 9 - TextSpeed;
     }
 
     /// <summary>

@@ -232,7 +232,7 @@ public class VgaGameLoopTests
     }
 
     private const string ProficiencyScreen = "c21f6ae5cda06f4a", BobbinOnTheCliff = "3cdf8e8514652f77";
-    private const string LeafIcon = "e7957c3dfd9dd795", DistaffTaken = "8b1e3477ea1b51eb", EggOpened = "4fe12a53ed8eccd4";
+    private const string LeafIcon = "e7957c3dfd9dd795", DistaffTaken = "fbe4368c4ed760cd", EggOpened = "12f75e00a312e805";
 
     // the objects of the VGA CD, numbered apart from the EGA's: the cliff (2), the village (3), the
     // tents (5), the path (7), outside the sanctuary (8), the sanctuary (9)

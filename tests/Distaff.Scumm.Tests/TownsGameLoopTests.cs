@@ -384,7 +384,7 @@ public class TownsGameLoopTests
 
     private const int Known = 122;
     private const int CliffToVillage = 153, Leaf = 154, VillageToTents = 161, TentsToPath = 201, PathToSanctuary = 252, SanctuaryDoor = 254, Egg = 270, Distaff = 271;
-    private const string TheDistaff = "af818c6c536ef1fd", ChooserShown = "9699e17cf0b59777";
+    private const string TheDistaff = "4859c473fd9c326b", ChooserShown = "9699e17cf0b59777";
 
     private static string Hash(RgbFrame frame)
         => Convert.ToHexStringLower(SHA256.HashData(frame.Pixels.SelectMany(p => new[] { p.R, p.G, p.B }).ToArray()))[..16];

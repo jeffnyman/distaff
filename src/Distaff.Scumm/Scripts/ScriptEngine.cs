@@ -173,6 +173,11 @@ public sealed class ScriptEngine
     {
         if ((number & 0xF000) == 0)
         {
+            if (number == Vars.CharInc && CharIncWriting is { } charInc)
+            {
+                value = charInc(value);
+            }
+
             Variables[CheckVariable(number)] = value;
             return;
         }
@@ -213,6 +218,9 @@ public sealed class ScriptEngine
     /// For tests that ask what the game has run.
     /// </summary>
     internal Action<int, int>? ScriptStarted { get; set; }
+
+    /// <summary>What a script's write of the text speed (<c>VAR_CHARINC</c>) becomes, for the world's text speed setting to have its say (<c>writeVar</c>).</summary>
+    internal Func<int, int>? CharIncWriting { get; set; }
 
     /// <summary>
     /// Starts a global or local script and runs it until it yields; then the caller, if any,
