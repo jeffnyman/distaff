@@ -428,6 +428,39 @@ public class VgaWalkthroughTests
         Assert.Equal(15, played.World.CurrentRoomNumber);
     }
 
+    /// <summary>
+    /// Saves made by ScummVM play on here. ScummVM loaded the walkthrough's saves from the end of
+    /// the Elders and of the Bishop, played on a few seconds and saved by itself (its autosave,
+    /// save version 124); the next section, played on from each, ends as it does from the
+    /// walkthrough's own save: in the same room, with the same drafts learned and used. The saves
+    /// are kept beside the game data, in <c>games/scummvm-saves</c>, and the test passes without
+    /// checking when they are absent.
+    /// </summary>
+    [Theory]
+    [InlineData("01-TheElders", 1)]
+    [InlineData("08-TheBishop", 8)]
+    public void A_save_made_by_scummvm_plays_on(string name, int next)
+    {
+        if (GameFolders.Find("scummvm-saves") is not { } folder || !File.Exists(Path.Combine(folder, $"loom-vga-{name}.s00")))
+        {
+            return;
+        }
+
+        var ours = next == 1 ? Island.Value : Void.Value;
+        var save = File.ReadAllBytes(Path.Combine(folder, $"loom-vga-{name}.s00"));
+        if (ours is null || Play(new Played(ours.World, save, 0), Sections[next]) is not { } played)
+        {
+            return;
+        }
+
+        Assert.Equal(ours.World.CurrentRoomNumber, played.World.CurrentRoomNumber);
+        for (int draft = 0; draft < 16; draft++)
+        {
+            Assert.Equal(Learned(ours, draft), Learned(played, draft));
+            Assert.Equal(Used(ours, draft), Used(played, draft));
+        }
+    }
+
     private static void DistaffMistakes(Walkthrough w)
     {
         w.WalkTo(200, 130).Ready();

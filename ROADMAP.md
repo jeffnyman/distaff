@@ -1112,3 +1112,71 @@ executable take it from one place: the window sets it at 64 pixels when it opens
 project builds into `distaff.exe` (`ApplicationIcon`). After a change to the drawing, run
 `dotnet run --project tools/icon -- src/Distaff.Player/distaff.ico [preview.png]` again.
 `AppIconTests` checks its size, its see-through corners and its lit middle.
+
+## Saves made by ScummVM
+
+Saves had been checked one way only, Distaff's loaded in ScummVM. ScummVM's autosave writes a
+save with no clicks (`autosave_period`, slot 0, `<target>.s00`): ScummVM loaded the walkthrough's
+saves from the end of the Elders and of the Bishop in each release, played on 16 seconds and saved
+by itself, in save version 124 (Distaff writes 108). Distaff loads all six. Loaded side by side
+with the save ScummVM started from, the state agrees: the room, the objects' owners and classes,
+the scripts running; what differs is what moves in 16 seconds (the timers, the mouse, an actor
+walking on, an object's state as a scene goes on), and what ScummVM's own way of saving version 3
+games leaves (variable 112 at the save room, 70, and 171 to 173 with the ego's box and place,
+which a load reads back), and the text speed (below). `A_save_made_by_scummvm_plays_on`, in each
+release's walkthrough tests, plays the next section on from each of ScummVM's saves (kept beside
+the game data, in `games/scummvm-saves`) and finds it ends as from the walkthrough's own save: in
+the same room, with the same drafts learned and used.
+
+The text speed differs. ScummVM keeps it as a setting of its own (`talkspeed`, 6 when unset): at
+boot it puts 9 - 6 = 3 in variable 37 (`VAR_CHARINC`) in place of the boot script's value, and
+again after every load (`syncSoundSettings`). Distaff keeps the scripts' value: 5 on the EGA and
+the VGA CD, 2 on the FM Towns. So lines stay up longer in Distaff on the EGA and VGA CD, and less
+long on the FM Towns, than in ScummVM by default.
+
+## What is left
+
+Everything still open, one item a line, kept up to date as items are done. The sections above
+keep the history, and an early phase's "not yet" there may have been done by a later one; this
+list is the current state.
+
+Not yet checked against ScummVM:
+
+1. (Done: saves made by ScummVM load and play on; see "Saves made by ScummVM".)
+2. The banners (pause, restart, snap scroll), against ScummVM's window.
+3. How frames run in the first steps after a load.
+4. The VGA CD's menu, against ScummVM's window (viewed, its main page pinned).
+
+Known differences, not fixed:
+
+5. The music's volume when recorded headless and in the AdLib player: 255, where ScummVM plays at 192 (the window already plays at 192).
+6. The VGA CD's restart does not show the dissolve out (effect 134) first.
+7. After a load, sounds the scripts start come one frame (0.1 s) sooner, against the CD music the load restarts, than in ScummVM.
+8. The music is not sought back to where it was after a load.
+9. The VGA CD's CD timer stops while its menu is up; ScummVM's stops only once it has counted.
+10. No subtitles setting: the text is always drawn, as ScummVM does by default.
+23. The text speed: ScummVM's default puts 3 in variable 37 (`VAR_CHARINC`) at boot and after every load, where Distaff keeps the boot script's 5 (EGA, VGA CD) or 2 (FM Towns), so lines last a different time.
+11. Not ported on the VGA CD: the text speed keys ('+' and '-'), the mouse wheel on the save list, and Ctrl+C and Alt+X to quit.
+
+Not ported, by choice:
+
+12. Dissolves paced by the display's refresh, as ScummVM's are.
+13. Of the FM Towns' smooth scrolling: what the layer keeps in columns scrolling out of view, the catch-up mode for slow screens, and semi-smooth scrolling.
+14. The FM Towns' text at twice the resolution.
+
+Coverage of the game's scripts:
+
+15. Objects' answers to looks and to drafts they do not take: 411 entries of 151 objects, by the coverage report.
+16. The glassmaker's greeting in the chalice's room (script 67), which looks unreachable; not confirmed in ScummVM.
+
+Larger features:
+
+17. MT-32 music for the EGA (the Roland Upgrade's sounds; needs an MT-32 emulator and the player's own ROMs).
+18. CMS music for the EGA.
+19. Other releases: other languages of the EGA, the Amiga, Atari ST and Macintosh releases, the PC-Engine CD, and the FM Towns' Japanese text.
+
+Sharing Distaff:
+
+20. A release build (single-file `distaff.exe`).
+21. A check that it builds and runs on Linux and macOS.
+22. Continuous integration running the tests that need no game data.
