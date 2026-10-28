@@ -856,3 +856,36 @@ and Standard; at Expert it has no staff or notes.
 - Not covered: optional scenes (the graves and the chalice in Crystalgard), deaths and other ways
   through, at any level.
 - The test suite takes about five minutes with these six runs, about two without them.
+
+## Optional scenes and other ways through
+
+`CoverageReport` (run with `DISTAFF_COVERAGE` naming a file) plays the EGA walkthrough and
+writes what it leaves unplayed: rooms never entered, global and local scripts never started,
+and each object's verb entries never run. A test hook on the script engine
+(`ScriptEngine.ScriptStarted`) reports each script started, and `Walkthrough.Watch` each world a
+walkthrough plays. The way through alone left five rooms unentered (12, 17, 22, 53, 56; 82 to 85
+are the MT-32 upgrade's sound files) and 24 global scripts unstarted. Three detours, played in
+every release from the walkthrough's saves, now cover the most of them:
+
+- Crystalgard's graves and chalice (`The_graves_and_the_chalice`): the graveyard (room 17),
+  where Master Goodmold comes out to greet the stranger (scripts 66 and 68, room 56); the two
+  epitaphs; Opening refused on a grave; and the chalice's room (22), the Chromax Conundrum
+  (script 108), its crystal and its bell.
+- The waterspout's ride (`The_waterspout_takes_bobbin_out_to_sea`): the way out of its room,
+  clicked while it still spins, walks Bobbin into it, and it drops him in the sea (script 53,
+  rooms 14 and 12); he swims back, and Un-Twisting then calms it as on the way through.
+- The distaff's answers (`The_distaff_answers_a_draft_gone_wrong`): nothing pointed at (script
+  13), a draft the object will not take, notes that are no draft, and a draft spun before Bobbin
+  has reached what he pointed at (script 12).
+
+The VGA CD's lines differ from the EGA's and the FM Towns' throughout these scenes (its
+dialogue was rewritten for the voices), and its glass bell has a scene of its own; each release's
+test checks its own. Clicking the door of the chalice's room just after the Conundrum leaves
+Bobbin in the room in ScummVM as in Distaff (checked by loading the same save in ScummVM and
+clicking there); the detour looks at the crystal and the bell first.
+
+- Left unplayed: room 53 (a branch of script 44), the room-22 glassmaker's greeting for a
+  visitor who comes there first (script 67), dyeing the green wool again (script 35), the
+  caves' other passages (scripts 77, 80 and 84), a draft on the Dead One at the rift (script
+  103), a note above those learned (script 11), and most objects' answers to drafts they do not
+  take.

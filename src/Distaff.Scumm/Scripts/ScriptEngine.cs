@@ -208,6 +208,13 @@ public sealed class ScriptEngine
     public bool IsScriptInUse(int number) => Slots.Any(s => s.Number == number);
 
     /// <summary>
+    /// Told of each script started: a global or local script's number with verb 0, an entry or
+    /// exit script's pseudo-number with verb 0, or an object's number with the verb asked of it.
+    /// For tests that ask what the game has run.
+    /// </summary>
+    internal Action<int, int>? ScriptStarted { get; set; }
+
+    /// <summary>
     /// Starts a global or local script and runs it until it yields; then the caller, if any,
     /// carries on. Unless recursive, other copies are stopped first. Mirrors <c>runScript</c>.
     /// </summary>
@@ -223,6 +230,7 @@ public sealed class ScriptEngine
             StopScript(number);
         }
 
+        ScriptStarted?.Invoke(number, 0);
         if (number < GlobalScriptCount)
         {
             var code = _host.GlobalScript(number) ?? throw new InvalidOperationException($"Script {number} does not exist.");
@@ -240,6 +248,7 @@ public sealed class ScriptEngine
     {
         if (offset != 0)
         {
+            ScriptStarted?.Invoke(pseudoNumber, 0);
             Start(pseudoNumber, ScriptKind.Room, room, offset, false, false, null);
         }
     }
@@ -262,6 +271,7 @@ public sealed class ScriptEngine
 
         if (_host.ObjectScript(obj, verb) is { } script)
         {
+            ScriptStarted?.Invoke(obj, verb);
             Start(obj, script.Kind, script.Code, script.Offset, freezeResistant, recursive, args);
         }
     }

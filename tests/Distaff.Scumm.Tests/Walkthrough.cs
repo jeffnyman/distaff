@@ -16,7 +16,17 @@ internal sealed class Walkthrough(GameWorld world)
     /// <summary>The longest a command waits before the walkthrough is taken to be stuck.</summary>
     public const int Patience = 6000;
 
-    public GameWorld World { get; } = world;
+    public GameWorld World { get; } = Watched(world);
+
+    /// <summary>Told of each world a walkthrough plays, on the thread that plays it: for tests that watch what the game runs.</summary>
+    [ThreadStatic]
+    public static Action<GameWorld>? Watch;
+
+    private static GameWorld Watched(GameWorld world)
+    {
+        Watch?.Invoke(world);
+        return world;
+    }
 
     /// <summary>The proficiency level played: 0 Practice, 1 Standard, 2 Expert, as the FM Towns' boot parameter numbers them.</summary>
     public int Level { get; init; }
@@ -167,6 +177,15 @@ internal sealed class Walkthrough(GameWorld world)
             Array.Reverse(notes);
         }
 
+        return PlayNotes(notes, wait);
+    }
+
+    /// <summary>
+    /// Plays notes on the distaff (1 for c to 8 for the high C), clicking each where it shows, and
+    /// unless told not to waits for the game to take them as a draft and the object to answer.
+    /// </summary>
+    public Walkthrough PlayNotes(int[] notes, bool wait = true)
+    {
         foreach (int note in notes)
         {
             var verb = World.Verbs.First(v => v.VerbId == note && v.Mode == 1 && v.SaveId == 0);
@@ -201,7 +220,7 @@ internal sealed class Walkthrough(GameWorld world)
     }
 
     /// <summary>Where on the screen an object of the room is, the camera brought to it first.</summary>
-    private (int X, int Y) OnScreen(int obj)
+    public (int X, int Y) OnScreen(int obj)
     {
         var o = World.CurrentRoom?.FindObject(obj) ?? throw new InvalidOperationException($"Object {obj} is not in room {World.CurrentRoomNumber}.");
         var (x, y) = World.PositionOf(o);

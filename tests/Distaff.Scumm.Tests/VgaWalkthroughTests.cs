@@ -267,6 +267,121 @@ public class VgaWalkthroughTests
         Assert.True(Learned(played, Unmaking));
     }
 
+    /// <summary>
+    /// The distaff's answers to a draft gone wrong, in the sanctuary after the Elders have gone:
+    /// nothing pointed at, a draft the object will not take, notes that are no draft, and a draft
+    /// spun while Bobbin is still on his way to what he pointed at.
+    /// </summary>
+    [Fact]
+    public void The_distaff_answers_a_draft_gone_wrong()
+    {
+        if (Elders.Value is not { } before || Play(before, DistaffMistakes) is not { } played)
+        {
+            return;
+        }
+
+        var said = Said(played);
+        Assert.Contains("It might help to point at something first ^", said);
+        Assert.Contains("Well, that didn't work.", said);
+        Assert.Contains("Hmm. I guess that isn't a draft.", said);
+        Assert.Contains("Maybe I should stand a bit closer.", said);
+    }
+
+    /// <summary>
+    /// Clicking the way out of the waterspout's room while it still spins walks Bobbin into it: it
+    /// carries him up and drops him in the sea (room 12), and he swims back. The way through then
+    /// goes on as before: Un-Twisting calms the waterspout and the log takes him to the shore.
+    /// </summary>
+    [Fact]
+    public void The_waterspout_takes_bobbin_out_to_sea()
+    {
+        if (Island.Value is not { } before || Play(before, OutToSea) is not { } played)
+        {
+            return;
+        }
+
+        var said = Said(played);
+        Assert.Contains("I think that's close enough.", said);
+        Assert.Contains("Now.  Let's try this again, shall we?", said);
+        Assert.Equal(15, played.World.CurrentRoomNumber);
+    }
+
+    /// <summary>
+    /// Crystalgard's graveyard and the chalice's room, which the way through passes by. Walking
+    /// into the graveyard brings Master Goodmold out to greet the stranger; the graves have their
+    /// epitaphs and are not to be opened; the chalice beyond tells of the Chromax Conundrum.
+    /// </summary>
+    [Fact]
+    public void The_graves_and_the_chalice()
+    {
+        if (Leaving.Value is not { } before || Play(before, GravesAndChalice) is not { } played)
+        {
+            return;
+        }
+
+        var said = Said(played);
+        Assert.Contains("I'm Master Goodmold, thirty-first in the Noble Guild of Glass Makers.", said);
+        Assert.Contains("and remember: if you break it, you buy it!", said);
+        Assert.Contains(said, l => l.StartsWith("\u0019Near this spot, Luscent Bottleblow, Founder of the Noble Guild of Glassmakers,", StringComparison.Ordinal));
+        Assert.Contains("\u0019Softshard, Wife of Luscent Bottleblow, here attained Final Clarity.\u0019", said);
+        Assert.Contains("I don't think I'll try that one again.", said);
+        Assert.Contains("That's beautiful! I've never seen anything sparkle like that ^", said);
+        Assert.Contains("That's the conundrum, you see.", said);
+        Assert.Contains("Huh! A glass bell!", said);
+        Assert.Equal(16, played.World.CurrentRoomNumber);
+    }
+
+    private static void DistaffMistakes(Walkthrough w)
+    {
+        w.WalkTo(200, 130).Ready();
+        w.Spin(Opening);
+        w.Click(Loom).Spin(Opening);
+        w.Click(Loom).PlayNotes([3, 3, 3, 3]);
+
+        // the loom clicked from across the room: Bobbin points at it at once, and walks on
+        w.WalkTo(40, 130).Ready();
+        var (x, y) = w.OnScreen(Loom);
+        w.ClickAt(x, y).Until(() => w.World.Engine.Variables[w.Pointed] == Loom, 200, "Bobbin to point at the Loom");
+        w.Spin(Opening);
+    }
+
+    private static void OutToSea(Walkthrough w)
+    {
+        // as the way through leaves the island, as far as the waterspout
+        w.Click(WheelOut).InRoom(5).Ready().Click(TentsToVillage).InRoom(3).Ready().Click(VillageToCliff).InRoom(2).Ready();
+        w.Click(Sky).Click(Sky).Click(Sky).Spin(Opening).Ready(20000);
+        w.Click(CliffToVillage).InRoom(3).Ready().Click(VillageToDock).InRoom(10).Ready();
+        w.Click(Clam).Spin(Opening).Ready(20000);
+        w.WalkTo(182, 53).Ready(20000);
+        w.Click(DockWater).InRoom(13).Ready(20000);
+        w.Use(Waterspout).Ready(20000);
+
+        // the way out walks Bobbin to the log while the waterspout spins, and into it
+        w.Click(WaterspoutOut).InRoom(12).Ready(20000);
+        w.Use(SeaBack).InRoom(13).Ready(20000);
+        w.Click(Waterspout).Spin(Twisting, backwards: true).Ready(20000);
+        w.Click(WaterspoutOut).InRoom(15).Ready(20000);
+    }
+
+    private static void GravesAndChalice(Walkthrough w)
+    {
+        w.Exit(ShoreToCrystalgard, 16);
+        w.Exit(CrystalgardToGraves, 17, 20000);
+
+        // the walk to the graves brings Goodmold out, whose welcome takes the clicks, so they are looked at again
+        w.Use(BottleblowGrave).Ready(20000).Use(SoftshardGrave).Ready(20000);
+        w.Use(BottleblowGrave).Ready(20000).Use(SoftshardGrave).Ready(20000);
+        w.Click(BottleblowGrave).Spin(Opening).Ready(20000);
+        w.Exit(GravesToChalice, 22, 20000);
+        w.Use(Chalice).Ready(20000).Use(ShowcaseCrystal).Ready(20000).Use(ShowcaseBell).Ready(20000);
+        w.Exit(ChaliceToCrystalgard, 16, 20000);
+    }
+
+    // the sea (12) and the way back from it; Crystalgard's graveyard (17) and the chalice's room (22)
+    private const int SeaBack = 247;
+    private const int CrystalgardToGraves = 274, BottleblowGrave = 282, SoftshardGrave = 283, GravesToChalice = 278, Chalice = 330, ChaliceToCrystalgard = 326;
+    private const int ShowcaseBell = 328, ShowcaseCrystal = 329;
+
     /// <summary>The drafts as the game numbers them in its table.</summary>
     private const int Opening = 0, StrawIntoGold = 1, Dyeing = 2, NightVision = 3, Twisting = 4, Sleep = 5, Emptying = 6;
     private const int Invisibility = 7, Terror = 8, Sharpening = 9, Reflection = 10, Healing = 11;
