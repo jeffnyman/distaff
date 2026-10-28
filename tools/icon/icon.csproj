@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- writes the player's distaff.ico from AppIcon, the drawing the window takes its icon from -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>make-icon</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Distaff.Player\Distaff.Player.csproj" />
+  </ItemGroup>
+</Project>

@@ -4,6 +4,8 @@
     <AssemblyName>distaff</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Description>Command line player for Loom: distaff &lt;game folder&gt;.</Description>
+    <!-- tools/icon writes it from AppIcon, the drawing the window's icon comes from -->
+    <ApplicationIcon>distaff.ico</ApplicationIcon>
   </PropertyGroup>
 
   <!-- SDL3 ships native libraries for every platform; a desktop player does not need the Android

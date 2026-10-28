@@ -33,6 +33,29 @@ internal sealed unsafe class SdlGraphicsDriver : IGraphicsDriver, IDisposable
         }
 
         _window = SdlException.ThrowIfNull(SDL_CreateWindow(title, 320 * _scale, 200 * _scale, flags), "SDL_CreateWindow");
+        SetIcon();
+    }
+
+    /// <summary>The window shows Distaff's icon (<see cref="AppIcon"/>), where the video driver has window icons; without one it keeps its own.</summary>
+    private void SetIcon()
+    {
+        const int size = 64;
+        // red, green, blue and alpha bytes in that order (SDL's RGBA32)
+        var format = BitConverter.IsLittleEndian ? SDL_PixelFormat.SDL_PIXELFORMAT_ABGR8888 : SDL_PixelFormat.SDL_PIXELFORMAT_RGBA8888;
+        var icon = SDL_CreateSurface(size, size, format);
+        if (icon is null)
+        {
+            return;
+        }
+
+        var pixels = AppIcon.Render(size);
+        for (int y = 0; y < size; y++)
+        {
+            new ReadOnlySpan<byte>(pixels, y * size * 4, size * 4).CopyTo(new Span<byte>((byte*)icon->pixels + (y * icon->pitch), size * 4));
+        }
+
+        SDL_SetWindowIcon(_window, icon);
+        SDL_DestroySurface(icon);
     }
 
     public int Width => _width;

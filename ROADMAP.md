@@ -1079,3 +1079,16 @@ ScummVM draws them (`showOldStyleBannerAndPause`, `GameWorld.Banners`):
   engine back to the proficiency screen. Viewed, not compared with ScummVM's window.
 - A key pressed while a screen effect shows is taken at once, and its banner shows once the
   effect has; ScummVM takes keys between frames, after the effect, which looks the same.
+
+## The icon
+
+Distaff has an icon of its own, drawn for it and taking nothing from the game: a distaff, its
+staff through the bundle of thread wound at its head and a strand drawn off it, glowing cyan on a
+rounded tile of night sky with a few stars. It is drawn in code (`AppIcon`, in the player:
+distances to the staff, the bundle and the strand, supersampled 4 by 4), so the window and the
+executable take it from one place: the window sets it at 64 pixels when it opens
+(`SDL_SetWindowIcon`, where the video driver has window icons), and `tools/icon` writes
+`src/Distaff.Player/distaff.ico` from it at 16 to 256 pixels, each size a PNG, which the player's
+project builds into `distaff.exe` (`ApplicationIcon`). After a change to the drawing, run
+`dotnet run --project tools/icon -- src/Distaff.Player/distaff.ico [preview.png]` again.
+`AppIconTests` checks its size, its see-through corners and its lit middle.
