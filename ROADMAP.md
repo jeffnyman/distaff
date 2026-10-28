@@ -1213,6 +1213,25 @@ buffers, by however long that is in real time. Distaff starts both in the same s
 scripts and the load do in ScummVM's own order (`scummLoop_handleSaveLoad`, then
 `runAllScripts`), and the difference is not ScummVM's to copy.
 
+## The banners against ScummVM
+
+The banners, compared with ScummVM's window: each release's walkthrough save from the end of the
+Elders loaded in ScummVM (`-x1`), a key pressed, the window captured at 6x and read back a pixel
+at a time against Distaff's frame from the same save and key, the FM Towns' green cut to 5 bits.
+
+- The pause banner (space), the restart question (F8) and the EGA's and the FM Towns' snap
+  scroll banner (Alt+I) match pixel for pixel: their place, height, edges, colours, words and
+  the words' place. What differs is the Loom's threads, whose colours cycle and were caught at
+  another moment, and ScummVM's mouse cursor.
+- Not confirmed: the VGA CD's snap scroll banner (Ctrl+R). ScummVM showed none 0.4 seconds
+  after the key, where its code shows one for 90 quarter-frames (`showBannerAndPause`), so
+  either the key did not reach it or it does not; one run cannot tell which, and Distaff, which
+  shows it as ScummVM's code reads, is left as it is.
+- Keys sent to ScummVM's window need their scan codes: SDL reads the key from them, and without
+  them F8, Alt+I and Ctrl+R did not arrive while the space bar did. A second space did not end
+  ScummVM's pause banner in one run, keeping it up through the keys after; each banner was then
+  captured in a run of its own.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above
@@ -1222,7 +1241,7 @@ list is the current state.
 Not yet checked against ScummVM:
 
 1. (Done: saves made by ScummVM load and play on; see "Saves made by ScummVM".)
-2. The banners (pause, restart, snap scroll), against ScummVM's window.
+2. (Done but for one: the banners match ScummVM's window; the VGA CD's snap scroll banner is not confirmed. See "The banners against ScummVM".)
 3. How frames run in the first steps after a load.
 4. The VGA CD's menu, against ScummVM's window (viewed, its main page pinned).
 
