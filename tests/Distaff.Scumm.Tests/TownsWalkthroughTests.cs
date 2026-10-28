@@ -404,6 +404,62 @@ public class TownsWalkthroughTests
         Assert.Equal(16, played.World.CurrentRoomNumber);
     }
 
+    /// <summary>
+    /// Dyeing tried on wool that is already its colour. After the dye pot, Dyeing on the green
+    /// wool is a draft not yet used (script 35); once used on the white wool, Dyeing again finds
+    /// it green enough, and Dyeing backwards, twice, finds it as pale as it gets.
+    /// </summary>
+    [Fact]
+    public void Dyeing_on_wool_that_is_already_dyed()
+    {
+        if (Elders.Value is not { } before || Play(before, DyeingAgain) is not { } played)
+        {
+            return;
+        }
+
+        var said = Said(played);
+        Assert.Contains("Those threads didn't feel quite right.", said);
+        Assert.Contains("Think I'm on the right track, though.", said);
+        Assert.Contains("It's plenty green enough already.", said);
+        Assert.Contains("It already looks about as pale as it can get.", said);
+        Assert.True(Used(played, Dyeing));
+    }
+
+    /// <summary>
+    /// The caves' other passages, which the way through passes by (scripts 77, 80 and 84): the
+    /// one back up to the dragon's lair, the second way into the east cave from where its first
+    /// comes out, and the way back up to the ledge over the pool from below it.
+    /// </summary>
+    [Fact]
+    public void The_caves_other_passages()
+    {
+        if (Shepherds.Value is not { } before || Play(before, OtherPassages) is not { } played)
+        {
+            return;
+        }
+
+        Assert.Equal(31, played.World.CurrentRoomNumber);
+    }
+
+    /// <summary>
+    /// A draft spun on the Dead One across the rift (script 103): Cygna answers that the other
+    /// side of the Pattern is beyond the threads' reach. Looked at, he is close, but not close
+    /// enough.
+    /// </summary>
+    [Fact]
+    public void A_draft_on_the_dead_one()
+    {
+        if (Void.Value is not { } before || Play(before, DraftOnTheDeadOne) is not { } played)
+        {
+            return;
+        }
+
+        var said = Said(played);
+        Assert.Contains("Close. But not close enough ...", said);
+        Assert.Contains("No use, Bobbin. That side of the Pattern is beyond the reach of our threads now.", said);
+        Assert.Equal(51, played.World.CurrentRoomNumber);
+    }
+
     private static void DistaffMistakes(Walkthrough w)
     {
         w.WalkTo(200, 130).Ready();
@@ -452,6 +508,66 @@ public class TownsWalkthroughTests
         w.Use(Chalice).Ready(20000).Use(ShowcaseCrystal).Ready(20000).Use(ShowcaseBell).Ready(20000);
         w.Exit(ChaliceToCrystalgard, 16, 20000);
     }
+
+    private static void DyeingAgain(Walkthrough w)
+    {
+        w.Use(SanctuaryOut).InRoom(8).Ready().Use(SanctuaryToPath).InRoom(7).Ready().Use(PathToTents).InRoom(5).Ready();
+        w.Use(TentsToHetchel).InRoom(6).Ready();
+        w.Use(DyePot).Ready(20000);
+        w.Click(GreenWool).Spin(Dyeing).Ready(20000);
+        w.Click(WhiteWool).Spin(Dyeing).Ready(20000);
+        w.Click(WhiteWool).Spin(Dyeing).Ready(20000);
+        w.Click(WhiteWool).Spin(Dyeing, backwards: true).Ready(20000);
+        w.Click(WhiteWool).Spin(Dyeing, backwards: true).Ready(20000);
+    }
+
+    private static void OtherPassages(Walkthrough w)
+    {
+        w.Click(LairToCaves).InRoom(65).Ready(20000);
+        w.Click(CaveDarkness).Spin(NightVision).Ready(20000);
+
+        // each passage can be clicked only from the part of the caves it leads from (room 30's
+        // script 200 keeps the others untouchable): the one up to the lair from where Bobbin comes in
+        w.Exit(CaveToLair, 28, 20000);
+        w.Exit(LairToCaves, 30, 20000);
+
+        // the east cave by its first way, and back out by it, then in by the second
+        w.Click(514).Ready(20000);
+        w.Exit(CaveEast, 32, 20000);
+        w.Exit(EastCaveBack, 30, 20000);
+        w.Exit(CaveEastBelow, 32, 20000);
+        w.Exit(EastCaveBack, 30, 20000);
+
+        // the ledge over the pool, the pool emptied, and up again from below it
+        w.Click(503).Ready(20000);
+        w.Exit(CaveLedge, 31, 20000);
+        w.Use(Pool).Ready(20000);
+        w.Click(Pool).Spin(Emptying).Ready(20000);
+        w.Exit(PoolOut, 30, 20000);
+        w.Exit(CaveToLedgeBelow, 31, 20000);
+    }
+
+    private static void DraftOnTheDeadOne(Walkthrough w)
+    {
+        // as the way through, as far as the rift
+        w.Exit(WonderWest, 50, 20000);
+        w.Exit(BackToTheIsland, 7, 20000);
+        w.Exit(PathToSanctuary, 9, 20000);
+        w.Use(Loom).Ready(20000);
+        w.Click(Hetchel).Spin(Silence, backwards: true).Ready(20000);
+        w.Use(Loom).Ready(20000);
+        w.Click(Hetchel).Spin(Shaping, backwards: true).Ready(20000);
+        w.Use(Loom).Ready(20000);
+        w.Use(Feather).Ready(20000);
+        w.Click(Loom).Spin(Unmaking).InRoom(51).Ready(20000);
+        w.Use(DeadOne).Ready(20000);
+        w.Click(DeadOne).Spin(Healing).Ready(20000);
+    }
+
+    // Hetchel's tent's green wool (6); the caves' other passages (30); the Dead One across the rift (51)
+    private const int GreenWool = 206;
+    private const int CaveToLair = 507, CaveEastBelow = 510, CaveToLedgeBelow = 518;
+    private const int DeadOne = 742;
 
     // the sea (12) and the way back from it; Crystalgard's graveyard (17) and the chalice's room (22)
     private const int SeaBack = 322;

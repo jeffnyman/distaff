@@ -939,11 +939,26 @@ chalice's room just after the Conundrum leaves
 Bobbin in the room in ScummVM as in Distaff (checked by loading the same save in ScummVM and
 clicking there); the detour looks at the crystal and the bell first.
 
-- Left unplayed: the room-22 glassmaker's greeting for a
-  visitor who comes there first (script 67), dyeing the green wool again (script 35), the
-  caves' other passages (scripts 77, 80 and 84), a draft on the Dead One at the rift (script
-  103), and most objects' answers to drafts they do not
-  take.
+- Three more detours, in every release, cover the scripts that had been left:
+  - Dyeing on wool already its colour (`Dyeing_on_wool_that_is_already_dyed`): after the dye
+    pot, Dyeing on the green wool is a draft not yet used, and Bobbin feels the threads were not
+    quite right (script 35; the VGA CD rewrote it as "I don't think I spun that right."); once
+    used, Dyeing again finds the wool green enough, and backwards twice as pale as it gets.
+  - The caves' other passages (`The_caves_other_passages`, scripts 77, 80 and 84): room 30's
+    script 200 makes each passage touchable only from the part of the caves it leads from, by
+    the walk box Bobbin is in. The way up to the dragon's lair is open from where he comes in;
+    the second way into the east cave from where he comes back out of it; the way up to the
+    ledge over the pool from below it, where the pool's way out leaves him.
+  - A draft on the Dead One across the rift (`A_draft_on_the_dead_one`, script 103): Cygna
+    answers that that side of the Pattern is beyond the threads' reach.
+- Left unplayed: the glassmaker's greeting in the chalice's room (script 67), which looks
+  unreachable: it comes from looking at the crystal there or walking into its box 0, and the
+  room makes both possible only for a visitor who comes from the graveyard, where Goodmold has
+  always greeted him first (bit 3513). The other global scripts never started are the
+  interface's or unused: the save room's (4), the sounds stopped (38), the demo's save message
+  (43), a helper nothing calls (24), the ending's input (115), an older draft check (9), and two
+  cutscenes whose way in was not looked for (51 and 107). And most objects' answers to looks and
+  drafts they do not take: 411 entries of 151 objects, by the coverage report.
 
 ## Screen transitions
 

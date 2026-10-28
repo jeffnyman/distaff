@@ -49,6 +49,9 @@ public class CoverageReport
             tests.The_distaff_answers_a_draft_gone_wrong();
             tests.The_waterspout_takes_bobbin_out_to_sea();
             tests.The_graves_and_the_chalice();
+            tests.Dyeing_on_wool_that_is_already_dyed();
+            tests.The_caves_other_passages();
+            tests.A_draft_on_the_dead_one();
         }
         finally
         {
