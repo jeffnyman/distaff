@@ -9,7 +9,9 @@ namespace Distaff.Scumm.Tests;
 /// DISTAFF_COVERAGE environment variable names (and nothing done without it): the rooms never
 /// entered, the global scripts never started, and for each room the local scripts never started
 /// and each object's verb entries never run. Draft verbs are among them, and 86 is an object's
-/// answer to any draft it has no entry for. It is how the detours were found.
+/// answer to any draft it has no entry for. It is how the detours were found. Run it on its own
+/// (<c>--filter CoverageReport</c>): the walkthrough's sections are played once per run, and a
+/// section another test played first is not seen.
 /// </summary>
 public class CoverageReport
 {
@@ -43,6 +45,7 @@ public class CoverageReport
             var ending = typeof(WalkthroughTests).GetField("Ending", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
             _ = ending.GetType().GetProperty("Value")!.GetValue(ending);
             var tests = new WalkthroughTests();
+            tests.The_opening_plays_to_the_end();
             tests.The_distaff_answers_a_draft_gone_wrong();
             tests.The_waterspout_takes_bobbin_out_to_sea();
             tests.The_graves_and_the_chalice();

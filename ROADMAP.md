@@ -875,17 +875,24 @@ every release from the walkthrough's saves, now cover the most of them:
   clicked while it still spins, walks Bobbin into it, and it drops him in the sea (script 53,
   rooms 14 and 12); he swims back, and Un-Twisting then calms it as on the way through.
 - The distaff's answers (`The_distaff_answers_a_draft_gone_wrong`): nothing pointed at (script
-  13), a draft the object will not take, notes that are no draft, and a draft spun before Bobbin
-  has reached what he pointed at (script 12).
+  13), a draft the object will not take, notes that are no draft, a draft spun before Bobbin
+  has reached what he pointed at (script 12), and a note typed that he has not learned (script
+  11).
+- The opening (`The_opening_plays_to_the_end`), which the way through skips with Escape: the
+  island at dawn, then the Elders' messenger, a nymph, rousing Bobbin (room 53, script 44), until
+  control comes back on the cliff. Its EGA frames match ScummVM's (the summons, compared at the
+  same line of text; only the nymph's sparkle differs). The FM Towns opens with its own welcome
+  to the Age of the Great Guilds, and the VGA CD with its credits and its own words.
 
 The VGA CD's lines differ from the EGA's and the FM Towns' throughout these scenes (its
 dialogue was rewritten for the voices), and its glass bell has a scene of its own; each release's
-test checks its own. Clicking the door of the chalice's room just after the Conundrum leaves
+test checks its own. With these, the EGA's report has every room entered (82 to 85 aside). Clicking the door of the
+chalice's room just after the Conundrum leaves
 Bobbin in the room in ScummVM as in Distaff (checked by loading the same save in ScummVM and
 clicking there); the detour looks at the crystal and the bell first.
 
-- Left unplayed: room 53 (a branch of script 44), the room-22 glassmaker's greeting for a
+- Left unplayed: the room-22 glassmaker's greeting for a
   visitor who comes there first (script 67), dyeing the green wool again (script 35), the
   caves' other passages (scripts 77, 80 and 84), a draft on the Dead One at the rift (script
-  103), a note above those learned (script 11), and most objects' answers to drafts they do not
+  103), and most objects' answers to drafts they do not
   take.

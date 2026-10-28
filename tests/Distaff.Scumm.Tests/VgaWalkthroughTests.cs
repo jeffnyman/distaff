@@ -268,9 +268,38 @@ public class VgaWalkthroughTests
     }
 
     /// <summary>
+    /// The opening played through instead of skipped: Practice chosen, the credits over the island at
+    /// dawn, then the Elders' messenger, a nymph, rouses Bobbin (room 53) in the VGA CD's own
+    /// words. Control comes back with Bobbin on
+    /// the cliff (room 2), where the way through starts.
+    /// </summary>
+    [Fact]
+    public void The_opening_plays_to_the_end()
+    {
+        if (GameFolders.Find(GameFolders.Vga) is not { } path)
+        {
+            return;
+        }
+
+        var world = new GameWorld(ResourceLoader.Open(new DirectoryGameContainer(path)));
+        var w = new Walkthrough(world);
+        world.Boot();
+        w.Wait(300).ClickAt(w.LevelButton.X, w.LevelButton.Y);
+        w.InRoom(53, 20000).InRoom(2, 20000).Ready(20000);
+
+        var said = world.MessageLog;
+        Assert.Contains("LucasArts Entertainment Company", said);
+        Assert.Contains("Rise, son of Cygna.", said);
+        Assert.Contains("The Elders await you in the Sanctuary.", said);
+        Assert.Contains("I'd better get down to the village.", said);
+        Assert.Equal(2, world.CurrentRoomNumber);
+    }
+
+    /// <summary>
     /// The distaff's answers to a draft gone wrong, in the sanctuary after the Elders have gone:
-    /// nothing pointed at, a draft the object will not take, notes that are no draft, and a draft
-    /// spun while Bobbin is still on his way to what he pointed at.
+    /// nothing pointed at, a draft the object will not take, notes that are no draft, a note typed
+    /// that Bobbin has not learned, and a draft spun while Bobbin is still on his way to what he
+    /// pointed at.
     /// </summary>
     [Fact]
     public void The_distaff_answers_a_draft_gone_wrong()
@@ -284,6 +313,7 @@ public class VgaWalkthroughTests
         Assert.Contains("It might help to point at something first ^", said);
         Assert.Contains("Well, that didn't work.", said);
         Assert.Contains("Hmm. I guess that isn't a draft.", said);
+        Assert.Contains("That thread's too high for me.", said);
         Assert.Contains("Maybe I should stand a bit closer.", said);
     }
 
@@ -343,6 +373,9 @@ public class VgaWalkthroughTests
         var (x, y) = w.OnScreen(Loom);
         w.ClickAt(x, y).Until(() => w.World.Engine.Variables[w.Pointed] == Loom, 200, "Bobbin to point at the Loom");
         w.Spin(Opening);
+
+        // a note typed that Bobbin has not learned yet
+        w.Click(Loom).Key(Key.G, 'g').Wait(100).Ready(20000);
     }
 
     private static void OutToSea(Walkthrough w)

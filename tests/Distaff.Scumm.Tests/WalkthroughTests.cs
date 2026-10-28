@@ -268,9 +268,38 @@ public class WalkthroughTests
     }
 
     /// <summary>
+    /// The opening played through instead of skipped: Practice chosen, the island at dawn, then the Elders'
+    /// messenger, a nymph, rouses Bobbin (room 53, the only room the way through and its detours
+    /// do not enter) and calls him to the Sanctuary. Control comes back with Bobbin on
+    /// the cliff (room 2), where the way through starts.
+    /// </summary>
+    [Fact]
+    public void The_opening_plays_to_the_end()
+    {
+        if (GameFolders.Find(GameFolders.Ega) is not { } path)
+        {
+            return;
+        }
+
+        var world = new GameWorld(ResourceLoader.Open(new DirectoryGameContainer(path)));
+        var w = new Walkthrough(world);
+        world.Boot();
+        w.Wait(60).ClickAt(w.LevelButton.X, w.LevelButton.Y);
+        w.InRoom(53, 20000).InRoom(2, 20000).Ready(20000);
+
+        var said = world.MessageLog;
+        Assert.Contains("Rise, son of Cygna.", said);
+        Assert.Contains("I am sent by the Elders to summon you.", said);
+        Assert.Contains("The High Council awaits your presence in the Sanctuary.", said);
+        Assert.Contains("Better get down to the village.", said);
+        Assert.Equal(2, world.CurrentRoomNumber);
+    }
+
+    /// <summary>
     /// The distaff's answers to a draft gone wrong, in the sanctuary after the Elders have gone:
-    /// nothing pointed at, a draft the object will not take, notes that are no draft, and a draft
-    /// spun while Bobbin is still on his way to what he pointed at.
+    /// nothing pointed at, a draft the object will not take, notes that are no draft, a note typed
+    /// that Bobbin has not learned, and a draft spun while Bobbin is still on his way to what he
+    /// pointed at.
     /// </summary>
     [Fact]
     public void The_distaff_answers_a_draft_gone_wrong()
@@ -284,6 +313,7 @@ public class WalkthroughTests
         Assert.Contains("I suppose I ought to point at something first.", said);
         Assert.Contains("That draft won't work on the Loom.", said);
         Assert.Contains("Hmm. I guess that isn't a draft.", said);
+        Assert.Contains("That thread is too high for me! Guess I need more experience.", said);
         Assert.Contains("Maybe I ought to stand a bit closer.", said);
     }
 
@@ -342,6 +372,9 @@ public class WalkthroughTests
         var (x, y) = w.OnScreen(Loom);
         w.ClickAt(x, y).Until(() => w.World.Engine.Variables[w.Pointed] == Loom, 200, "Bobbin to point at the Loom");
         w.Spin(Opening);
+
+        // a note typed that Bobbin has not learned yet
+        w.Click(Loom).Key(Key.G, 'g').Wait(100).Ready(20000);
     }
 
     private static void OutToSea(Walkthrough w)
