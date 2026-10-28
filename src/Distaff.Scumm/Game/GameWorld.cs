@@ -84,7 +84,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         _classes = [.. index.ObjectClasses];
         Engine = new ScriptEngine(this, seed, loader.Version, loader.FmTowns);
         Sound = new SoundSystem(sound, LoadSound, sampleRate, cdTracks,
-            loader.FmTowns ? cd => new PlayerTowns(sampleRate, cd, PlayCdTrack, StopCdSound) : null);
+            loader.FmTowns ? cd => new PlayerTowns(sampleRate, cd, PlayCdTrack, StopCdSound, s => Sound!.Stop(s)) : null);
         Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i, this))];
         Verbs = [.. Enumerable.Range(0, VerbCount).Select(_ => new VerbSlot())];
         // version 4 has no charset 0; its scripts pick one before any text (initCharset)

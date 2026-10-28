@@ -27,17 +27,17 @@ before it made.
 |---|---|---|---|
 | DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Playable to the end, with saves and sound |
 | DOS VGA CD (1992) | 4 | `000.LFL`, `DISK01.LEC` (XOR 0x69), `90x.LFL`, one CD audio track | Playable to the end, with its voices and music, and its own menu (F5) to save and load |
-| FM Towns (1991) | 3, 256 colours (`GF_OLD256`) | `00.LFL` to `99.LFL`, not encoded, 16 CD audio tracks | Plays from the opening into the island (`--difficulty` sets the proficiency level), with its CD music; the sound effects are silent yet |
+| FM Towns (1991) | 3, 256 colours (`GF_OLD256`) | `00.LFL` to `99.LFL`, not encoded, 16 CD audio tracks | Plays from the opening into the island (`--difficulty` sets the proficiency level), with its CD music and its sound on the Towns' emulated FM and PCM chips |
 
 ## Layout
 
 | Path | What it is |
 |---|---|
-| `src/Distaff.Scumm` | The interpreter: the host contract, detection, resources, rooms and drawing them, the script decoder and engine, the game loop, costumes and walking actors, the font and text, verbs and the cursor, ScummVM-compatible saves, sound (PC speaker, PCjr, AdLib on an emulated OPL2). |
+| `src/Distaff.Scumm` | The interpreter: the host contract, detection, resources, rooms and drawing them, the script decoder and engine, the game loop, costumes and walking actors, the font and text, verbs and the cursor, ScummVM-compatible saves, sound (PC speaker, PCjr, AdLib on an emulated OPL2, the FM Towns' FM and PCM chips). |
 | `src/Distaff.Audio` | Decoders for CD audio tracks kept as files: FLAC, its own, and Ogg Vorbis, on [NVorbis](https://github.com/NVorbis/NVorbis). The interpreter takes tracks through an interface (`ICdTrack`) and carries no decoder of its own. |
 | `src/Distaff.Player` | The `distaff` player: an SDL window (`Sdl`, from Maniacal), and the headless tools. |
 | `tests/Distaff.Scumm.Tests` | Unit tests, and tests that run against the real game data when it is present. |
-| `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`, `port_sound_tables.py`), and `opl-reference`, which builds ScummVM's OPL2 emulator to check the port against. |
+| `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`, `port_sound_tables.py`), and `opl-reference` and `towns-reference`, which build ScummVM's OPL2 emulator and its FM Towns sound to check the ports against. |
 
 The host contract is part of `Distaff.Scumm`: the engine base class, the graphics, input and audio
 drivers it is given and a headless host (`Hosting`, `Input`), screen surfaces and PNG writing

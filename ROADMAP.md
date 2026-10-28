@@ -731,14 +731,41 @@ Part 1, the CD (done):
   as 169 of 255: what is heard is the track's samples at that volume. A recording of the opening
   has the CD's music throughout. Track 7 plays under the Elders' meeting, whose lines show
   under the room for their time each, in each Elder's colour.
-- The PCM and FM sounds are silent yet.
+Part 2, the effects (done):
 
-Part 2, the effects:
-
-- `players/player_towns.cpp` (`Player_Towns_v1`) for the 38 sampled sounds on the Towns' PCM
-  chip and the 8 pieces of music on its FM chip (Euphony), on ScummVM's emulation of the chips
-  (`audio/softsynth/fmtowns_pc98`: `towns_audio.cpp`, `towns_pc98_fmsynth.cpp`,
-  `towns_euphony.cpp`).
+- `Sound/Towns`: ScummVM's emulation of the FM Towns' sound, as Loom's player reaches it. The FM
+  chip (`TownsFmSynth`, `TownsFmOperator`: `TownsPC98_FmSynth` and its operators, their tables,
+  envelopes and timers, at the chip's 7670454/72 Hz); the Towns' audio BIOS over it
+  (`TownsAudio`: `TownsAudioInterfaceInternal`'s numbered commands as methods), with the PCM
+  chip's eight channels (`TownsPcm`: `TownsAudio_PcmChannel`, `TownsAudio_WaveTable`); and the
+  Euphony music driver and player (`EuphonyPlayer`: `EuphonyDriver`, `EuphonyPlayer`). Timer A
+  runs Euphony, timer B the PCM notes' envelopes, both inside the rendering, so a sound's status
+  follows what has been rendered: by the host, or headless in step with the game.
+- `PlayerTowns` plays every type now (`Player_Towns_v1`): sampled sounds (type 0) on the PCM
+  channels kept for effects, by priority, at the scripts' volume and note when they gave them
+  (`playPcmTrack`, `allocatePcmChannel`, `stopPcmTrack`), and Euphony music (type 1,
+  `playEuphonyTrack`). Their status is the chips' (`getSoundStatus`). `MusicPlayer`s may render
+  in stereo (`MonoAudioSource.RenderStereo`). `SoundSystem.Stop` zeroes a sound's place in the
+  queue, as ScummVM does, so a stop while the queue is handed over is safe.
+- `tools/towns-reference` builds ScummVM's own `fmtowns_pc98` sources and `player_towns.cpp` with
+  MSVC against stand-in headers, driven by small scripts of sounds started, stopped and
+  overridden, and writes the 16-bit stereo output and the sounds' statuses
+  (`extract_sounds.py` takes the sounds from the game's files as Distaff loads them).
+- Checked against the FM Towns release and ScummVM's code: the synthesiser's tables are
+  identical; the scripts for the sound of a draft that worked (sound 24), three effects at once
+  with the scripts' volume and note, a looping one and a stop, and the four Euphony notes of
+  Opening with one started over another, give the same samples and statuses; so do 24
+  randomised runs over every sampled and Euphony sound at three rates, with overlaps, stolen
+  channels, stops, overrides and reads of varied sizes. In the game, Opening spun on the egg
+  plays its four notes and then the sound of a draft that worked, as the reference does.
+- As in ScummVM, the output depends on how much is read at a time. After a read of 1 to 4
+  frames ScummVM's `TownsPC98_FmSynth::readBuffer` reads before its buffer (its pending samples
+  are miscounted); the port gives silence there. Reads of 64 frames and more, which hosts and the
+  tests make, never meet it. The music and effects play at full volume, as Distaff's other
+  players and its CD do; ScummVM's defaults are 192 of 256.
+- Left out, as Loom does not reach them: `doCommand` and what only it calls, the player's save
+  state (with saves), wave tables and PCM notes keyed from them, the chip's registers written
+  directly, the LFO and DAC, and the PC-98's SSG and rhythm sources.
 
 ### Phase 22: saves and the whole game
 

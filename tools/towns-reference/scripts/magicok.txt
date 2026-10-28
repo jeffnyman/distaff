@@ -1,0 +1,9 @@
+# Sound 24, the sample heard when a draft works (magicok): one PCM channel at its own volume and note.
+load 24 sounds/so024.bin
+g 1024 512
+start 24
+status 24
+g 184320 512
+status 24
+g 8192 512
+status 24

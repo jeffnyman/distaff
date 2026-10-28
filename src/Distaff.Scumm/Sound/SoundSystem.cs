@@ -17,7 +17,8 @@ public enum SoundDevice
 /// <see cref="PlayerV2"/>, the AdLib their second with <see cref="PlayerAd"/> on an emulated
 /// OPL2, MAME's, as ScummVM picks by default (<c>setupMusic</c>). Ported by way of Maniacal.
 /// The VGA CD's voices and music come from its CD track instead (<see cref="Cd"/>), mixed in. The
-/// FM Towns has a player of its own, which plays its music from the CD's tracks.
+/// FM Towns has a player of its own, which plays its music from the CD's tracks and its effects
+/// on an emulation of its PCM and FM chips (<see cref="PlayerTowns"/>).
 /// </summary>
 public sealed class SoundSystem : IDisposable
 {
@@ -96,11 +97,20 @@ public sealed class SoundSystem : IDisposable
         _queue.Clear();
     }
 
-    /// <summary>Mirrors <c>Sound::stopSound</c>: the sound stops, and leaves the queue.</summary>
+    /// <summary>
+    /// Mirrors <c>Sound::stopSound</c>: the sound stops, and its places in the queue are emptied,
+    /// as the FM Towns' player may stop a sound while the queue is being played.
+    /// </summary>
     public void Stop(int sound)
     {
         Player.StopSound(sound);
-        _queue.RemoveAll(s => s == sound);
+        for (int i = 0; i < _queue.Count; i++)
+        {
+            if (_queue[i] == sound)
+            {
+                _queue[i] = 0;
+            }
+        }
     }
 
     /// <summary>Mirrors <c>Sound::stopAllSounds</c>, which <c>stopMusic</c> calls.</summary>

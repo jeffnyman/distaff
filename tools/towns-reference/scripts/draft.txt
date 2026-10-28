@@ -1,0 +1,29 @@
+# The notes of the draft Opening, E C E D: Euphony sounds 3, 1, 3 and 2 on the FM chip, a second apart.
+load 1 sounds/so001.bin
+load 2 sounds/so002.bin
+load 3 sounds/so003.bin
+load 5 sounds/so005.bin
+load 8 sounds/so008.bin
+g 1024 1024
+start 3
+status 3
+g 44032 1024
+status 3
+start 1
+g 44032 1024
+start 3
+g 44032 1024
+start 2
+status 2
+g 34816 1024
+status 2
+g 9216 1024
+status 2
+# a note started while another plays: the track already playing goes on
+start 8
+g 10240 1024
+start 5
+status 5
+status 8
+g 40960 1024
+status 8

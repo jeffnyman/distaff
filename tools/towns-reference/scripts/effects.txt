@@ -1,0 +1,21 @@
+# Sampled sounds together: 9 at the volume and note the scripts set, 11 looping until stopped, 68 on a third channel.
+load 9 sounds/so009.bin
+load 11 sounds/so011.bin
+load 68 sounds/so068.bin
+g 512 512
+vol 9 100 60
+note 9 72
+start 9
+start 11
+g 8192 512
+start 68
+status 9
+status 11
+status 68
+g 30720 512
+status 9
+status 11
+status 68
+stop 11
+status 11
+g 4096 512

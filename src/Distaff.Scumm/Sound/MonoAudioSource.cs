@@ -3,9 +3,9 @@ using Distaff.Scumm.Hosting;
 namespace Distaff.Scumm.Sound;
 
 /// <summary>
-/// Base for synthesisers that render mono signed 16-bit audio at a fixed rate. Duplicates the
-/// result into the host's interleaved stereo buffer, applies a master gain and counts frames so
-/// an engine can tell whether the host is actually consuming audio.
+/// Base for synthesisers that render signed 16-bit audio at a fixed rate, mono unless they render
+/// stereo themselves. Duplicates mono into the host's interleaved stereo buffer, applies a master
+/// gain and counts frames so an engine can tell whether the host is actually consuming audio.
 /// </summary>
 public abstract class MonoAudioSource : IAudioSource
 {
@@ -36,6 +36,24 @@ public abstract class MonoAudioSource : IAudioSource
     public void Read(Span<short> interleavedStereo)
     {
         int frames = interleavedStereo.Length / 2;
+        RenderStereo(interleavedStereo[..(frames * 2)]);
+
+        int gain = Volatile.Read(ref _gain);
+        if (gain != UnityGain)
+        {
+            for (int i = 0; i < frames * 2; i++)
+            {
+                interleavedStereo[i] = (short)((interleavedStereo[i] * gain) >> 8);
+            }
+        }
+
+        Interlocked.Add(ref _framesRendered, frames);
+    }
+
+    /// <summary>Fills the whole buffer with interleaved stereo samples at <see cref="SampleRate"/>; by default the mono samples on both sides.</summary>
+    protected virtual void RenderStereo(Span<short> interleavedStereo)
+    {
+        int frames = interleavedStereo.Length / 2;
         if (_mono.Length < frames)
         {
             _mono = new short[frames];
@@ -43,18 +61,13 @@ public abstract class MonoAudioSource : IAudioSource
 
         var mono = _mono.AsSpan(0, frames);
         RenderMono(mono);
-
-        int gain = Volatile.Read(ref _gain);
         for (int i = 0; i < frames; i++)
         {
-            short sample = gain == UnityGain ? mono[i] : (short)((mono[i] * gain) >> 8);
-            interleavedStereo[2 * i] = sample;
-            interleavedStereo[2 * i + 1] = sample;
+            interleavedStereo[2 * i] = mono[i];
+            interleavedStereo[2 * i + 1] = mono[i];
         }
-
-        Interlocked.Add(ref _framesRendered, frames);
     }
 
-    /// <summary>Fills the whole buffer with mono samples at <see cref="SampleRate"/>.</summary>
-    protected abstract void RenderMono(Span<short> buffer);
+    /// <summary>Fills the whole buffer with mono samples at <see cref="SampleRate"/>; silence unless overridden.</summary>
+    protected virtual void RenderMono(Span<short> buffer) => buffer.Clear();
 }
