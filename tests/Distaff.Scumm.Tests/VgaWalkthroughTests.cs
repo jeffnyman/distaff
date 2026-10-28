@@ -413,6 +413,23 @@ public class VgaWalkthroughTests
     }
 
     /// <summary>
+    /// Invisibility spun at the shepherds when they first stop Bobbin in the woods: they are not
+    /// fooled. On the way, the scene prints a line for actor 0, which ScummVM takes
+    /// (<c>derefActor</c>) and does not show, actor 0 being in no room. Found by the object sweep.
+    /// </summary>
+    [Fact]
+    public void Invisibility_at_the_shepherds()
+    {
+        if (Leaving.Value is not { } before || Play(before, InvisibilityAtTheShepherds) is not { } played)
+        {
+            return;
+        }
+
+        Assert.Contains("Aye, you'll have to do better than that to get past us.", Said(played));
+        Assert.Equal(23, played.World.CurrentRoomNumber);
+    }
+
+    /// <summary>
     /// From the waterspout's room, before the waterspout is calmed, the way back along the log
     /// takes Bobbin back up the dock (script 107). The log takes him out again, and the way
     /// through goes on: Un-Twisting calms the waterspout and the log takes him to the shore.
@@ -693,6 +710,13 @@ public class VgaWalkthroughTests
         // the path down from Crystalgard ends in a cutscene halfway
         w.WalkTo(110, 120).Ready(20000).WalkTo(110, 120).Ready(20000);
         w.Click(Shepherd).Spin(Terror).Ready(20000);
+    }
+
+    private static void InvisibilityAtTheShepherds(Walkthrough w)
+    {
+        w.Exit(ShoreToWoods, 23);
+        w.WalkTo(110, 120).Ready(20000);
+        w.Click(Shepherd).Spin(Invisibility).Ready(20000);
     }
 
     private static void TheDragon(Walkthrough w)

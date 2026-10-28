@@ -22,6 +22,10 @@ internal sealed class Walkthrough(GameWorld world)
     [ThreadStatic]
     public static Action<GameWorld>? Watch;
 
+    /// <summary>Told each time the walkthrough has control again (<see cref="Ready"/>), on the thread that plays it: for tests that save where it goes.</summary>
+    [ThreadStatic]
+    public static Action<Walkthrough>? WatchReady;
+
     private static GameWorld Watched(GameWorld world)
     {
         Watch?.Invoke(world);
@@ -76,6 +80,7 @@ internal sealed class Walkthrough(GameWorld world)
     {
         int quiet = 0;
         Until(() => (quiet = InControl ? quiet + 1 : 0) >= 8, max, "control");
+        WatchReady?.Invoke(this);
         return this;
     }
 

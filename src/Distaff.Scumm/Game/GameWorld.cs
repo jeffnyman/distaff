@@ -189,6 +189,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// </summary>
     public void Step()
     {
+        PauseShake();
         if (InEffect)
         {
             StepEffect();

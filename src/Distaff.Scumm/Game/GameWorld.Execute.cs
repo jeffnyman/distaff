@@ -926,6 +926,12 @@ public sealed partial class GameWorld
             case 4:
                 ShadowPalette[a[1] & 0xFF] = (byte)a[0];
                 break;
+            case 5:
+                SetShake(true);
+                break;
+            case 6:
+                SetShake(false);
+                break;
             default:
                 _unhandled.Add($"roomOps {sub}");
                 break;

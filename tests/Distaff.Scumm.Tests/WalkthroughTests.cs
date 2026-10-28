@@ -417,6 +417,76 @@ public class WalkthroughTests
     }
 
     /// <summary>
+    /// Opening spun at the grave in the woods: the ground shakes (<c>SO_ROOM_SHAKE_ON</c>), and the
+    /// grave stays shut. While it shakes, the whole picture is raised by 0 to 3 rows, black below,
+    /// three of the shake's steps to each frame of the game; a save made then keeps it shaking. The
+    /// shake stops before Bobbin speaks. Found by the object sweep.
+    /// </summary>
+    [Fact]
+    public void Opening_at_the_grave_shakes_the_ground()
+    {
+        var offsets = new List<int>();
+        var frames = new List<int>();
+        byte[]? shaking = null;
+        if (Elders.Value is not { } before || Play(before, w =>
+        {
+            w.Use(SanctuaryOut).InRoom(8).Ready().Use(SanctuaryToPath).InRoom(7).Ready().Use(PathToTents).InRoom(5).Ready();
+            w.Use(TentsToVillage).InRoom(3).Ready().Use(VillageToWoods).InRoom(4).Ready();
+            w.Click(Grave).Spin(Opening, wait: false);
+            w.Until(() =>
+            {
+                var world = w.World;
+                if (world.ShakeEnabled)
+                {
+                    frames.Add(world.ShakeFrame);
+                    int k = world.ShakeOffset;
+                    offsets.Add(k);
+                    var plain = world.UnshakenFrame(cursor: false);
+                    var shaken = world.Frame(cursor: false);
+                    for (int y = 0; y < shaken.Height; y++)
+                    {
+                        Assert.True(y + k < plain.Height ? shaken.Row(y).SequenceEqual(plain.Row(y + k)) : shaken.Row(y).ToArray().All(c => c == default), $"row {y} raised {k}");
+                    }
+
+                    shaking ??= world.Save("shaking", new DateTime(2026, 10, 28));
+                }
+
+                return w.InControl;
+            }, 20000, "the grave's answer").Ready();
+        }) is not { } played)
+        {
+            return;
+        }
+
+        Assert.False(played.World.ShakeEnabled);
+        Assert.Equal("Maybe I'd better not try that.", Said(played).Last(m => m.Length > 0));
+        Assert.True(offsets.Count >= 15, $"shook for {offsets.Count} frames");
+        Assert.Equal([1, 4, 7, 2, 5, 0, 3, 6], frames.Take(8));
+        Assert.Contains(3, offsets);
+
+        var loaded = new GameWorld(ResourceLoader.Open(new DirectoryGameContainer(GameFolders.Find(GameFolders.Ega)!)));
+        loaded.Load(shaking!);
+        Assert.True(loaded.ShakeEnabled);
+    }
+
+    /// <summary>
+    /// Invisibility spun at the shepherds when they first stop Bobbin in the woods: they are not
+    /// fooled. On the way, the scene prints a line for actor 0, which ScummVM takes
+    /// (<c>derefActor</c>) and does not show, actor 0 being in no room. Found by the object sweep.
+    /// </summary>
+    [Fact]
+    public void Invisibility_at_the_shepherds()
+    {
+        if (Leaving.Value is not { } before || Play(before, InvisibilityAtTheShepherds) is not { } played)
+        {
+            return;
+        }
+
+        Assert.Contains("That camouflage trick won't work on us.", Said(played));
+        Assert.Equal(23, played.World.CurrentRoomNumber);
+    }
+
+    /// <summary>
     /// From the waterspout's room, before the waterspout is calmed, the way back along the log
     /// takes Bobbin back up the dock (script 107). The log takes him out again, and the way
     /// through goes on: Un-Twisting calms the waterspout and the log takes him to the shore.
@@ -692,6 +762,13 @@ public class WalkthroughTests
         // the path down from Crystalgard ends in a cutscene halfway
         w.WalkTo(110, 120).Ready(20000).WalkTo(110, 120).Ready(20000);
         w.Click(Shepherd).Spin(Terror).Ready(20000);
+    }
+
+    private static void InvisibilityAtTheShepherds(Walkthrough w)
+    {
+        w.Exit(ShoreToWoods, 23);
+        w.WalkTo(110, 120).Ready(20000);
+        w.Click(Shepherd).Spin(Invisibility).Ready(20000);
     }
 
     private static void TheDragon(Walkthrough w)

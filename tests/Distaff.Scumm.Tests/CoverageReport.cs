@@ -1,4 +1,5 @@
 using System.Reflection;
+using Distaff.Scumm.Game;
 using Distaff.Scumm.Resources;
 using Distaff.Scumm.Storage;
 
@@ -9,7 +10,9 @@ namespace Distaff.Scumm.Tests;
 /// DISTAFF_COVERAGE environment variable names (and nothing done without it): the rooms never
 /// entered, the global scripts never started, and for each room the local scripts never started
 /// and each object's verb entries never run. Draft verbs are among them, and 86 is an object's
-/// answer to any draft it has no entry for. It is how the detours were found. Run it on its own
+/// answer to any draft it has no entry for. It is how the detours were found. After the walkthrough,
+/// <see cref="ObjectSweep"/> tries every object it found, and what went wrong is written next to the
+/// report (<c>.sweep.txt</c>); what the sweep runs counts as played. Run it on its own
 /// (<c>--filter CoverageReport</c>): the walkthrough's sections are played once per run, and a
 /// section another test played first is not seen.
 /// </summary>
@@ -27,18 +30,25 @@ public class CoverageReport
         var rooms = new HashSet<int>();
         var scripts = new HashSet<int>();
         var objects = new HashSet<(int Obj, int Verb)>();
-        Walkthrough.Watch = world => world.Engine.ScriptStarted = (number, verb) =>
+        var snapshots = new ObjectSweep.Snapshots();
+        void Record(GameWorld world) => world.Engine.ScriptStarted = (number, verb) =>
         {
-            rooms.Add(world.CurrentRoomNumber);
-            if (verb != 0)
+            lock (objects)
             {
-                objects.Add((number, verb));
-            }
-            else
-            {
-                scripts.Add(number);
+                rooms.Add(world.CurrentRoomNumber);
+                if (verb != 0)
+                {
+                    objects.Add((number, verb));
+                }
+                else
+                {
+                    scripts.Add(number);
+                }
             }
         };
+
+        Walkthrough.WatchReady = snapshots.Take;
+        Walkthrough.Watch = Record;
 
         try
         {
@@ -57,7 +67,12 @@ public class CoverageReport
         finally
         {
             Walkthrough.Watch = null;
+            Walkthrough.WatchReady = null;
         }
+
+        // every object's answers, tried in every room the walkthrough had control in
+        var findings = ObjectSweep.Run(path, snapshots.Saves, Record);
+        File.WriteAllLines(output + ".sweep.txt", [$"{snapshots.Saves.Count} saves tried, {findings.Count} findings", .. findings.Select(f => $"room {f.Room} object {f.Object} {f.Action}: {f.What}")]);
 
         var loader = ResourceLoader.Open(new DirectoryGameContainer(path));
         var globals = Enumerable.Range(1, loader.Index.Count(ResourceType.Script) - 1)

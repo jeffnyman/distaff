@@ -22,7 +22,8 @@ The walkthrough tests play the whole game, the EGA, VGA CD and FM Towns releases
 start to the end, a section at a time, each section starting from the save the one
 before it made, at each of the three proficiency levels, and some ways off it: the opening played
 through, Crystalgard's graves and chalice, the waterspout's ride out to sea, and the distaff's answers to drafts gone
-wrong. With `DISTAFF_EXPORT_SAVES` naming a folder, they also write those saves there,
+wrong. The coverage report (`DISTAFF_COVERAGE`) lists what they leave unplayed, and sweeps every object the walkthrough
+finds, looking at it and spinning every draft Bobbin knows at it from a save of the room. With `DISTAFF_EXPORT_SAVES` naming a folder, they also write those saves there,
 and each has been loaded in ScummVM 2026.4.0, which drew the same screen, and saved again by it
 and loaded here.
 [ROADMAP.md](ROADMAP.md) gives the order of work.

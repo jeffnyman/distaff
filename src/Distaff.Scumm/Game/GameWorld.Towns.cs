@@ -36,8 +36,11 @@ public sealed partial class GameWorld
     /// is false. The FM Towns' puts its two layers together, the room in its palette, through the
     /// shadow palette, and the text layer in <see cref="TownsTextPalette"/>, with the cursor in the
     /// text layer's colours (<c>setBuiltinCursor</c>); all in the 15-bit colour ScummVM shows it in.
+    /// The shake raises it all.
     /// </summary>
-    public RgbFrame Frame(bool cursor = true)
+    public RgbFrame Frame(bool cursor = true) => Shaken(UnshakenFrame(cursor));
+
+    internal RgbFrame UnshakenFrame(bool cursor)
     {
         if (InEffect)
         {

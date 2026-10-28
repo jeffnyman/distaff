@@ -503,6 +503,8 @@ public sealed partial class GameWorld
         }
         (s.EgoPositioned, s.ScreenEffectFlag, s.ScreenB, s.ScreenH) = (_egoPositioned ? 1 : 0, _screenEffectFlag ? 1 : 0, ViewTop, ViewTop + ViewHeight);
         (s.DoEffect, s.SwitchRoomEffect, s.NewEffect, s.SwitchRoomEffect2) = (_doEffect ? 1 : 0, _switchRoomEffect, _newEffect, _switchRoomEffect2);
+        // a save from the menu, as ScummVM's, keeps the shake as the menu left it: stopped
+        (s.ShakeEnabled, s.ShakeFrame) = _shakeEnabled && !InInterface ? (1, ShakeFrame) : (0, 0);
 
         for (int i = 0; i < ScummState.ActorCount; i++)
         {
@@ -662,6 +664,9 @@ public sealed partial class GameWorld
         (_doEffect, _switchRoomEffect, _newEffect, _switchRoomEffect2, _screenEffectFlag) = (s.DoEffect != 0, s.SwitchRoomEffect, s.NewEffect, s.SwitchRoomEffect2, s.ScreenEffectFlag != 0);
         _effectFrames.Clear();
         _display = null;
+
+        // the shake goes on from where it was, its clock from now
+        (_shakeEnabled, _shakeBase, _shakeStart, _shakePaused) = (s.ShakeEnabled != 0, s.ShakeFrame, Time, false);
 
         (UserPut, CursorState, _currentCursor) = (s.UserPut, s.CursorState, s.CurrentCursor & 3);
         _cursorAnimateIndex = s.CursorAnimateIndex;

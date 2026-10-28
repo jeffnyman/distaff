@@ -963,7 +963,45 @@ clicking there); the detour looks at the crystal and the bell first.
   (43), a helper nothing calls (24), the ending's input (115), an older draft check (9), and the
   log's ride out to the waterspout (51), a copy of the one the dock's water starts (52), the
   same instruction for instruction, which nothing starts. And most objects' answers to looks and
-  drafts they do not take: 411 entries of 151 objects, by the coverage report.
+  drafts they do not take: 411 entries of 151 objects, by the coverage report, until the object
+  sweep below.
+
+## The object sweep
+
+`ObjectSweep`, part of the coverage report, tries every object's answers where the walkthrough
+finds them. A test hook (`Walkthrough.WatchReady`) is told each time the walkthrough has control
+again; the sweep saves the room then, the first time in each room and again each time Bobbin
+comes back knowing drafts he did not before (76 saves in 45 rooms). For each save, each object
+that can be clicked (not class 32, its parents' states showing it, as `findObject` asks) is
+tried from a fresh copy of the save: looked at (a double click), and each draft Bobbin knows and
+can play there spun at it, forwards and backwards. A try that throws, waits more than 3000 steps,
+or reaches an instruction Distaff does not handle is written down, with the stack. The saves are
+tried in parallel; the whole report, walkthrough and all, takes about ten seconds.
+
+- It found two things, both fixed and pinned:
+  - Spinning Invisibility at the shepherds when they first stop Bobbin in the woods
+    (`Invisibility_at_the_shepherds`, in every release) prints a line for actor 0. ScummVM's
+    `derefActor` takes actor 0, who is in no room, so the line is not shown and the scene goes
+    on; Distaff threw. The shepherds are not fooled ("That camouflage trick won't work on us.";
+    on the VGA CD, "Aye, you'll have to do better than that to get past us.").
+  - The screen shake (`SO_ROOM_SHAKE_ON` and `_OFF`) was not ported. Loom shakes the ground in
+    four rooms: Opening at the grave in the woods by the village, and drafts and a look in rooms
+    24, 34 and 44. As ScummVM's `updateScreenShakeEffect`, every 8 ticks of the timer (about 33.8
+    ms; ScummVM's clock counts whole milliseconds and carries the rest) the whole picture,
+    cursor and all, is raised by the next of 0, 1, 2, 1, 0, 2, 3 and 1 rows, black showing below;
+    the first step at once. Distaff keeps it by the game's time, so it is the same each run. A
+    menu or banner stops it and starts it again from the beginning when it goes; a save made
+    from the menu, as ScummVM's, keeps it stopped, and other saves keep where it was. On the EGA
+    a frame is three steps of the shake (`Opening_at_the_grave_shakes_the_ground`). Not compared
+    against ScummVM's window.
+- The one try left set down is the ending: Unmaking spun at the Loom plays the game out, past
+  the try's 3000 steps.
+- Left unrun: 144 entries (from 411), of objects the walkthrough never finds clickable with the
+  draft known: mostly exits it does not take (verb 56), looks at objects only clickable at another
+  moment (54), drafts known only after the walkthrough has left the room for good (58 to 73,
+  and 86, an object's answer to any draft it has no entry for), and the interface's own objects
+  in the proficiency screen (room 69) and the save screen (room 70). A save from another moment
+  or another way through would reach more of them.
 
 ## Screen transitions
 
@@ -1264,7 +1302,7 @@ Not ported, by choice:
 
 Coverage of the game's scripts:
 
-15. Objects' answers to looks and to drafts they do not take: 411 entries of 151 objects, by the coverage report.
+15. Objects' answers the walkthrough never reaches: 144 entries, from 411, after the object sweep (see "The object sweep").
 16. The glassmaker's greeting in the chalice's room (script 67), which looks unreachable; not confirmed in ScummVM.
 
 Larger features:

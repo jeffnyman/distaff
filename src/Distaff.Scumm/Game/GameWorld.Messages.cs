@@ -168,7 +168,8 @@ public sealed partial class GameWorld
         }
         else
         {
-            var actor = Actors[CheckActor(ActorToPrintFor)];
+            // derefActor takes actor 0, who is never in the room: a message for it is not shown
+            var actor = Actors[ActorToPrintFor is >= 0 and < ActorCount ? ActorToPrintFor : CheckActor(ActorToPrintFor)];
             if (!actor.IsInRoom(CurrentRoomNumber))
             {
                 return;
