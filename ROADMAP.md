@@ -864,9 +864,9 @@ for each release), which the tests write to the folder `DISTAFF_EXPORT_SAVES` na
     `tools/towns-reference`'s), the PCM sound agrees to 99.8% of its samples, the rest single
     samples a step of the sampled sound apart, about every 576; rendered alone after the right
     lead-in, ScummVM's own player gives what Distaff's does. The note agrees in level and
-    shape (correlation 0.9992), starting a frame (0.1 s) later in ScummVM, which loads at the
-    end of a frame and runs the scripts that play it after the next frame's wait, where
-    Distaff's step after a load does both; the CD music, restarted by the load, is identical.
+    shape (correlation 0.9992), starting 0.05 to 0.1 seconds after the restarted CD music in
+    ScummVM, a gap that varies from run to run, where Distaff starts both in the same step (see
+    "Sound after a load"); the CD music, restarted by the load, is identical.
   - Fixed on the way: a load sets the game's time to the save's play time, and the self clock,
     which keeps the sound with the game when the host reads none, took the jump for sound
     nobody had read and rendered it all at once. On the FM Towns that ran the CD music on by
