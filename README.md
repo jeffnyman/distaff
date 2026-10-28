@@ -20,7 +20,7 @@ rooms are drawn, and the game's own save screen (F5; the VGA CD's menu) saves an
 run it: `distaff <folder> --run 2000 --click 100:160,92 --key 200:esc --screenshot end.png`.
 The walkthrough tests play the whole game, the EGA, VGA CD and FM Towns releases all three, from the
 start to the end, a section at a time, each section starting from the save the one
-before it made. With `DISTAFF_EXPORT_SAVES` naming a folder, they also write those saves there,
+before it made, at each of the three proficiency levels. With `DISTAFF_EXPORT_SAVES` naming a folder, they also write those saves there,
 and each has been loaded in ScummVM 2026.4.0, which drew the same screen, and saved again by it
 and loaded here.
 [ROADMAP.md](ROADMAP.md) gives the order of work.

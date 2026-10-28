@@ -280,8 +280,8 @@ public class WalkthroughTests
 
     private static void TheElders(Walkthrough w)
     {
-        // the proficiency screen prints on, so it is waited out; PRACTICE, then Escape skips the opening
-        w.Wait(60).ClickAt(160, 92).Wait(100).Key(Key.Escape, (char)27).Ready();
+        // the proficiency screen prints on, so it is waited out; the level, then Escape skips the opening
+        w.Wait(60).ClickAt(w.LevelButton.X, w.LevelButton.Y).Wait(100).Key(Key.Escape, (char)27).Ready();
         w.Use(Leaf);
         w.Use(CliffToVillage).InRoom(3).Ready();
         w.Use(VillageToTents).InRoom(5).Ready();
@@ -532,8 +532,37 @@ public class WalkthroughTests
     /// <summary>2 once the dragon has flown from its lair.</summary>
     private const int DragonGone = 202;
 
+    /// <summary>
+    /// The whole game at the Standard and Expert levels: the same route, section by section, each
+    /// from the save the one before made. At Expert the distaff has no staff or notes, but the game
+    /// still teaches and takes the same drafts, and the level stays in its variable to the end.
+    /// </summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void Plays_to_the_end(int level)
+    {
+        Played? played = null;
+        foreach (var section in Sections)
+        {
+            played = Play(played, section, level);
+            if (played is null)
+            {
+                return;
+            }
+        }
+
+        var said = Said(played!);
+        Assert.Equal("The End", said[^1]);
+        Assert.Equal(8, played!.World.Engine.Variables[Known]);
+        Assert.True(Learned(played, Unmaking));
+        Assert.Equal(level, played.World.Engine.Variables[played.World.Version == 4 ? 173 : 123]);
+    }
+
+    private static readonly Action<Walkthrough>[] Sections = [TheElders, TheIsland, LeavingTheIsland, Crystalgard, TheDragon, TheCaves, TheForge, TheBishop, TheVoid, TheLoom];
+
     /// <summary>Plays a section from where the one before it saved, or from boot, and saves at its end.</summary>
-    private static Played? Play(Played? before, Action<Walkthrough> section)
+    private static Played? Play(Played? before, Action<Walkthrough> section, int level = 0)
     {
         if (GameFolders.Find(GameFolders.Ega) is not { } path)
         {
@@ -541,7 +570,7 @@ public class WalkthroughTests
         }
 
         var world = new GameWorld(ResourceLoader.Open(new DirectoryGameContainer(path)));
-        var w = new Walkthrough(world);
+        var w = new Walkthrough(world) { Level = level };
         if (before is null)
         {
             world.Boot();
@@ -554,7 +583,7 @@ public class WalkthroughTests
 
         int first = world.MessageLog.Count;
         section(w);
-        return new Played(world, Walkthrough.Export("loom-ega", section, world.Save(section.Method.Name, new DateTime(2026, 10, 27))), first);
+        return new Played(world, Walkthrough.Export("loom-ega", section, world.Save(section.Method.Name, new DateTime(2026, 10, 27)), level), first);
     }
 
     /// <summary>What was said in the section.</summary>

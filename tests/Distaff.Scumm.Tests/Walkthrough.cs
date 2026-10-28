@@ -18,6 +18,12 @@ internal sealed class Walkthrough(GameWorld world)
 
     public GameWorld World { get; } = world;
 
+    /// <summary>The proficiency level played: 0 Practice, 1 Standard, 2 Expert, as the FM Towns' boot parameter numbers them.</summary>
+    public int Level { get; init; }
+
+    /// <summary>Where the proficiency screen's button for <see cref="Level"/> is, on the EGA's and the VGA CD's screen (room 69).</summary>
+    public (int X, int Y) LevelButton => (160, Level switch { 1 => 71, 2 => 119, _ => 92 });
+
     /// <summary>How much higher the game's own variables are numbered: 50 on the VGA CD, whose engine keeps more of its own below them.</summary>
     public int Shift => World.Version == 4 ? 50 : 0;
 
@@ -32,10 +38,12 @@ internal sealed class Walkthrough(GameWorld world)
 
     /// <summary>
     /// Writes a section's save to the folder the DISTAFF_EXPORT_SAVES environment variable names,
-    /// when it names one, as <c>release-NN-Section.sNN</c>: for loading in ScummVM, or in the player.
+    /// when it names one, as <c>release-NN-Section.sNN</c>, with the level's name after the release
+    /// above Practice: for loading in ScummVM, or in the player.
     /// </summary>
-    public static byte[] Export(string release, Action<Walkthrough> section, byte[] save)
+    public static byte[] Export(string release, Action<Walkthrough> section, byte[] save, int level = 0)
     {
+        release += level switch { 1 => "-standard", 2 => "-expert", _ => "" };
         var folder = Environment.GetEnvironmentVariable("DISTAFF_EXPORT_SAVES");
         if (!string.IsNullOrEmpty(folder))
         {

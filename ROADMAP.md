@@ -841,3 +841,18 @@ an arrow for the mouse. A click, a button's initial, or the arrow keys and Retur
 Escape closes it as ScummVM's dialog closes, at Practice. `--difficulty`, or a save given with
 `--load`, skips it; the headless `--run` still boots at Practice unless told otherwise.
 `TownsGameLoopTests` pins the dialog's screen and each way of choosing.
+
+## The Standard and Expert levels
+
+Each release's walkthrough also plays the whole game at Standard and at Expert
+(`Plays_to_the_end`): the Practice route unchanged, picked on the proficiency screen (the EGA's
+and VGA CD's room 69) or given as the FM Towns' boot parameter, every section from the save the
+one before made. The route needs nothing new, since the walkthrough reads a draft's notes from
+the game's table, not from the distaff, and the levels change what the distaff shows, not what
+the game asks. Each run ends on "The End" with all eight notes and Unmaking learned, and the
+level still in variable 123 (173 on the VGA CD). At rest the distaff looks the same at Practice
+and Standard; at Expert it has no staff or notes.
+
+- Not covered: optional scenes (the graves and the chalice in Crystalgard), deaths and other ways
+  through, at any level.
+- The test suite takes about five minutes with these six runs, about two without them.
