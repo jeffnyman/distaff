@@ -30,8 +30,8 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <summary>Mirrors <c>_numArray</c>: the string resources.</summary>
     public const int StringCount = 50;
 
-    /// <summary>The screen's size.</summary>
-    public const int ScreenWidth = 320, ScreenHeight = 200;
+    /// <summary>The screen's width; its height is the release's (<see cref="ScreenHeight"/>).</summary>
+    public const int ScreenWidth = 320;
 
     /// <summary>The bits of <c>VAR_CURRENT_LIGHTS</c>: the room lit, the flashlight on, actors in their colours (<c>LIGHTMODE_</c>).</summary>
     public const int LightsRoomOn = 2, LightsFlashlightOn = 4, LightsActorColors = 8;
@@ -76,6 +76,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     public GameWorld(ResourceLoader loader, int seed = 1, SoundDevice sound = SoundDevice.Speaker, int sampleRate = DefaultSampleRate, Func<int, ICdTrack?>? cdTracks = null)
     {
         _loader = loader;
+        Screens = loader.FmTowns ? new VirtScreens(TownsScreenHeight, fmTowns: true) : new VirtScreens();
         SaveTarget = ScummDetector.Identify(loader.Game)?.PreferredTarget ?? "loom";
         var index = loader.Index;
         _owners = [.. index.ObjectOwners];
@@ -116,7 +117,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     public int CurrentRoomNumber { get; private set; }
 
     /// <summary>The screen's bands: text, the room, verbs.</summary>
-    public VirtScreens Screens { get; } = new();
+    public VirtScreens Screens { get; }
 
     /// <summary>Where the room's view starts on the screen and how tall it is (<c>initScreens</c>): the text above it, the verbs below.</summary>
     public int ViewTop => Screens.Main.Top;
@@ -257,6 +258,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         Sound.ProcessQueue();
         Sound.Update(Time);
         AnimateCursor();
+
+        // drawDirtyScreenParts: what was drawn in the text and verb bands shows in the FM Towns' text layer
+        Screens.FlushTownsLayer();
         Steps++;
     }
 
@@ -335,7 +339,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
             var dark = new Surface8(image.Pixels.Width, image.Pixels.Height);
             if ((lights & LightsFlashlightOn) != 0 && FlashlightRect() is { } light)
             {
-                Flashlight.Copy(image.Pixels, dark, light.Intersect(dark.Bounds));
+                Flashlight.Copy(image.Pixels, dark, light.Intersect(dark.Bounds), FmTowns);
             }
 
             image = image with { Pixels = dark };
@@ -357,7 +361,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <summary>
     /// Where the flashlight shines in the room, or null when it has no size or there is no ego.
     /// Mirrors <c>drawFlashlight</c>: around the ego, on a strip and an even line, Loom version 3's
-    /// 4 pixels right and 12 up, kept within the view.
+    /// 4 pixels right and 12 up, kept within the view; the FM Towns' just around the ego.
     /// </summary>
     private Rect? FlashlightRect()
     {
@@ -369,20 +373,28 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
         int w = _flashlightStrips.X * 8;
         int h = _flashlightStrips.Y * 8;
-        int x = (Actors[ego].X & ~7) - w / 2 - Camera.Left + 4;
-        int y = (Actors[ego].Y & ~1) - h / 2 - 12;
+        int x = Actors[ego].X - w / 2 - Camera.Left;
+        int y = Actors[ego].Y - h / 2;
+        if (!FmTowns)
+        {
+            x = (Actors[ego].X & ~7) - w / 2 - Camera.Left + 4;
+            y = (Actors[ego].Y & ~1) - h / 2 - 12;
+        }
+
         x = x < 0 ? 0 : Math.Min(x, Camera.ScreenWidth - w);
         y = y < 0 ? 0 : Math.Min(y, ViewHeight - h);
         return new Rect(x + Camera.Left, y, w, h);
     }
 
-    /// <summary>The colours of the screen: the EGA's, through the shadow palette.</summary>
     /// <summary>
     /// The colours on the screen. The EGA's are its 16 through the shadow palette; the VGA CD's
     /// are the 256 of <see cref="CurrentPalette"/>, each through the shadow palette (<c>updatePalette</c>
-    /// with <c>_shadowPalRemap</c>).
+    /// with <c>_shadowPalRemap</c>); the FM Towns' are those of its picture layer, likewise, in
+    /// 15-bit colour (<c>_16BitPalette</c>).
     /// </summary>
-    public Rgb[] DisplayPalette() => _loader.Version == 4
+    public Rgb[] DisplayPalette() => FmTowns
+        ? [.. Enumerable.Range(0, 256).Select(i => To15Bit(CurrentPalette[ShadowPalette[i]]))]
+        : _loader.Version == 4
         ? [.. Enumerable.Range(0, 256).Select(i => CurrentPalette[ShadowPalette[i]])]
         : [.. Enumerable.Range(0, 16).Select(i => Palettes.Ega[ShadowPalette[i] & 0x0F])];
 
@@ -511,6 +523,13 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     public void StartScene(int room)
     {
         StopTalk();
+
+        // fadeOut: the FM Towns' version 3 clears the text over the room band
+        if (FmTowns)
+        {
+            Screens.TextSurface.FillRect(new Rect(0, ViewTop, ScreenWidth, ViewHeight), 0);
+        }
+
         Engine.LeaveRoomScript();
 
         RunExitScript();

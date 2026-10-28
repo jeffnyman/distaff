@@ -51,9 +51,8 @@ public sealed class ScummEngine : Engine
             _world.SaveTarget = SaveTarget;
         }
 
-        Host.Graphics.SetMode(GameWorld.ScreenWidth, GameWorld.ScreenHeight);
+        Host.Graphics.SetMode(GameWorld.ScreenWidth, _world.ScreenHeight);
         Host.Graphics.SetTitle($"Distaff - {Detected.Title}");
-        Host.Graphics.SetPalette(Palettes.Ega);
         StartAudio(_world);
         if (StartingSave is { } save)
         {
@@ -114,10 +113,7 @@ public sealed class ScummEngine : Engine
             world.Step();
         }
 
-        var frame = world.Screen();
-        world.DrawCursor(frame);
-        Host.Graphics.SetPalette(world.DisplayPalette());
-        Host.Graphics.Present(frame);
+        Host.Graphics.Present(world.Frame());
         return world.QuitRequested ? TickResult.Quit : TickResult.After(world.StepLength);
     }
 }

@@ -72,6 +72,52 @@ public static class PngWriter
         WriteChunk(stream, "IEND", []);
     }
 
+    /// <summary>Writes a frame of colours as a true-colour PNG.</summary>
+    public static byte[] Encode(RgbFrame frame, int scaleX = 1, int scaleY = 1)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(scaleX, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(scaleY, 1);
+
+        using var stream = new MemoryStream();
+        int width = frame.Width * scaleX;
+        int height = frame.Height * scaleY;
+
+        stream.Write([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+        Span<byte> ihdr = stackalloc byte[13];
+        BinaryPrimitives.WriteInt32BigEndian(ihdr, width);
+        BinaryPrimitives.WriteInt32BigEndian(ihdr[4..], height);
+        ihdr[8] = 8; // bit depth
+        ihdr[9] = 2; // colour type: true colour
+        WriteChunk(stream, "IHDR", ihdr);
+
+        using var idat = new MemoryStream();
+        using (var zlib = new ZLibStream(idat, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            var row = new byte[1 + width * 3];
+            for (int y = 0; y < frame.Height; y++)
+            {
+                var source = frame.Row(y);
+                for (int x = 0; x < width; x++)
+                {
+                    var color = source[x / scaleX];
+                    row[1 + x * 3] = color.R;
+                    row[2 + x * 3] = color.G;
+                    row[3 + x * 3] = color.B;
+                }
+
+                for (int repeat = 0; repeat < scaleY; repeat++)
+                {
+                    zlib.Write(row);
+                }
+            }
+        }
+
+        WriteChunk(stream, "IDAT", idat.ToArray());
+        WriteChunk(stream, "IEND", []);
+        return stream.ToArray();
+    }
+
     private static void WriteChunk(Stream stream, string type, ReadOnlySpan<byte> data)
     {
         Span<byte> length = stackalloc byte[4];

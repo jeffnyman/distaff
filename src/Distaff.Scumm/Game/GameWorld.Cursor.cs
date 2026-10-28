@@ -156,9 +156,18 @@ public sealed partial class GameWorld
     /// <summary>Draws the cursor over a frame at the mouse, when it shows (<c>_cursor.state</c> above 0).</summary>
     public void DrawCursor(Surface8 frame)
     {
+        foreach (var (x, y) in CursorPixels(frame.Width, frame.Height))
+        {
+            frame[x, y] = _cursorColor;
+        }
+    }
+
+    /// <summary>The points of a screen of the given size the cursor covers, none when it does not show.</summary>
+    private IEnumerable<(int X, int Y)> CursorPixels(int width, int height)
+    {
         if (CursorState <= 0)
         {
-            return;
+            yield break;
         }
 
         var rows = _cursorImages[_currentCursor];
@@ -169,9 +178,9 @@ public sealed partial class GameWorld
             {
                 int px = MouseX - hx + x;
                 int py = MouseY - hy + y;
-                if ((rows[y] & (1 << (15 - x))) != 0 && px >= 0 && px < frame.Width && py >= 0 && py < frame.Height)
+                if ((rows[y] & (1 << (15 - x))) != 0 && px >= 0 && px < width && py >= 0 && py < height)
                 {
-                    frame[px, py] = _cursorColor;
+                    yield return (px, py);
                 }
             }
         }

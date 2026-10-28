@@ -68,18 +68,14 @@ public sealed class HeadlessHost : IHost
 
 public sealed class HeadlessGraphics : IGraphicsDriver
 {
-    private readonly Rgb[] _palette = new Rgb[256];
-
     public int Width { get; private set; }
 
     public int Height { get; private set; }
 
     public string Title { get; private set; } = string.Empty;
 
-    public ReadOnlySpan<Rgb> Colors => _palette;
-
     /// <summary>A copy of the most recently presented frame, or null before the first present.</summary>
-    public Surface8? LastFrame { get; private set; }
+    public RgbFrame? LastFrame { get; private set; }
 
     public int PresentCount { get; private set; }
 
@@ -90,16 +86,9 @@ public sealed class HeadlessGraphics : IGraphicsDriver
         LastFrame = null;
     }
 
-    public void SetPalette(ReadOnlySpan<Rgb> colors, int start = 0) => colors.CopyTo(_palette.AsSpan(start));
-
-    public void Present(Surface8 frame)
+    public void Present(RgbFrame frame)
     {
-        if (LastFrame is null || LastFrame.Width != frame.Width || LastFrame.Height != frame.Height)
-        {
-            LastFrame = new Surface8(frame.Width, frame.Height);
-        }
-
-        LastFrame.CopyFrom(frame);
+        LastFrame = frame.Clone();
         PresentCount++;
     }
 
@@ -112,7 +101,7 @@ public sealed class HeadlessGraphics : IGraphicsDriver
             throw new InvalidOperationException("Nothing has been presented yet.");
         }
 
-        return PngWriter.Encode(LastFrame, _palette, scaleX, scaleY);
+        return PngWriter.Encode(LastFrame, scaleX, scaleY);
     }
 }
 

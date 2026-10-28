@@ -125,6 +125,12 @@ public sealed partial class GameWorld
                 RedrawRoom();
                 return 0;
             case "o4_oldRoomEffect":
+                // the FM Towns' effect 4 clears the text surface and the text layer (o4_oldRoomEffect)
+                if (FmTowns && instruction.SubOps[0].Code == 3 && subArguments[0][0] == 4)
+                {
+                    ClearTownsText();
+                }
+
                 return 0;
 
             // actors
@@ -350,7 +356,8 @@ public sealed partial class GameWorld
     /// <summary>
     /// A sound's data as the device plays it: the speaker and PCjr block, or the AdLib block after
     /// its 4-byte header (<c>readSoundResourceSmallHeader</c>). Some index entries point past their
-    /// room file, and the Roland Upgrade's sounds are single blocks; these play nothing.
+    /// room file, and the Roland Upgrade's sounds are single blocks; these play nothing. The FM
+    /// Towns' sounds are not played yet.
     /// </summary>
     private byte[]? LoadSound(int number)
     {
@@ -358,7 +365,7 @@ public sealed partial class GameWorld
         {
             try
             {
-                data = _loader.Index.Locate(ResourceType.Sound, number).IsPresent && _loader.LoadSound(number) is { } resource
+                data = !_loader.FmTowns && _loader.Index.Locate(ResourceType.Sound, number).IsPresent && _loader.LoadSound(number) is { } resource
                     ? Sound.Device == SoundDevice.AdLib ? resource.AdLib[4..].ToArray() : resource.Speaker.ToArray()
                     : null;
             }
@@ -515,7 +522,9 @@ public sealed partial class GameWorld
 
     /// <summary>
     /// Fills a rectangle of the band its top is in, corners included, clipped to the band. Mirrors
-    /// <c>drawBox</c> for version 3, which draws over what the band shows.
+    /// <c>drawBox</c> for version 3, which draws over what the band shows. The FM Towns' draws a
+    /// pixel wider and taller where the band allows, in the colour's low four bits doubled, into
+    /// the text surface and at once into the text layer, and leaves the band itself as it is.
     /// </summary>
     private void DrawBox(int x, int y, int x2, int y2, int color)
     {
@@ -549,6 +558,27 @@ public sealed partial class GameWorld
         y = Math.Max(y, 0);
         y2 = Math.Min(y2, vs.Height);
         int xstart = vs.Number == VirtScreenNumber.Main ? Camera.Left : 0;
+        if (FmTowns)
+        {
+            if (vs.Number != VirtScreenNumber.Text)
+            {
+                // the original FM Towns interpreter overdraws by a pixel each way
+                x2 += x2 < width ? 1 : 0;
+                y2 += y2 < vs.Height ? 1 : 0;
+            }
+
+            color = ((color & 0x0F) << 4) | (color & 0x0F);
+            var rect = Rect.FromBounds(x, y + vs.Top, x2, y2 + vs.Top);
+            if (vs.Number != VirtScreenNumber.Text)
+            {
+                FillTownsTextLayer(rect, (byte)color);
+                return;
+            }
+
+            Screens.TextSurface.FillRect(rect, (byte)color);
+            Screens.MarkDirty(vs, x, x2, y, y2);
+        }
+
         front.FillRect(Rect.FromBounds(x + xstart, y, x2 + xstart, y2), (byte)color);
     }
 

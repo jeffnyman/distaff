@@ -622,24 +622,58 @@ chips, and the music on 16 CD audio tracks. Its phases build on both earlier rel
   instructions) decode straight to their ends. Pictures viewed: the logo, the cliff, the
   village.
 
-### Phase 19: the screen
+### Phase 19: the screen (done)
 
-- `gfx_towns.cpp`: the Towns' two layers, the 256-colour picture and the 16-colour text over
-  it (`TownsScreen`, `towns_drawStripToScreen`, `_textPalette`), 320x240 (Loom uses the 40 rows
-  under the 200), `_townsPaletteFlags` and the shadow palette, smooth scrolling, the room fades
-  `roomOps` asks of the layers.
-- The charset and text (`CharsetRendererTownsV3`), the cursor.
+- The host takes frames of colours now (`RgbFrame`, `IGraphicsDriver.Present`), which the
+  engine makes for every release: the EGA's and VGA CD's 8-bit screens through their palettes,
+  and the FM Towns' two layers put together. The SDL window shows them on a 32-bit surface; the
+  headless host and `--screenshot` write true-colour PNGs. `GameWorld.Screen` and
+  `DisplayPalette` are as before for the EGA and VGA CD.
+- `gfx_towns.cpp` (`GameWorld.Towns`, `VirtScreens.ComposeTowns`): the screen is 320x240, and
+  the boot script puts the room in the top 144 rows and the verbs in the 96 below. The picture
+  layer holds the main band alone, in the room's palette through the shadow palette; the text
+  layer over it holds the text surface over the main band and, over the other bands, what
+  `towns_drawStripToScreen` puts there: the text surface's colour, or the band's own low four
+  bits, brought up to date where the band was drawn (`markRectAsDirty`, `updateDirtyScreen`) at
+  the end of each step. It shows wherever it is not 0, in Loom's 16 colours
+  (`tableTownsLoomPalette`). Both are in ScummVM's 15-bit colour (`get16BitColor`, RGB555
+  widened again).
+- Text (`CharsetRendererTownsV3`): all of it goes into the text surface, whatever band it is in,
+  and marks its band to be shown again. A colour is its low four bits doubled, 0 becoming the
+  shadow's 0x88; bit 7 asks for a shadow right of and below each pixel, and there is no outline
+  (`setColor` for `GF_OLD256`, `drawBits1`). A new line moves down by the font's height, not the
+  slot's. A message clears only where the last one drew (`_curStringRect`,
+  `towns_restoreCharsetBg`).
+- `drawBox` for the FM Towns' version 3 draws a pixel wider and taller, in the colour's low four
+  bits doubled, into the text surface and at once into the text layer (`towns_fillTopLayerRect`),
+  and leaves the band as it is, so a box in colour 0 hides the band until it is drawn again.
+  `restoreBackground` fills the text surface too, with its colour doubled. The text surface and
+  the text layer are cleared by `initScreens`, by the old room effect 4 (`o4_oldRoomEffect`), and
+  over the room band at every change of room (`fadeOut`).
+- The cursor is drawn in the text layer's colours (`setBuiltinCursor`). The flashlight is around
+  the ego, neither on a strip nor moved, with the FM Towns' rounded corners (`townsCurveData`).
+  Verb images take the small-header layout, without version 4's row of 8.
+- Checked against the FM Towns release: the logo and the cliff in their colours, black below;
+  the opening's first line under the cliff, white with its shadow in colour 8 right of and below
+  it. The layers' rules, the flashlight's corners and the 15-bit colours have tests of their
+  own. Not yet seen: the verb band with the distaff, which needs the actors (phase 20).
+- As ScummVM has it with smooth scrolling off (its `smooth_scroll` option): the camera moves a
+  strip at a time. Left out: the text layer at twice the resolution (ScummVM's
+  `force_fmtowns_hires_mode`, off by default), the layer codes of `roomOps`' room fade and the
+  cycling fields of `drawBox`'s colour 254, which Loom's scripts do not use, and banners. A
+  palette change shows at once over the whole room, where ScummVM's picture layer keeps the
+  colours it was drawn in until the room is drawn again.
 
 ### Phase 20: scripts, costumes and the interface
 
 - The difficulty selection ScummVM shows in place of a boot parameter (`scumm.cpp`).
 - The FM Towns branches of the scripts (`script_v5.cpp`, `script_v4.cpp`, `script.cpp`, the CD
   query), costumes for `GF_OLD256` (`costume.cpp`), actors, verbs and the distaff, played from
-  the opening to the cliff.
+  the opening to the cliff, and the verb band seen.
 
 ### Phase 21: sound
 
-- The 16 CD tracks (FLAC here; a WAV copy is also available), and the CD query.
+- The 16 CD tracks (FLAC here; a WAV copy is also available), and the CD query's answers.
 - `players/player_towns.cpp` (`Player_Towns_v1`) for the effects, on the Towns' FM and PCM
   chips (`audio/softsynth/fmtowns_pc98`).
 

@@ -1,0 +1,93 @@
+using Distaff.Scumm.Graphics;
+using Distaff.Scumm.View;
+
+namespace Distaff.Scumm.Game;
+
+/// <summary>The FM Towns' screen: its height, its two layers and the colours they show in (<c>gfx_towns.cpp</c>).</summary>
+public sealed partial class GameWorld
+{
+    /// <summary>The FM Towns' screen's height: 240 rows, which Loom uses all of.</summary>
+    public const int TownsScreenHeight = 240;
+
+    /// <summary>
+    /// The 16 colours of the FM Towns' text layer for Loom, which ScummVM sets as the game starts
+    /// (<c>tableTownsLoomPalette</c>, <c>towns_setTextPaletteFromPtr</c>).
+    /// </summary>
+    public static readonly Rgb[] TownsTextPalette =
+    [
+        new(0x00, 0x00, 0x00), new(0x00, 0x00, 0xAB), new(0x00, 0xAB, 0x00), new(0x00, 0xAB, 0xAB),
+        new(0xAB, 0x00, 0x00), new(0x69, 0x29, 0x45), new(0x8C, 0x4D, 0x14), new(0xAB, 0xAB, 0xAB),
+        new(0x57, 0x3F, 0x57), new(0x57, 0x57, 0xFF), new(0x57, 0xFF, 0x57), new(0x57, 0xFF, 0xFF),
+        new(0xFF, 0x57, 0x57), new(0xD6, 0x94, 0x40), new(0xFF, 0xFF, 0x57), new(0xFF, 0xFF, 0xFF),
+    ];
+
+    /// <summary>The colour of the FM Towns' text shadows, and of text in colour 0 (<c>_shadowColor</c> of <c>CharsetRendererTownsV3</c>).</summary>
+    private const byte TownsShadowColor = 0x88;
+
+    /// <summary>The screen's height: 200, or the FM Towns' 240.</summary>
+    public int ScreenHeight => Screens.ScreenHeight;
+
+    /// <summary>Whether the release is the FM Towns', with its own screen.</summary>
+    private bool FmTowns => _loader.FmTowns;
+
+    /// <summary>
+    /// The screen in colours, as the host shows it, with the cursor unless <paramref name="cursor"/>
+    /// is false. The FM Towns' puts its two layers together, the room in its palette, through the
+    /// shadow palette, and the text layer in <see cref="TownsTextPalette"/>, with the cursor in the
+    /// text layer's colours (<c>setBuiltinCursor</c>); all in the 15-bit colour ScummVM shows it in.
+    /// </summary>
+    public RgbFrame Frame(bool cursor = true)
+    {
+        if (!FmTowns)
+        {
+            var screen = Screen();
+            if (cursor)
+            {
+                DrawCursor(screen);
+            }
+
+            return RgbFrame.FromIndexed(screen, DisplayPalette());
+        }
+
+        Rgb[] textColors = [.. TownsTextPalette.Select(To15Bit)];
+        var frame = Screens.ComposeTowns(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, Camera.Left,
+            Math.Min(ViewHeight, CurrentRoom?.Height ?? 0), DisplayPalette(), textColors);
+        if (cursor)
+        {
+            foreach (var (x, y) in CursorPixels(frame.Width, frame.Height))
+            {
+                frame[x, y] = textColors[_cursorColor & 0x0F];
+            }
+        }
+
+        return frame;
+    }
+
+    /// <summary>
+    /// A colour as ScummVM's 16-bit screen shows it: 5 bits for each of red, green and blue
+    /// (<c>get16BitColor</c> to RGB555), widened again (<c>PixelFormat::colorToRGB</c>).
+    /// </summary>
+    public static Rgb To15Bit(Rgb color)
+    {
+        static byte Widen(byte value) => (byte)((value >> 3 << 3) | (value >> 5));
+        return new Rgb(Widen(color.R), Widen(color.G), Widen(color.B));
+    }
+
+    /// <summary>
+    /// A rectangle of the screen filled at once in the FM Towns' text layer and its text surface,
+    /// in a colour of 4 bits doubled (<c>towns_fillTopLayerRect</c> and the text surface's fill in
+    /// <c>drawBox</c>).
+    /// </summary>
+    private void FillTownsTextLayer(Rect rect, byte color)
+    {
+        Screens.TextSurface.FillRect(rect, color);
+        Screens.TownsLayer?.FillRect(rect, color);
+    }
+
+    /// <summary>Clears the FM Towns' text surface and text layer (<c>clearLayer(1)</c> with the text surface).</summary>
+    private void ClearTownsText()
+    {
+        Screens.ClearTextSurface();
+        Screens.TownsLayer?.Fill(0);
+    }
+}

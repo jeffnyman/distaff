@@ -267,7 +267,7 @@ public sealed partial class GameWorld
         }
 
         var image = CurrentRoom.Data.Span[o.ImageOffset..];
-        if (_loader.Version == 4)
+        if (CurrentRoom.SmallHeader)
         {
             vs.Image = [.. image[..BinaryPrimitives.ReadInt32LittleEndian(image)], .. o.Code.Span];
             return;
@@ -324,9 +324,10 @@ public sealed partial class GameWorld
 
     /// <summary>
     /// Draws a verb's image, strip by strip, into the band it is in, in the room's colours.
-    /// Mirrors <c>drawVerbBitmap</c>: the verb covers the image's strips and rows. Version 4 reads
-    /// the width and height from the code block after the image block, draws the image from 8
-    /// bytes into its block (<c>getObjectImage</c>), and starts on a row of 8.
+    /// Mirrors <c>drawVerbBitmap</c>: the verb covers the image's strips and rows. With small
+    /// headers (the VGA CD and the FM Towns) the width and height come from the code block after
+    /// the image block, and the image is drawn from 8 bytes into its block (<c>getObjectImage</c>);
+    /// version 4 starts it on a row of 8.
     /// </summary>
     private void DrawVerbBitmap(VerbSlot vs)
     {
@@ -339,12 +340,17 @@ public sealed partial class GameWorld
         int x = xstart + vs.CurRect.Left / 8 * 8, y = vs.CurRect.Top - band.Top;
         var target = new MaskedImage(front, front);
         int strips, height;
-        if (_loader.Version == 4)
+        if (_loader.HeaderSize == Resources.ResourceLoader.SmallHeaderSize)
         {
             int size = BinaryPrimitives.ReadInt32LittleEndian(image);
             strips = image[size + 11];
             height = image[size + 17] / 8 * 8;
-            VgaBitmap.Draw(image.AsSpan(8), 0, strips, height, target, x, y & ~7, zBuffers: 1, RoomPalette);
+            if (_loader.Version == 4)
+            {
+                y &= ~7;
+            }
+
+            VgaBitmap.Draw(image.AsSpan(8), 0, strips, height, target, x, y, zBuffers: 1, RoomPalette, FmTowns);
         }
         else
         {
@@ -353,6 +359,7 @@ public sealed partial class GameWorld
             EgaBitmap.Draw(image.AsSpan(2), 0, strips, height, target, x, y, RoomPalette, mask: false);
         }
 
+        Screens.MarkDirty(band, x - xstart, x - xstart + strips * 8 - 1, y, y + height);
         vs.CurRect = new Rect(vs.CurRect.Left, vs.CurRect.Top, strips * 8, height);
         vs.OldRect = vs.CurRect;
     }
@@ -389,17 +396,25 @@ public sealed partial class GameWorld
             return;
         }
 
+        Screens.MarkDirty(vs, local.Left, local.Right, local.Top, local.Bottom);
         bool lightsOn = (Engine.Variables[Vars.CurrentLights] & LightsRoomOn) != 0;
         if (vs.HasTwoBuffers && CurrentRoomNumber != 0 && lightsOn)
         {
             Screens.RestoreMain(local.Offset(Camera.Left, 0));
             if (_hasMask)
             {
-                Screens.TextSurface.FillRect(local.Offset(0, vs.Top), VirtScreens.Transparent);
+                Screens.TextSurface.FillRect(local.Offset(0, vs.Top), Screens.TextTransparent);
             }
         }
         else
         {
+            // the FM Towns' back colour is doubled, and fills the text surface too
+            if (FmTowns)
+            {
+                backColor |= (byte)(backColor << 4);
+                Screens.TextSurface.FillRect(local.Offset(0, vs.Top), backColor);
+            }
+
             front.FillRect(vs.HasTwoBuffers ? local.Offset(Camera.Left, 0) : local, backColor);
         }
     }

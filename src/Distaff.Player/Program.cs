@@ -335,7 +335,7 @@ internal static class Program
 
         if (screenshot is not null)
         {
-            File.WriteAllBytes(screenshot, PngWriter.Encode(world.Screen(), world.DisplayPalette(), zoom, zoom));
+            File.WriteAllBytes(screenshot, PngWriter.Encode(world.Frame(cursor: false), zoom, zoom));
             Console.WriteLine($"wrote {screenshot}");
         }
 

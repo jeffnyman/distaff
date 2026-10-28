@@ -7,6 +7,9 @@ public enum ShadowType
     Normal,
     Horizontal,
     Outline,
+
+    /// <summary>The FM Towns' normal shadow: right of and below each pixel, not diagonally (<c>CharsetRendererTownsV3::drawBits1</c>).</summary>
+    RightAndBelow,
 }
 
 /// <summary>
@@ -282,6 +285,10 @@ public sealed class Charset
                             break;
                         case ShadowType.Horizontal:
                             Put(px + 1, py, shadowColor);
+                            break;
+                        case ShadowType.RightAndBelow:
+                            Put(px + 1, py, shadowColor);
+                            Put(px, py + 1, shadowColor);
                             break;
                         case ShadowType.Outline:
                             Put(px + 1, py, shadowColor);

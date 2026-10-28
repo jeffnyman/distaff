@@ -5,7 +5,7 @@ using static SDL.SDL3;
 namespace Distaff.Player.Sdl;
 
 /// <summary>
-/// Presents the engine's 8-bit framebuffer through an SDL indexed surface scaled onto the window
+/// Presents the engine's frames through an SDL surface of 32-bit colours scaled onto the window
 /// surface. No GPU renderer is involved, which keeps the path simple and exact. The window can be
 /// resized and switched to full screen; the frame keeps its aspect ratio and is centred with black
 /// borders.
@@ -15,7 +15,6 @@ internal sealed unsafe class SdlGraphicsDriver : IGraphicsDriver, IDisposable
     private readonly int _scale;
     private SDL_Window* _window;
     private SDL_Surface* _frame;
-    private SDL_Palette* _palette;
     private int _width;
     private int _height;
     private SDL_Rect _target; // where the frame lands on the window surface
@@ -59,8 +58,7 @@ internal sealed unsafe class SdlGraphicsDriver : IGraphicsDriver, IDisposable
         DestroyFrame();
         _width = width;
         _height = height;
-        _frame = SdlException.ThrowIfNull(SDL_CreateSurface(width, height, SDL_PixelFormat.SDL_PIXELFORMAT_INDEX8), "SDL_CreateSurface");
-        _palette = SdlException.ThrowIfNull(SDL_CreateSurfacePalette(_frame), "SDL_CreateSurfacePalette");
+        _frame = SdlException.ThrowIfNull(SDL_CreateSurface(width, height, SDL_PixelFormat.SDL_PIXELFORMAT_XRGB8888), "SDL_CreateSurface");
         SdlException.ThrowIfFalse(SDL_SetWindowMinimumSize(_window, width, height), "SDL_SetWindowMinimumSize");
 
         // a new mode gets the window at its natural size, shrunk to fit the display and centred
@@ -83,26 +81,7 @@ internal sealed unsafe class SdlGraphicsDriver : IGraphicsDriver, IDisposable
         }
     }
 
-    public void SetPalette(ReadOnlySpan<Rgb> colors, int start = 0)
-    {
-        if (_palette is null)
-        {
-            throw new InvalidOperationException("SetMode must be called before SetPalette.");
-        }
-
-        Span<SDL_Color> sdlColors = stackalloc SDL_Color[colors.Length];
-        for (int i = 0; i < colors.Length; i++)
-        {
-            sdlColors[i] = new SDL_Color { r = colors[i].R, g = colors[i].G, b = colors[i].B, a = 255 };
-        }
-
-        fixed (SDL_Color* p = sdlColors)
-        {
-            SdlException.ThrowIfFalse(SDL_SetPaletteColors(_palette, p, start, colors.Length), "SDL_SetPaletteColors");
-        }
-    }
-
-    public void Present(Surface8 frame)
+    public void Present(RgbFrame frame)
     {
         if (_frame is null)
         {
@@ -121,7 +100,12 @@ internal sealed unsafe class SdlGraphicsDriver : IGraphicsDriver, IDisposable
             int pitch = _frame->pitch;
             for (int y = 0; y < _height; y++)
             {
-                frame.Row(y).CopyTo(new Span<byte>(dest + y * pitch, _width));
+                var row = new Span<uint>(dest + y * pitch, _width);
+                var source = frame.Row(y);
+                for (int x = 0; x < _width; x++)
+                {
+                    row[x] = (uint)(source[x].R << 16 | source[x].G << 8 | source[x].B);
+                }
             }
         }
         finally
@@ -236,10 +220,8 @@ internal sealed unsafe class SdlGraphicsDriver : IGraphicsDriver, IDisposable
     {
         if (_frame is not null)
         {
-            // The palette is owned by the surface and freed with it.
             SDL_DestroySurface(_frame);
             _frame = null;
-            _palette = null;
         }
     }
 }

@@ -103,6 +103,9 @@ public sealed partial class GameWorld
 
     // the rectangle drawn since the first character (_str), and where speech was drawn (_hasMask, _textScreenID)
     private Rect _str;
+
+    // the FM Towns' text, where the message last drew (_curStringRect), -1 on the left for none
+    private Rect _curStringRect = Rect.FromBounds(-1, -1, -1, -1);
     private bool _hasMask;
     private VirtScreenNumber _textScreen;
 
@@ -242,6 +245,11 @@ public sealed partial class GameWorld
         _textRight = slot.Right;
         _textCenter = slot.Center;
         SetColor(_charsetColor);
+        if (FmTowns && (_keepText || _haveMsg == 0xFF))
+        {
+            _str = _curStringRect;
+        }
+
         if (_talkDelay != 0)
         {
             return;
@@ -278,9 +286,10 @@ public sealed partial class GameWorld
         }
 
         _firstChar = !_keepText;
+        int c;
         while (true)
         {
-            int c = NextCharsetCode(talker, out bool goOn);
+            c = NextCharsetCode(talker, out bool goOn);
             if (!goOn)
             {
                 break;
@@ -311,9 +320,18 @@ public sealed partial class GameWorld
             _shown.Append((char)c);
             _talkDelay += Engine.Variables[Vars.CharInc];
         }
+
+        // the loop ends at the message's end or a wait (codes 2 and 3)
+        if (FmTowns && c is 0 or 2 or 3)
+        {
+            _curStringRect = _str;
+        }
     }
 
-    /// <summary>Mirrors <c>newLine</c> for version 3: back to the slot's left, centred again, down the slot's line height or the font's.</summary>
+    /// <summary>
+    /// Mirrors <c>newLine</c> for version 3: back to the slot's left, centred again, down the
+    /// slot's line height or the font's; the FM Towns' always the font's.
+    /// </summary>
     private void NewLine()
     {
         _nextLeft = TextSlots[0].X;
@@ -322,7 +340,7 @@ public sealed partial class GameWorld
             _nextLeft = Math.Max(0, _nextLeft - StringWidth(0, _charsetBuffer.AsSpan(_charsetBufPos)) / 2);
         }
 
-        _nextTop += TextSlots[0].Height != 0 ? TextSlots[0].Height : _font?.Height ?? 8;
+        _nextTop += TextSlots[0].Height != 0 && !FmTowns ? TextSlots[0].Height : _font?.Height ?? 8;
     }
 
     /// <summary>
@@ -378,7 +396,7 @@ public sealed partial class GameWorld
                     // as ScummVM has it: a centred line starts its whole width left, and a slot 0
                     // line height moves the message's next line, not this text
                     _textLeft = _textCenter ? _startLeft - StringWidth(a, buf.AsSpan(Math.Min(i, buf.Length))) : _startLeft;
-                    if (TextSlots[0].Height != 0)
+                    if (TextSlots[0].Height != 0 && !FmTowns)
                     {
                         _nextTop += TextSlots[0].Height;
                     }
@@ -410,10 +428,19 @@ public sealed partial class GameWorld
     /// <summary>
     /// Mirrors <c>CharsetRendererV3::setColor</c> for Loom version 3: bit 6 asks for an outline
     /// (none when <paramref name="shadowModeSpecialFlag"/>), bit 7 for a shadow, and the low four
-    /// bits are the colour.
+    /// bits are the colour. The FM Towns' (<c>GF_OLD256</c>) has no outline, and its colour is the
+    /// low four bits doubled, colour 0 its shadow's, 0x88 (<c>CharsetRendererTownsV3::setShadowMode</c>).
     /// </summary>
     private void SetColor(int color, bool shadowModeSpecialFlag = false)
     {
+        if (FmTowns)
+        {
+            _shadow = (color & 0x80) != 0 ? ShadowType.RightAndBelow : ShadowType.None;
+            int low = color & 0x0F;
+            _textColor = low == 0 ? TownsShadowColor : (byte)(low | (low << 4));
+            return;
+        }
+
         if (_font is { IsClassic: true })
         {
             // version 4: the colour as it is, no shadow (CharsetRendererCommon::setColor)
@@ -430,7 +457,8 @@ public sealed partial class GameWorld
     /// <summary>
     /// Draws a character at the pen and moves it on. Mirrors <c>CharsetRendererV3::printChar</c>:
     /// nothing past the slot's right edge; speech over the room goes into the text surface, other
-    /// text into the band; the drawn rectangle grows by the character and its shadow.
+    /// text into the band, but all the FM Towns' text into the text surface; the drawn rectangle
+    /// grows by the character and its shadow.
     /// </summary>
     private void PrintChar(int chr, bool ignoreCharsetMask)
     {
@@ -452,7 +480,7 @@ public sealed partial class GameWorld
             return;
         }
 
-        if (_shadow == ShadowType.Normal)
+        if (_shadow is ShadowType.Normal or ShadowType.RightAndBelow)
         {
             height++;
         }
@@ -473,7 +501,12 @@ public sealed partial class GameWorld
             _textScreen = vs.Number;
         }
 
-        if (ignoreCharsetMask || !vs.HasTwoBuffers)
+        Screens.MarkDirty(vs, _textLeft, _textLeft + origWidth, _textTop - vs.Top, _textTop - vs.Top + height);
+        if (FmTowns)
+        {
+            Charset.DrawBits1(Screens.TextSurface, _textLeft, _textTop, _font.Glyph(chr), origWidth, 8, _textColor, _shadow, TownsShadowColor);
+        }
+        else if (ignoreCharsetMask || !vs.HasTwoBuffers)
         {
             int xstart = vs.Number == VirtScreenNumber.Main ? Camera.Left : 0;
             Charset.DrawBits1(front, _textLeft + xstart, _textTop - vs.Top, _font.Glyph(chr), origWidth, 8, _textColor, _shadow);
@@ -584,6 +617,21 @@ public sealed partial class GameWorld
     /// </summary>
     private void RestoreCharsetBg()
     {
+        if (FmTowns)
+        {
+            // towns_restoreCharsetBg: only where the message last drew
+            if (_curStringRect.Left != -1)
+            {
+                RestoreBackground(_curStringRect, 0);
+                _curStringRect = Rect.FromBounds(-1, _curStringRect.Top, _curStringRect.Right, _curStringRect.Bottom);
+                _hasMask = false;
+            }
+
+            _nextLeft = TextSlots[0].X;
+            _nextTop = TextSlots[0].Y;
+            return;
+        }
+
         _nextLeft = TextSlots[0].X;
         _nextTop = TextSlots[0].Y;
         if (!_hasMask)
