@@ -827,8 +827,24 @@ for each release), which the tests write to the folder `DISTAFF_EXPORT_SAVES` na
   - Version 4 text skips the x offset of a string's first character, and of a line's after a
     new line (`_disableOffsX`): the distaff's note letters, the proficiency screen and other
     text the VGA font draws stood a pixel left of ScummVM's.
-- Not compared: sound, and how frames run after a load (the scripts redraw the distaff's notes
-  some steps after it in both).
+- Sound, recorded from ScummVM through SDL's disk audio driver (`SDL_AUDIODRIVER=disk`, which
+  writes the mixer's output to a file) and from `distaff --run --wav`, aligned at the music's
+  first note:
+  - EGA, PC speaker: the title music note for note (a pitch track from zero crossings agrees on
+    every 50 ms frame for 15 seconds), the two within 3 samples of each other throughout.
+  - EGA, AdLib: correlation 0.997 over 15 seconds, the same MAME OPL as ScummVM's default.
+  - VGA CD: the spoken proficiency prompt and both segments of the title music identical
+    (correlation 1.0000), but the second segment starts 274 ms sooner than in ScummVM, whose
+    room-change transition (`transitionEffect`, set by `o4_oldRoomEffect`) takes that long; Distaff
+    switches rooms at once.
+  - FM Towns: the opening's CD music bit-identical (every sample for 30 seconds), through the
+    FLAC decoder and the CD volume curve.
+  - ScummVM runs its music at its default volume, 192 of 255: on the speaker and the CD that is
+    the mixer's music volume (Distaff plays at full volume, 4/3 louder), and `Player_AD` scales
+    each operator's level by it, which makes ScummVM's AdLib about four times quieter. With
+    ScummVM's music and effects volumes at 255, the levels agree within 1%.
+- Not compared: how frames run after a load (the scripts redraw the distaff's notes some steps
+  after it in both), the FM Towns' FM and PCM sound effects, and the PCjr.
 
 ## The FM Towns' proficiency level
 
