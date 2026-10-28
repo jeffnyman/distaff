@@ -78,6 +78,7 @@ public sealed partial class GameWorld
     {
         Time = time;
         Sound.Output.Resync(time);
+        ResetScroll();
     }
 
     /// <summary>

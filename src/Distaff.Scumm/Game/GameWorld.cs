@@ -149,16 +149,16 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <summary>Whether a script asked to restart or quit (<c>o5_systemOps</c>).</summary>
     public bool QuitRequested { get; private set; }
 
-    /// <summary>The ticks the next step waits (<c>VAR_TIMER_NEXT</c>, at least 1).</summary>
-    public int StepTicks => Math.Max(1, Engine.Variables[Vars.TimerNext]);
+    /// <summary>The ticks the next frame waits (<c>VAR_TIMER_NEXT</c>, at least 1, longer while the FM Towns scrolls).</summary>
+    public int StepTicks => FrameTicks();
 
     /// <summary>
     /// The time the next step takes: its ticks of 4 quarter-frames each (<c>waitForTimer(delta * 4)</c>),
     /// at the DOS timer's rate, or 240 a second on the FM Towns (<c>setTimerAndShakeFrequency</c>).
     /// </summary>
-    public TimeSpan StepLength => InEffect
-        ? TimeSpan.FromSeconds(_effectFrames.Peek().QuarterFrames / QuarterFrameRate)
-        : TimeSpan.FromSeconds(StepTicks * 4 / (FmTowns ? 240.0 : TimerFrequency));
+    public TimeSpan StepLength => InEffect ? _effectFrames.Peek().Length
+        : Smooth && !InInterface ? SmoothStepLength()
+        : FrameLength(StepTicks);
 
     /// <summary>The world instructions with no subsystem yet, as the scripts ran them.</summary>
     public IReadOnlyList<string> Unhandled => _unhandled;
@@ -202,8 +202,22 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
             return;
         }
 
-        int delta = StepTicks;
-        Time += StepLength;
+        // the wait before the frame, in which the FM Towns' picture scrolls a pixel each tick
+        int delta;
+        if (Smooth)
+        {
+            if (WaitStep(out delta))
+            {
+                Steps++;
+                return;
+            }
+        }
+        else
+        {
+            delta = StepTicks;
+            Time += StepLength;
+        }
+
         Frames++;
         Engine.Variables[Vars.Timer] = delta;
         Engine.Variables[Vars.TimerTotal] += delta;
@@ -331,6 +345,11 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
         if (diff is 8 or -8)
         {
+            if (Smooth)
+            {
+                RequestScroll(diff == 8 ? -1 : 1);
+            }
+
             RedrawRoom(0, Camera.Left);
             RedrawRoom(Camera.Left + Camera.ScreenWidth);
         }

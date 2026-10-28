@@ -136,7 +136,8 @@ public class TownsScreenTests
         Assert.Equal((7, 8), (Lit(10, 4, 12), Lit(11, 4, 12)));
     }
 
-    private const string Logo = "a978b0f902ec14fd", Cliff = "a5fa4406e5f2caf3";
+    // the cliff's frame is reached later with the smooth scrolling, the messenger at another point of her flight
+    private const string Logo = "a978b0f902ec14fd", Cliff = "0f6e49e94151884f";
 
     private static string Hash(RgbFrame frame)
         => Convert.ToHexStringLower(SHA256.HashData(frame.Pixels.SelectMany(p => new[] { p.R, p.G, p.B }).ToArray()))[..16];

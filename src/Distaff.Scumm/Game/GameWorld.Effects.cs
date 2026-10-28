@@ -25,7 +25,7 @@ public sealed partial class GameWorld
     private bool _clearClicks;
 
     /// <summary>The screens an effect stopped on, each with the quarter-frames it shows for, still to show.</summary>
-    private readonly Queue<(RgbFrame Frame, int QuarterFrames)> _effectFrames = new();
+    private readonly Queue<(RgbFrame Frame, TimeSpan Length, int QuarterFrames)> _effectFrames = new();
 
     /// <summary>What ScummVM's screen shows while an effect is drawn on it, from the frame before the effect on.</summary>
     private RgbFrame? _display;
@@ -67,6 +67,7 @@ public sealed partial class GameWorld
     /// </summary>
     private void FadeOut(int effect)
     {
+        WaitForScroll(0);
         if (_screenEffectFlag && effect != 0)
         {
             var display = Display();
@@ -95,6 +96,7 @@ public sealed partial class GameWorld
     /// </summary>
     private void FadeIn(int effect)
     {
+        WaitForScroll(0);
         if (effect == 128)
         {
             var display = Display();
@@ -188,7 +190,7 @@ public sealed partial class GameWorld
             if (halt)
             {
                 blits = 0;
-                _effectFrames.Enqueue((display.Clone(), 1));
+                _effectFrames.Enqueue((display.Clone(), TimeSpan.FromSeconds(1 / QuarterFrameRate), 1));
             }
         }
     }
@@ -223,7 +225,7 @@ public sealed partial class GameWorld
 
     /// <summary>The screen as it is drawn now, without the cursor.</summary>
     private RgbFrame ComposeFrame() => FmTowns
-        ? Screens.ComposeTowns(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, Camera.Left,
+        ? Screens.ComposeTowns(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, ShownLeft,
             Math.Min(ViewHeight, CurrentRoom?.Height ?? 0), DisplayPalette(), [.. TownsTextPalette.Select(To15Bit)])
         : RgbFrame.FromIndexed(Screen(), DisplayPalette());
 
@@ -242,8 +244,8 @@ public sealed partial class GameWorld
     /// </summary>
     private void StepEffect()
     {
-        var (_, quarterFrames) = _effectFrames.Dequeue();
-        Time += TimeSpan.FromSeconds(quarterFrames / QuarterFrameRate);
+        var (_, length, quarterFrames) = _effectFrames.Dequeue();
+        Time += length;
         AdvanceCdTimer(quarterFrames);
         Sound.Update(Time);
         if (_effectFrames.Count == 0)

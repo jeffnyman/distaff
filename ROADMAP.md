@@ -658,7 +658,8 @@ chips, and the music on 16 CD audio tracks. Its phases build on both earlier rel
   it. The layers' rules, the flashlight's corners and the 15-bit colours have tests of their
   own. Not yet seen: the verb band with the distaff, which needs the actors (phase 20).
 - As ScummVM has it with smooth scrolling off (its `smooth_scroll` option): the camera moves a
-  strip at a time. Left out: the text layer at twice the resolution (ScummVM's
+  strip at a time. Smooth scrolling, ScummVM's default, came later (see "The FM Towns' smooth
+  scrolling" below). Left out: the text layer at twice the resolution (ScummVM's
   `force_fmtowns_hires_mode`, off by default), the layer codes of `roomOps`' room fade and the
   cycling fields of `drawBox`'s colour 254, which Loom's scripts do not use, and banners. A
   palette change shows at once over the whole room, where ScummVM's picture layer keeps the
@@ -1007,3 +1008,40 @@ loop, and were right.
   offscreen with its dummy sound card, and checks the game time against the clock: no more than
   2% and 0.1 s ahead, and not far behind. With the delays halved, as the old loop had them in
   effect, all three fail (5.4 to 6.2 s of game time in 3 s).
+
+## The FM Towns' smooth scrolling
+
+ScummVM scrolls the FM Towns' picture smoothly unless its `smooth_scroll` option is turned off,
+and Distaff had it a strip at a time. Now `GameWorld.SmoothScrolling` (on by default, the
+player's `--no-smooth-scroll` turns it off) ports it from `gfx_towns.cpp` and `ScummEngine::go`:
+
+- A camera that moves a strip draws the new strip at once and asks for 8 pixels of scroll
+  (`requestScroll`, from `redrawBGAreas`); the picture layer scrolls a pixel at each tick of
+  `1000 / 60` milliseconds (`towns_updateGfx`, `scrollLayer`). The picture shows the room as far
+  behind the camera as the scroll has still to go (`ShownLeft`); other moves of the camera
+  redraw at once, the scroll still to go kept.
+- Each tick that leaves the layer still scrolling makes the next frame's wait count it as three
+  quarters of a tick (`_scrollDeltaAdjust`), and the scripts' timers count the longer wait, so
+  the game slows while the picture scrolls.
+- The game waits for the scroll where it would outrun it (`towns_waitForScroll`): a request not
+  yet taken, a camera that turns while the layer scrolls the other way, a layer 184 pixels
+  behind (the layer is 512 wide), and a room hidden or shown (`fadeOut`, `fadeIn`). Those waits
+  show the scroll as the dissolve shows its stops, the game's timers not counting them; the
+  ticks in the wait between frames are steps of their own, so the window shows each pixel.
+- The opening's climb up the cliff after the messenger outruns the scroll: the picture falls
+  up to 184 pixels behind, the messenger's room waits 1.7 seconds for it to end, and her first
+  words come at 32.9 seconds instead of 29.3. ScummVM's window, captured through the opening
+  (no clicks; Practice as the boot parameter), shows her words, the Elders' and the climb at the
+  smooth timings, its start a little over 2 seconds behind and drifting about 0.15 seconds by
+  then (its dissolves are slower, as found for the VGA CD), and cannot be fitted to the others
+  (it would have to start 5.8 seconds behind). ScummVM takes at most a pixel each time it
+  updates the screen, so how fast its scroll runs depends on the machine; Distaff's is the
+  pixel every 16 milliseconds it aims at.
+- `TownsScrollingTests` checks that the picture falls behind the climbing camera by at most the
+  184 pixels and the strip asked for, and is with it again when it stops; that without smooth
+  scrolling the picture is where the camera is; and the messenger's first words at both
+  timings. `StepFrame` in the tests steps through the scroll's steps as well as an effect's.
+- Not ported: what the layer keeps of the columns that scroll out of view (Distaff shows the
+  room and its objects there, without what was last drawn over them), the catch-up ScummVM
+  falls into when its screen updates are slow (`_refreshNeedCatchUp`), and the semi-smooth
+  scrolling of the opening's fast camera (`semi_smooth_scroll`, off by default).

@@ -37,6 +37,7 @@ internal static class Program
         string? target = null;
         var sound = SoundDevice.AdLib;
         string? wav = null;
+        bool smoothScroll = true;
         int? traceActor = null;
         string objects = "initial";
         bool mask = false;
@@ -115,6 +116,9 @@ internal static class Program
                 case "--copy-protection":
                     copyProtection = true;
                     break;
+                case "--no-smooth-scroll":
+                    smoothScroll = false;
+                    break;
                 case "--difficulty" when i + 1 < args.Length && Array.IndexOf(Difficulties, args[i + 1].ToLowerInvariant()) is >= 0 and var level:
                     bootParam = level;
                     i++;
@@ -171,7 +175,7 @@ internal static class Program
             if (run is { } runSteps)
             {
                 var store = new FileSaveStore(savesDirectory);
-                return Run(ResourceLoader.Open(game), runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, wav, CdTrackFiles.In(gamePath));
+                return Run(ResourceLoader.Open(game), runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, wav, CdTrackFiles.In(gamePath), smoothScroll);
             }
 
             if (script is { } scriptNo)
@@ -189,7 +193,7 @@ internal static class Program
                 return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
             }
 
-            return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, CdTrackFiles.In(gamePath), playFor);
+            return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, CdTrackFiles.In(gamePath), playFor, smoothScroll);
         }
         catch (Exception ex) when (ex is NotSupportedException or InvalidDataException)
         {
@@ -206,10 +210,10 @@ internal static class Program
 
     private static int Usage()
     {
-        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--difficulty practice|standard|expert] [--sound speaker|pcjr|adlib] [--load file] [--saves folder] [--target name]");
+        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--no-smooth-scroll] [--difficulty practice|standard|expert] [--sound speaker|pcjr|adlib] [--load file] [--saves folder] [--target name]");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
-        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|adlib] [--wav file.wav] [--trace-actor N] [--copy-protection] [--screenshot file.png] [--zoom N]");
+        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|adlib] [--wav file.wav] [--trace-actor N] [--copy-protection] [--no-smooth-scroll] [--screenshot file.png] [--zoom N]");
         return 2;
     }
 
@@ -221,11 +225,11 @@ internal static class Program
     /// file in the game's folder.
     /// </summary>
     private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int? bootParam, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound,
-        Func<int, ICdTrack?> cdTracks, TimeSpan? playFor)
+        Func<int, ICdTrack?> cdTracks, TimeSpan? playFor, bool smoothScroll)
     {
         using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen, Saves = new FileSaveStore(savesDirectory) });
         var detected = new DetectedGame("scumm", "loom", "Loom", release.Variant, release.Language, release.Platform);
-        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, BootParam = bootParam, StartingSave = load, SaveTarget = target, SoundDevice = sound, CdTracks = cdTracks };
+        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, BootParam = bootParam, StartingSave = load, SaveTarget = target, SoundDevice = sound, CdTracks = cdTracks };
         SDL.SDL3.SDL_HideCursor();
         var clock = System.Diagnostics.Stopwatch.StartNew();
         host.Run(engine, duration: playFor);
@@ -270,9 +274,9 @@ internal static class Program
     /// stereo, the VGA CD's track mixed in.
     /// </summary>
     private static int Run(ResourceLoader loader, int steps, bool copyProtection, int? bootParam, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor,
-        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, string? wav, Func<int, ICdTrack?> cdTracks)
+        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, string? wav, Func<int, ICdTrack?> cdTracks, bool smoothScroll)
     {
-        var world = new GameWorld(loader, sound: sound, cdTracks: wav is null ? null : cdTracks) { CopyProtection = copyProtection, SaveStore = store, SaveTarget = target };
+        var world = new GameWorld(loader, sound: sound, cdTracks: wav is null ? null : cdTracks) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, SaveStore = store, SaveTarget = target };
         var audio = new List<short>();
         long framesRead = 0;
         void ReadAudio()

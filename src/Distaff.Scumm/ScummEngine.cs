@@ -25,6 +25,9 @@ public sealed class ScummEngine : Engine
     /// <summary>Whether the game's copy protection is kept. Off by default, as in ScummVM. Set before <see cref="Initialize"/>.</summary>
     public bool CopyProtection { get; set; }
 
+    /// <summary>Whether the FM Towns' picture scrolls smoothly, as ScummVM has it by default (<see cref="GameWorld.SmoothScrolling"/>). Set before <see cref="Initialize"/>.</summary>
+    public bool SmoothScrolling { get; set; } = true;
+
     /// <summary>A save to start from instead of the boot script, as ScummVM's launcher loads one. Set before <see cref="Initialize"/>.</summary>
     public byte[]? StartingSave { get; set; }
 
@@ -57,6 +60,7 @@ public sealed class ScummEngine : Engine
         _world = new GameWorld(loader, Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate, CdTracks)
         {
             CopyProtection = CopyProtection,
+            SmoothScrolling = SmoothScrolling,
             SaveStore = Host.Saves,
         };
         if (SaveTarget is not null)
