@@ -41,6 +41,8 @@ internal static class Program
         string? mt32Roms = null;
         var mt32Model = Mt32Model.Auto;
         string? wav = null;
+        string? video = null;
+        string ffmpeg = "ffmpeg";
         bool smoothScroll = true;
         bool semiSmoothScroll = false;
         int textSpeed = GameWorld.DefaultTextSpeed;
@@ -50,7 +52,7 @@ internal static class Program
         int? traceActor = null;
         string objects = "initial";
         bool mask = false;
-        int zoom = 1;
+        int? zoom = null;
         string? output = null;
 
         for (int i = 0; i < args.Length; i++)
@@ -118,6 +120,12 @@ internal static class Program
                     break;
                 case "--wav" when i + 1 < args.Length:
                     wav = args[++i];
+                    break;
+                case "--video" when i + 1 < args.Length:
+                    video = args[++i];
+                    break;
+                case "--ffmpeg" when i + 1 < args.Length:
+                    ffmpeg = args[++i];
                     break;
                 case "--trace-actor" when i + 1 < args.Length && int.TryParse(args[i + 1], out int traced):
                     traceActor = traced;
@@ -233,7 +241,7 @@ internal static class Program
             if (run is { } runSteps)
             {
                 var store = new FileSaveStore(savesDirectory);
-                return Run(ResourceLoader.Open(game), runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, mt32, wav, CdTrackFiles.In(gamePath), smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed ?? 1);
+                return Run(ResourceLoader.Open(game), runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, mt32, wav, video, ffmpeg, CdTrackFiles.In(gamePath), smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed ?? 1);
             }
 
             if (script is { } scriptNo)
@@ -248,12 +256,12 @@ internal static class Program
 
             if (roomNumber is { } roomNo)
             {
-                return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
+                return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom ?? 1, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
             }
 
             return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, mt32, CdTrackFiles.In(gamePath), playFor, smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed);
         }
-        catch (Exception ex) when (ex is NotSupportedException or InvalidDataException)
+        catch (Exception ex) when (ex is NotSupportedException or InvalidDataException or FfmpegException)
         {
             Console.Error.WriteLine($"distaff: {ex.Message}");
             return 1;
@@ -271,7 +279,7 @@ internal static class Program
         Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--difficulty practice|standard|expert] [--sound speaker|pcjr|cms|adlib|mt32] [--mt32-roms folder] [--mt32-model mt32|cm32l] [--load file] [--saves folder] [--target name]");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
-        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|cms|adlib|mt32] [--mt32-roms folder] [--mt32-model mt32|cm32l] [--wav file.wav] [--trace-actor N] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--screenshot file.png] [--zoom N]");
+        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|cms|adlib|mt32] [--mt32-roms folder] [--mt32-model mt32|cm32l] [--wav file.wav] [--video file.mp4] [--ffmpeg path] [--trace-actor N] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--screenshot file.png] [--zoom N]");
         return 2;
     }
 
@@ -331,12 +339,19 @@ internal static class Program
     /// given steps, saving at others as ScummVM's menu saves, and reports where it got to. With a
     /// WAV file, the sound is read as a host would, a step's worth after each step, and written in
     /// stereo, the VGA CD's track mixed in. Its random numbers are seeded with 1, or the seed given,
-    /// so a run is the same each time.
+    /// so a run is the same each time. With a video file, ffmpeg records it as a window shows and
+    /// plays it, the screen 4 times its size unless zoomed otherwise.
     /// </summary>
-    private static int Run(ResourceLoader loader, int steps, bool copyProtection, int? bootParam, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor,
-        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, Func<int, IMidiDevice>? mt32, string? wav, Func<int, ICdTrack?> cdTracks, bool smoothScroll, bool semiSmoothScroll, int textSpeed, bool subtitles, (int Music, int Sfx) volumes, int randomSeed)
+    private static int Run(ResourceLoader loader, int steps, bool copyProtection, int? bootParam, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int? zoom, int? traceActor,
+        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, Func<int, IMidiDevice>? mt32, string? wav, string? video, string ffmpeg, Func<int, ICdTrack?> cdTracks, bool smoothScroll, bool semiSmoothScroll, int textSpeed, bool subtitles, (int Music, int Sfx) volumes, int randomSeed)
     {
-        var world = new GameWorld(loader, randomSeed, sound, cdTracks: wav is null ? null : cdTracks, mt32: mt32) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, SemiSmoothScrolling = semiSmoothScroll, TextSpeed = textSpeed, Subtitles = subtitles, SaveStore = store, SaveTarget = target };
+        if (wav is not null && video is not null)
+        {
+            Console.Error.WriteLine("distaff: a run writes its sound to a WAV file or a video, not both");
+            return 2;
+        }
+
+        var world = new GameWorld(loader, randomSeed, sound, cdTracks: wav is null && video is null ? null : cdTracks, mt32: mt32) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, SemiSmoothScrolling = semiSmoothScroll, TextSpeed = textSpeed, Subtitles = subtitles, SaveStore = store, SaveTarget = target };
         world.Sound.MusicVolume = volumes.Music;
         world.Sound.SfxVolume = volumes.Sfx;
         var audio = new List<short>();
@@ -368,6 +383,9 @@ internal static class Program
         {
             world.Boot(bootParam ?? 0);
         }
+
+        using var recorder = video is null ? null : new VideoRecorder(new FfmpegEncoder(video, zoom ?? 4, ffmpeg: ffmpeg));
+        recorder?.Record(world);
 
         int room = -1;
         for (int step = 0; step < steps && !world.QuitRequested && !world.RestartRequested; step++)
@@ -420,9 +438,15 @@ internal static class Program
             Console.WriteLine($"wrote {wav}: {audio.Count / 2.0 / GameWorld.DefaultSampleRate:F1} seconds, peak {audio.DefaultIfEmpty().Max(s => Math.Abs((int)s))}");
         }
 
+        if (recorder is not null)
+        {
+            recorder.Finish();
+            Console.WriteLine($"wrote {video}: {recorder.Length.TotalSeconds:F1} seconds, {recorder.FramesWritten} frames");
+        }
+
         if (screenshot is not null)
         {
-            File.WriteAllBytes(screenshot, PngWriter.Encode(world.Frame(cursor: false), zoom, zoom));
+            File.WriteAllBytes(screenshot, PngWriter.Encode(world.Frame(cursor: false), zoom ?? 1, zoom ?? 1));
             Console.WriteLine($"wrote {screenshot}");
         }
 

@@ -918,6 +918,21 @@ public class VgaWalkthroughTests
         Assert.Equal(level, played.World.Engine.Variables[played.World.Version == 4 ? 173 : 123]);
     }
 
+    /// <summary>The whole game at Practice, recorded as a player would see and hear it, when DISTAFF_RECORD_VIDEO names a folder for the video.</summary>
+    [Fact]
+    public void Records_the_whole_game() => Walkthrough.Record("loom-vga", () =>
+    {
+        Played? played = null;
+        foreach (var section in Sections)
+        {
+            played = Play(played, section);
+            if (played is null)
+            {
+                return;
+            }
+        }
+    });
+
     private static readonly Action<Walkthrough>[] Sections = [TheElders, TheIsland, LeavingTheIsland, Crystalgard, TheDragon, TheCaves, TheForge, TheBishop, TheVoid, TheLoom];
 
     /// <summary>Plays a section from where the one before it saved, or from boot, and saves at its end.</summary>
@@ -928,15 +943,17 @@ public class VgaWalkthroughTests
             return null;
         }
 
-        var world = new GameWorld(ResourceLoader.Open(new DirectoryGameContainer(path)));
+        var world = Walkthrough.NewWorld(path);
         var w = new Walkthrough(world) { Level = level };
         if (before is null)
         {
             world.Boot();
+            Walkthrough.Recording?.Record(world);
         }
         else
         {
             world.Load(before.Save);
+            Walkthrough.Recording?.Record(world);
             w.Ready();
         }
 

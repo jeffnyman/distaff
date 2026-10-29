@@ -192,6 +192,15 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// </summary>
     public void Step()
     {
+        StepOnce();
+        Stepped?.Invoke(this);
+    }
+
+    /// <summary>Told after each step, as a host is after it: for a recording of what the game shows and plays.</summary>
+    public event Action<GameWorld>? Stepped;
+
+    private void StepOnce()
+    {
         PauseShake();
         if (InEffect)
         {

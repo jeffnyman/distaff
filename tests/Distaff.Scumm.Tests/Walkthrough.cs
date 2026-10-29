@@ -1,6 +1,11 @@
+using Distaff.Audio;
 using Distaff.Scumm.Game;
+using Distaff.Scumm.Hosting;
 using Distaff.Scumm.Input;
+using Distaff.Scumm.Resources;
 using Distaff.Scumm.Scripts;
+using Distaff.Scumm.Sound;
+using Distaff.Scumm.Storage;
 
 namespace Distaff.Scumm.Tests;
 
@@ -77,6 +82,53 @@ internal sealed class Walkthrough(GameWorld world)
     }
 
     private static readonly Dictionary<string, int> Exported = [];
+
+    /// <summary>The video the walkthrough's sections are recorded into, on the thread that plays them (<see cref="Record"/>).</summary>
+    [ThreadStatic]
+    public static VideoRecorder? Recording;
+
+    /// <summary>
+    /// A world for a section of the game in a folder. A recording hears the game as a player does:
+    /// the EGA on the AdLib, the others with their CD audio.
+    /// </summary>
+    public static GameWorld NewWorld(string path)
+    {
+        var loader = ResourceLoader.Open(new DirectoryGameContainer(path));
+        return Recording is null ? new GameWorld(loader) : new GameWorld(loader, sound: SoundDevice.AdLib, cdTracks: CdTrackFiles.In(path));
+    }
+
+    /// <summary>
+    /// Plays a release's walkthrough into a video, <c>release.mp4</c> in the folder the
+    /// DISTAFF_RECORD_VIDEO environment variable names, when it names one, by ffmpeg on the PATH or
+    /// the one DISTAFF_FFMPEG names. Each section's world is recorded after the one before.
+    /// </summary>
+    public static void Record(string release, Action play)
+    {
+        var folder = Environment.GetEnvironmentVariable("DISTAFF_RECORD_VIDEO");
+        if (string.IsNullOrEmpty(folder))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(folder);
+        string ffmpeg = Environment.GetEnvironmentVariable("DISTAFF_FFMPEG") is { Length: > 0 } named ? named : "ffmpeg";
+        using var recorder = new VideoRecorder(new FfmpegEncoder(Path.Combine(folder, release + ".mp4"), ffmpeg: ffmpeg));
+        Recording = recorder;
+        try
+        {
+            play();
+
+            // without the game's data nothing was played
+            if (recorder.FramesWritten > 0)
+            {
+                recorder.Finish();
+            }
+        }
+        finally
+        {
+            Recording = null;
+        }
+    }
 
     /// <summary>Steps until the player has had control for a few steps running.</summary>
     public Walkthrough Ready(int max = Patience)

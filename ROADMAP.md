@@ -1691,6 +1691,31 @@ at a time against Distaff's frame from the same save and key, the FM Towns' gree
   ScummVM's pause banner in one run, keeping it up through the keys after; each banner was then
   captured in a run of its own.
 
+## Recording a video
+
+A run, or a walkthrough, recorded as a video, as a window shows and plays it.
+
+- `GameWorld.Stepped` tells a recorder of each step. `VideoRecorder` then shows the frame for the
+  step's length (`StepLength`, as `ScummEngine.Tick` waits) and reads the sound over the same
+  time, as the audio device pulls it. The video runs at 60 frames a second, each frame the game's
+  frame showing at its time; the sound and the frames are counted from one clock, so they cannot
+  drift apart.
+- The recording's clock is the host's, not the game's: the game's time stands while a banner or
+  the VGA CD's menu is up, and the window still shows them.
+- A walkthrough's sections are worlds of their own, each loaded from the save the one before made:
+  the recorder moves from one to the next, the video going on where it was.
+- `FfmpegEncoder` pipes the frames raw to ffmpeg, scaled up by whole pixels and encoded as H.264
+  (`-tune animation`, CRF 18), and writes the sound to a WAV file beside the output; at the end
+  the two are put together, the sound as AAC, and the files beside it removed. The scale is 4 by
+  default, even so that the colour's half-size planes fall on the game's pixels.
+- `--video file.mp4` (and `--ffmpeg path`) on a headless run; `DISTAFF_RECORD_VIDEO` (and
+  `DISTAFF_FFMPEG`) for the walkthrough tests' `Records_the_whole_game`, at Practice: the EGA on
+  the AdLib, the others with their CD audio. All three play to the end so: the EGA in 1:16:35,
+  the FM Towns in 1:16:44, the VGA CD in 1:13:00.
+- Checked with a stand-in encoder: the frames and samples written are the time recorded at their
+  rates, from world to world and through the pause banner. ffmpeg itself is checked when it is to
+  be had (`Ffmpeg_writes_the_video`); a run with none says it needs it.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above

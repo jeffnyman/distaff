@@ -35,8 +35,8 @@ Distaff is not a ScummVM fork, and it plays no other SCUMM game.
   music playing on from where it was saved.
 - **The FM Towns' smooth scrolling**, and ScummVM's semi-smooth option.
 - **One self-contained file** for Windows, Linux and macOS, with nothing to install.
-- **A headless mode** that plays from scripted clicks and keys and writes screenshots and sound,
-  as the tests use it.
+- **A headless mode** that plays from scripted clicks and keys and writes screenshots, sound and
+  video, as the tests use it.
 
 ## The releases
 
@@ -116,8 +116,15 @@ and plays:
 distaff <game folder> --run 2000 --click 100:160,92 --key 200:esc --screenshot end.png --wav sound.wav
 ```
 
-`--save step:file` saves along the way. Other tools: `--room N` draws a room as a PNG and lists
-its objects, and `--script N` and `--room-scripts N` disassemble scripts.
+`--save step:file` saves along the way. `--video file.mp4` records the run as a window shows and
+plays it, at 60 frames a second and 4 times the screen's size unless `--zoom` says otherwise; it
+needs [ffmpeg](https://ffmpeg.org), on the PATH or named with `--ffmpeg`. Other tools: `--room N`
+draws a room as a PNG and lists its objects, and `--script N` and `--room-scripts N` disassemble
+scripts.
+
+With `DISTAFF_RECORD_VIDEO` naming a folder, the walkthrough tests record each release's whole
+game at Practice into it, as `loom-ega.mp4`, `loom-fmtowns.mp4` and `loom-vga.mp4`: the EGA on
+the AdLib, the others with their CD audio, each about an hour and a quarter.
 
 ## Building
 
