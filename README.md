@@ -61,6 +61,13 @@ dotnet test
 dotnet run --project src/Distaff.Player -- <game folder>
 ```
 
+A release is one file that needs nothing installed (the .NET runtime and SDL3 inside):
+
+```
+dotnet publish src/Distaff.Player -c Release -r win-x64 -o publish
+publish/distaff <game folder>
+```
+
 ## Game data
 
 Distaff ships no game data. Point it at a folder holding a release. The tests look for the folders

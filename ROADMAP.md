@@ -1299,6 +1299,22 @@ script slot (its script, place, delay and state), every object's state and every
 - Not compared: a load from inside the game (the save screen, or the VGA CD's menu), which
   ScummVM does partway through a frame (`requestLoad`); it would need clicks in ScummVM's window.
 
+## A release build
+
+The player published for a platform is one file that needs nothing installed:
+
+- `dotnet publish src/Distaff.Player -c Release -r win-x64` writes `distaff.exe` alone, about
+  13 MB: self-contained (the .NET runtime inside), SDL3's library inside and unpacked when it
+  starts, trimmed and compressed, without symbols or documentation files. The settings are the
+  player's whenever a runtime is given, so `dotnet build`, `dotnet run` and the tests are as
+  they were.
+- Trimming gives no warnings (and warnings are errors here).
+- Checked on Windows against the debug build, headless: 900 steps of each release give the same
+  screenshot and the same recording, the CD's track included; a save made at a step is the same
+  but for its name; ScummVM's FM Towns save and a save of Distaff's load to the same screen. The
+  window opened on the VGA CD for 5 seconds and closed cleanly, playing 5.2 seconds in 5.2.
+  Other platforms are item 21's.
+
 ## The VGA CD's subtitles
 
 ScummVM's `subtitles` setting, which on the VGA CD decides whether the lines the CD says are
@@ -1445,10 +1461,10 @@ Larger features:
 
 17. MT-32 music for the EGA (the Roland Upgrade's sounds; needs an MT-32 emulator and the player's own ROMs).
 18. CMS music for the EGA.
-19. Other releases: other languages of the EGA, the Amiga, Atari ST and Macintosh releases, the PC-Engine CD, and the FM Towns' Japanese text.
+19. (Dropped: other releases, as other languages of the EGA, the Amiga, Atari ST and Macintosh releases, the PC-Engine CD, and the FM Towns' Japanese text; Distaff plays the EGA, the VGA CD and the FM Towns.)
 
 Sharing Distaff:
 
-20. A release build (single-file `distaff.exe`).
+20. (Done: `dotnet publish -c Release -r win-x64` gives one `distaff.exe`; see "A release build".)
 21. A check that it builds and runs on Linux and macOS.
 22. Continuous integration running the tests that need no game data.

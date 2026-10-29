@@ -8,11 +8,29 @@
     <ApplicationIcon>distaff.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <!-- published for a platform (dotnet publish -c Release -r win-x64), the player is one file
+       that needs nothing installed: the runtime, SDL3 and the game code inside, trimmed and
+       compressed -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishDocumentationFiles>false</PublishDocumentationFiles>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' and '$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
   <!-- SDL3 ships native libraries for every platform; a desktop player does not need the Android
        and iOS ones, which are most of the package -->
   <Target Name="DistaffTrimMobileNatives" AfterTargets="ComputeResolvedFilesToPublishList">
     <ItemGroup>
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(ResolvedFileToPublish.RelativePath)', '^runtimes[\/](android|ios)'))" />
+      <!-- and a release has no symbols, the other projects' included -->
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'$(DebugType)' == 'none' and '%(ResolvedFileToPublish.Extension)' == '.pdb'" />
     </ItemGroup>
   </Target>
   <ItemGroup>
