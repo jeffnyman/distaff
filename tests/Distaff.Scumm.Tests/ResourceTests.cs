@@ -228,6 +228,43 @@ public class ResourceTests
         Assert.Null(loader.LoadCharset(1));
     }
 
+    /// <summary>
+    /// The glassmaker's greeting (script 67) cannot be reached: it plays in room 22 for a visitor
+    /// who comes from the graveyard (room 17), and the graveyard's way to room 22, exit 353 at its
+    /// box 10, is reached only through its box 8, where Goodmold greets Bobbin first (script 66,
+    /// which sets bit 3513 that both ask after). Without box 8, no box of the graveyard leads to
+    /// box 10, from where Bobbin comes in by the other two exits (box 0 and box 11) or anywhere else.
+    /// </summary>
+    [Fact]
+    public void The_graveyards_way_to_the_chalice_passes_goodmold()
+    {
+        if (Open()?.LoadRoom(17) is not { } room)
+        {
+            return;
+        }
+
+        var boxes = room.WalkBoxes;
+        var reached = new HashSet<int> { 0, 11 };
+        for (bool more = true; more;)
+        {
+            more = false;
+            foreach (int from in reached.ToList())
+            {
+                for (int to = 0; to < boxes.Count; to++)
+                {
+                    if (to != 8 && boxes.NextBox(from, to) == to && reached.Add(to))
+                    {
+                        more = true;
+                    }
+                }
+            }
+        }
+
+        Assert.DoesNotContain(10, reached);
+        Assert.Equal([0, 1, 2, 3, 4, 5, 6, 7, 11], reached.Order());
+        Assert.True(boxes.Contains(10, 336, 141), "exit 353 is walked to in box 10");
+    }
+
     private static ResourceLoader? Open()
         => GameFolders.Find(GameFolders.Ega) is { } path ? ResourceLoader.Open(new DirectoryGameContainer(path)) : null;
 }

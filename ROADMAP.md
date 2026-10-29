@@ -953,11 +953,11 @@ clicking there); the detour looks at the crystal and the bell first.
     waterspout's room, before it is calmed, the way back along the log takes Bobbin up the dock
     again, wading out of the water; script 107 leaves the dock's water untouchable until he has
     walked to the dock's end, from where the log takes him out again and the way through goes on.
-- Left unplayed: the glassmaker's greeting in the chalice's room (script 67), which looks
-  unreachable: it comes from looking at the crystal there or walking into its box 0, and the
-  room makes both possible only for a visitor who comes from the graveyard, where Goodmold has
-  always greeted him first (bit 3513). The other global scripts never started are the
-  interface's or unused: the save room's (4), the sounds stopped (38), the demo's save message
+- Left unplayed: the glassmaker's greeting in the chalice's room (script 67), which cannot be
+  reached (see "The glassmaker's greeting"): it comes from looking at the crystal or walking
+  into box 0 of room 22, both only for a visitor from the graveyard, where Goodmold has always
+  greeted him first (bit 3513). The other global scripts never started are the interface's or
+  unused: the save room's (4), the sounds stopped (38), the demo's save message
   (43), a helper nothing calls (24), the ending's input (115), an older draft check (9), and the
   log's ride out to the waterspout (51), a copy of the one the dock's water starts (52), the
   same instruction for instruction, which nothing starts. And most objects' answers to looks and
@@ -996,6 +996,49 @@ tried in parallel; the whole report, walkthrough and all, takes about ten second
   the try's 3000 steps.
 - Left unrun then: 144 entries (from 411), of objects the walkthrough never finds clickable with
   the draft known; all since run (see "The rest of the objects' answers").
+
+## The VGA CD's menu against ScummVM's window
+
+The menu and the text speed banner, compared pixel for pixel with ScummVM's window, the same
+ScummVM save at the Bishop loaded in both, the same slot-1 save in the list:
+
+- The main page, the save page ("Name your SAVE game", the list, the arrows, OK and Cancel) and
+  the load page ("Select a game to LOAD", Cancel) are the same, pixel for pixel, but for
+  ScummVM's own cursor, which it draws where the mouse last was in the window.
+- The text speed banner ('+', "Text Speed Slow ... Fast", the slider one faster) is the same;
+  the room behind it differs where the Bishop and the portal's edge move, the two caught at a
+  different moment.
+- ScummVM's window was driven by a script that loads the save, presses keys and clicks at given
+  seconds and captures the window, each only with ScummVM's window in front; the cursor is moved
+  off the window before each capture.
+
+Found on the way: a ScummVM save of the VGA CD would not load into Distaff with the AdLib, the
+player's default device ("The VGA CD release's sounds are not read yet."). ScummVM plays the
+VGA CD on its MIDI device and keeps its iMuse's state in the save's sound block; Distaff read it
+as its AdLib player's state, whose music, sound 0, the VGA CD cannot give. Only the EGA has
+`Player_AD` in ScummVM: the AdLib's state is now kept in and taken from EGA saves only. A VGA CD
+save of Distaff's carries no sound state, which ScummVM skips, where it had carried the AdLib's,
+which ScummVM's iMuse would have read. `VgaSaveTests` loads every ScummVM save of the VGA CD
+with the AdLib, plays on, and saves again without sound state.
+
+## The glassmaker's greeting
+
+Script 67, a glassmaker greeting Bobbin in the chalice's room (room 22), cannot be reached, as
+the game's scripts and rooms have it (ScummVM plays the same data, so its window was not used):
+
+- Two things start it, each only while bit 3513 is clear: Bobbin walking into room 22's box 0
+  (its local script 200), and the end of looking at the crystal (object 404, local script 204).
+- Box 0 is open only to a visitor from the graveyard (room 17, by its exit 353; room 22's entry
+  script 210). The crystal can be clicked only after the bell's scene (object 403, local script
+  205), which puts Bobbin at the crystal and the room in the state of script 212, and the bell
+  only in the state of script 210, a visitor from the graveyard again. The room's other ways in
+  (objects 348 and 368, script 211) close box 0 and leave the bell and the crystal alone.
+- In the graveyard, exit 353 is walked to in box 10, which is reached only through box 8, where
+  its local script 200 starts Goodmold's greeting (script 66), which sets bit 3513 first.
+  Bobbin comes into the graveyard by three exits (from room 16 to its box 0 and box 11, and back
+  from room 22 to box 10), each by a click, never in a cutscene, so its script 200, which an
+  entry outside a cutscene starts (bit 3438 is the cutscene's), is always watching.
+- `ResourceTests` pins the graveyard's boxes: without box 8, none of them leads to box 10.
 
 ## The rest of the objects' answers
 
@@ -1540,7 +1583,7 @@ Not yet checked against ScummVM:
 1. (Done: saves made by ScummVM load and play on; see "Saves made by ScummVM".)
 2. (Done but for one: the banners match ScummVM's window; the VGA CD's snap scroll banner is not confirmed. See "The banners against ScummVM".)
 3. (Done for a load from the launcher: see "Frames after a load". A load from inside the game is not compared.)
-4. The VGA CD's menu, against ScummVM's window (viewed, its main page pinned).
+4. (Done: the menu's pages and the text speed banner match ScummVM's window pixel for pixel; see "The VGA CD's menu against ScummVM's window".)
 
 Known differences, not fixed:
 
@@ -1562,7 +1605,7 @@ Not ported, by choice:
 Coverage of the game's scripts:
 
 15. (Done: the 144 entries the sweep left are run, by force where the walkthrough saved and played for the interface's objects, with nothing found wrong; see "The rest of the objects' answers".)
-16. The glassmaker's greeting in the chalice's room (script 67), which looks unreachable; not confirmed in ScummVM.
+16. (Done: the glassmaker's greeting cannot be reached, as the game's scripts and rooms have it; see "The glassmaker's greeting".)
 
 Larger features:
 

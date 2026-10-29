@@ -513,9 +513,11 @@ public sealed partial class GameWorld
         {
             CaptureTowns(s);
         }
-        else if (Sound.Player is PlayerAd adLib)
+        else if (_loader.Version == 3 && Sound.Player is PlayerAd adLib)
         {
-            // the AdLib's music and effects, and where the music is (Player_AD::saveLoadWithSerializer)
+            // the AdLib's music and effects, and where the music is (Player_AD::saveLoadWithSerializer);
+            // only the EGA has Player_AD: ScummVM's VGA CD keeps its iMuse's state here, which
+            // Distaff does not have, and writes nothing in its place
             s.SoundEngineData = adLib.SaveState();
         }
         (s.EgoPositioned, s.ScreenEffectFlag, s.ScreenB, s.ScreenH) = (_egoPositioned ? 1 : 0, _screenEffectFlag ? 1 : 0, ViewTop, ViewTop + ViewHeight);
@@ -714,9 +716,10 @@ public sealed partial class GameWorld
             _curStringRect = s.HasTownsData ? Rect.FromBounds(r[0], r[1], r[2], r[3]) : Rect.FromBounds(-1, -1, -1, -1);
             TownsPlayer.LoadState(s.SoundEngineData);
         }
-        else if (Sound.Player is PlayerAd adLib)
+        else if (_loader.Version == 3 && Sound.Player is PlayerAd adLib)
         {
-            // the AdLib's music starts again where the save left it, and its effects with it
+            // the AdLib's music starts again where the save left it, and its effects with it; a VGA
+            // CD save's sound state is ScummVM's iMuse's, and is passed over
             adLib.LoadState(s.SoundEngineData, LoadSound);
         }
 

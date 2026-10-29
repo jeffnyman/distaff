@@ -160,6 +160,34 @@ public class VgaSaveTests
     private const int SanctuaryDoor = 179, Distaff = 196;
 
     /// <summary>The proficiency screen, PRACTICE, and the opening skipped with Escape, to Bobbin on the cliff in control.</summary>
+    /// <summary>
+    /// The sound state of a VGA CD save is ScummVM's iMuse's (the release plays its MIDI device),
+    /// which Distaff does not have: whatever the device, ScummVM's saves load and play on, the
+    /// state passed over (with the AdLib it had been read as the AdLib player's, whose music, sound
+    /// 0, the VGA CD cannot give), and Distaff's own saves carry none, which ScummVM skips.
+    /// </summary>
+    [Fact]
+    public void The_sound_state_is_scummvms_imuses_and_passed_over()
+    {
+        if (Open() is not { } loader || GameFolders.Find("scummvm-saves") is not { } saves)
+        {
+            return;
+        }
+
+        foreach (string file in Directory.GetFiles(saves, "loom-vga-*.s00"))
+        {
+            var world = new GameWorld(loader, sound: Sound.SoundDevice.AdLib);
+            world.Load(File.ReadAllBytes(file));
+            for (int i = 0; i < 40; i++)
+            {
+                world.Step();
+            }
+
+            var (_, state) = SaveFile.Read(world.Save("again", When), loader.Index.ObjectOwners.Count, 4);
+            Assert.Empty(state.SoundEngineData);
+        }
+    }
+
     private static Walkthrough Skip(GameWorld world)
     {
         world.Boot();
