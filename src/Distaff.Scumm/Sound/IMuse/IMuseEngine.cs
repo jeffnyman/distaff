@@ -1,3 +1,5 @@
+using Distaff.Scumm.Saves;
+
 namespace Distaff.Scumm.Sound.IMuse;
 
 /// <summary>
@@ -9,8 +11,8 @@ namespace Distaff.Scumm.Sound.IMuse;
 /// channel allocation, as Loom has it. Left out, as Loom's scripts and music never reach them:
 /// the scripts' commands (<c>doCommand</c>, which only <c>soundKludge</c> reaches), so the
 /// command queue, triggers, hooks, deferred commands and faders' targets; iMuse's own sysex
-/// messages and Roland instruments (an RO sound has no sysex); the AdLib and other drivers; and
-/// saving, which is to come.
+/// messages and Roland instruments (an RO sound has no sysex); the AdLib and other drivers. What
+/// a save keeps of what is left out (the queue, triggers, hooks, faders, loops) is kept as read.
 /// </summary>
 internal sealed class IMuseEngine
 {
@@ -27,6 +29,16 @@ internal sealed class IMuseEngine
     private byte _musicVolumeEff;
     private bool _paused;
 
+    // what a save keeps that Loom never changes: the command queue and its triggers, the volume
+    // channels' table, the queued commands and Sam & Max's triggers (init_queue, the constructor)
+    private int _queueEnd, _queuePos, _queueSound, _queueAdding, _queueMarker, _queueCleared, _triggerCount, _snmTriggerIndex;
+    private readonly int[] _volchanTable = new int[8];
+    private readonly int[] _cmdQueue = new int[64 * 8];
+    private readonly int[] _snmTriggers = new int[16 * SnmTriggerFields];
+
+    // ImTrigger: its sound, id, expiry and 8 commands
+    private const int SnmTriggerFields = 3 + 8;
+
     public IMuseEngine(IMuseDriverMt32 midi)
     {
         _midi = midi;
@@ -35,6 +47,7 @@ internal sealed class IMuseEngine
         for (int i = 0; i != 8; i++)
         {
             _channelVolume[i] = _channelVolumeEff[i] = 127;
+            _volchanTable[i] = 127;
         }
 
         for (int i = 0; i < _players.Length; i++)
@@ -298,29 +311,248 @@ internal sealed class IMuseEngine
     }
 
     public void RemoveSuspendedPart(Part part) => _waitingPartsQueue.Remove(part);
+
+    /// <summary>A part by its place, 1 based as a save numbers them, 0 for none.</summary>
+    public Part? PartAt(int number) => number == 0 ? null : _parts[number - 1];
+
+    /// <summary>A player by its place, 1 based as a save numbers them, 0 for none.</summary>
+    public Player? PlayerAt(int number) => number == 0 ? null : _players[number - 1];
+
+    /// <summary>A player's place, 1 based, 0 for none.</summary>
+    public int NumberOf(Player? player) => player is null ? 0 : Array.IndexOf(_players, player) + 1;
+
+    /// <summary>
+    /// Reads or writes iMuse's state: the queue, the volumes, the players, the parts and their
+    /// instruments; after a read, the players' sounds started again where they were (each sound
+    /// from <paramref name="sound"/>, as iMuse finds it in the resources), the parts set up again,
+    /// and channels given out. Mirrors <c>saveLoadIMuse</c>, <c>fix_players_after_load</c> and
+    /// <c>fix_parts_after_load</c>.
+    /// </summary>
+    public void SaveLoad(SaveSerializer s, Func<int, byte[]?> sound)
+    {
+        s.Byte(ref _queueEnd, 8);
+        s.Byte(ref _queuePos, 8);
+        s.Uint16(ref _queueSound, 8);
+        s.Byte(ref _queueAdding, 8);
+        s.Byte(ref _queueMarker, 8);
+        s.Byte(ref _queueCleared, 8);
+        int master = _masterVolume;
+        s.Byte(ref master, 8);
+        _masterVolume = (byte)master;
+        s.Uint16(ref _triggerCount, 8);
+        s.Uint16(ref _snmTriggerIndex, 54);
+        for (int i = 0; i < _channelVolume.Length; i++)
+        {
+            int v = _channelVolume[i];
+            s.Uint16(ref v, 8);
+            _channelVolume[i] = (ushort)v;
+        }
+
+        s.Array(_volchanTable, 8, (x, i) => x.Uint16(ref _volchanTable[i]), 8);
+        s.Array(_cmdQueue, _cmdQueue.Length, (x, i) => x.Uint16(ref _cmdQueue[i], 23));
+        for (int t = 0; t < _snmTriggers.Length; t += SnmTriggerFields)
+        {
+            s.Int16(ref _snmTriggers[t], 54);
+            s.Byte(ref _snmTriggers[t + 1], 54);
+            s.Uint16(ref _snmTriggers[t + 2], 54);
+            s.Array(_snmTriggers, 8, (x, i) => x.Uint16(ref _snmTriggers[t + 3 + i]), 54);
+        }
+
+        foreach (var player in _players)
+        {
+            player.SaveLoad(s);
+        }
+
+        foreach (var part in _parts)
+        {
+            part.SaveLoad(s);
+        }
+
+        // the instruments, as they are from version 11
+        foreach (var part in _parts)
+        {
+            part.Instrument.SaveLoad(s);
+        }
+
+        // the volume faders before version 17
+        s.Skip(13 * 8, 8, 16);
+
+        if (s.IsLoading)
+        {
+            foreach (var player in _players)
+            {
+                if (player.IsActive)
+                {
+                    player.FixAfterLoad(sound);
+                }
+            }
+
+            foreach (var part in _parts)
+            {
+                if (part.Player is not null)
+                {
+                    part.FixAfterLoad();
+                }
+            }
+
+            SetImuseMasterVolume(_masterVolume);
+            ReallocateMidiChannels();
+        }
+    }
+
+    /// <summary>Mirrors <c>setImuseMasterVolume</c>.</summary>
+    private void SetImuseMasterVolume(int vol)
+    {
+        vol = Math.Min(vol, 255);
+        if (_masterVolume == vol)
+        {
+            return;
+        }
+
+        _masterVolume = (byte)vol;
+        vol = _masterVolume * _musicVolumeEff / 255;
+        for (int i = 0; i < _channelVolume.Length; i++)
+        {
+            _channelVolumeEff[i] = (ushort)(_channelVolume[i] * vol / 255);
+        }
+
+        if (!_paused)
+        {
+            UpdateVolumes();
+        }
+    }
 }
 
 /// <summary>
-/// An instrument a part plays: here always a program of the MT-32's (<c>Instrument_Program</c>,
-/// the sound being the MT-32's and the module an MT-32, so the number goes as it is).
+/// An instrument a part plays: none, or a program (<c>Instrument_Program</c>), for an RO sound one
+/// of the MT-32's, and the module an MT-32, so the number goes as it is. Mapping a program between
+/// the MT-32's and General MIDI, which a save made for another module could ask for, is left out.
 /// </summary>
 internal sealed class Instrument
 {
-    private byte _program = 255;
+    // Instrument's itNone and itProgram
+    private const int TypeNone = 0, TypeProgram = 1;
 
-    public bool IsValid => _program < 128;
+    private int _type = TypeNone;
+    private int _program = 255;
+    private int _bank;
+    private bool _soundTypeMt32;
+    private bool _nativeMt32Device = true;
 
-    public void Clear() => _program = 255;
+    public bool IsValid => _type == TypeProgram && _program < 128;
+
+    public void Clear() => _type = TypeNone;
 
     /// <summary>Mirrors <c>Instrument::program</c>.</summary>
-    public void Program(byte program) => _program = program > 127 ? (byte)255 : program;
+    public void Program(byte program, byte bank, bool mt32SoundType)
+    {
+        Clear();
+        if (program > 127)
+        {
+            return;
+        }
+
+        _type = TypeProgram;
+        (_program, _bank, _soundTypeMt32, _nativeMt32Device) = (program, bank, mt32SoundType, true);
+    }
 
     public void Send(MidiChannel mc)
     {
-        if (_program < 128)
+        if (IsValid)
         {
-            mc.ProgramChange(_program);
+            mc.ProgramChange((byte)_program);
         }
+    }
+
+    /// <summary>
+    /// Its type, then a program's number, bank and kinds of sound and module. Mirrors
+    /// <c>Instrument::saveLoadWithSerializer</c> and <c>Instrument_Program</c>'s; the module's kind
+    /// is read from version 122, and written as it is read.
+    /// </summary>
+    public void SaveLoad(SaveSerializer s)
+    {
+        if (s.IsLoading)
+        {
+            Clear();
+            (_program, _bank, _soundTypeMt32, _nativeMt32Device) = (255, 0, false, true);
+        }
+
+        s.Byte(ref _type);
+        switch (_type)
+        {
+            case TypeNone:
+                break;
+            case TypeProgram:
+                s.Byte(ref _program);
+                s.Byte(ref _bank, 123);
+                s.Bool(ref _soundTypeMt32);
+                s.Bool(ref _nativeMt32Device, 122);
+                break;
+            default:
+                throw new InvalidDataException($"An iMuse instrument of type {_type}, which an RO sound does not have.");
+        }
+    }
+}
+
+/// <summary>
+/// A fader of a player's volume, transposition or speed, which only the scripts' commands set:
+/// here only kept for a save. Mirrors <c>ParameterFader</c>.
+/// </summary>
+internal sealed class ParameterFader
+{
+    public int Param, Dir, Incr, Ifrac, Irem, Ttime, Cntdwn, State;
+
+    /// <summary>
+    /// Mirrors its <c>syncWithSerializer</c>: before version 116 a fader was its start, end and
+    /// times, turned into steps when read, and is written so (an idle one, all 0).
+    /// </summary>
+    public void SaveLoad(SaveSerializer s)
+    {
+        s.Int16(ref Param, 17);
+        if (s.Version < 116)
+        {
+            int start = 0, end = 0, totalTime = 0, currentTime = 0;
+            s.Int16(ref start, 17);
+            s.Int16(ref end, 17);
+            s.Uint32(ref totalTime, 17);
+            s.Uint32(ref currentTime, 17);
+            if (s.IsSaving)
+            {
+                return;
+            }
+
+            int diff = end - start;
+            uint tt = (uint)totalTime, ct = (uint)currentTime;
+            if (Param != 0 && diff != 0 && tt != 0)
+            {
+                if (tt < 10000)
+                {
+                    tt = 10000;
+                    ct = (uint)(tt - diff);
+                }
+
+                Dir = diff / Math.Abs(diff);
+                Incr = (short)(diff / (int)(tt / 10000));
+                Ifrac = (ushort)(Math.Abs(diff) % (int)(tt / 10000));
+                State = (short)(start + diff * (int)ct / (int)tt);
+            }
+            else
+            {
+                Param = 0;
+            }
+
+            Irem = 0;
+            Cntdwn = 0;
+            return;
+        }
+
+        s.SByte(ref Dir, 116);
+        s.Int16(ref Incr, 116);
+        s.Uint16(ref Ifrac, 116);
+        s.Uint16(ref Irem, 116);
+        s.Uint16(ref Ttime, 116);
+        s.Uint16(ref Cntdwn, 116);
+        s.Int16(ref State, 116);
     }
 }
 
@@ -341,6 +573,13 @@ internal sealed class Player(IMuseEngine se) : IMidiReceiver
     private byte _speed = 128;
     private uint _transitionTimer;
     private uint _volChan;
+
+    // what a save keeps that Loom never changes: the track, the loop, the hooks and the faders
+    private int _trackIndex, _loopToBeat, _loopFromBeat, _loopCounter, _loopToTick, _loopFromTick;
+    private int _hookJump, _hookTranspose;
+    private readonly byte[] _hookPartOnOff = new byte[16], _hookPartVolume = new byte[16], _hookPartProgram = new byte[16], _hookPartTranspose = new byte[16];
+    private readonly ParameterFader[] _parameterFaders = [new(), new(), new(), new()];
+    private int _musicTick;
 
     public bool IsActive { get; private set; }
 
@@ -380,6 +619,15 @@ internal sealed class Player(IMuseEngine se) : IMidiReceiver
         _transpose = 0;
         _detune = 0;
 
+        foreach (var fader in _parameterFaders)
+        {
+            fader.Param = 0;
+        }
+
+        HookClear();
+
+        // start_seq_sound, its variables reset
+        (_loopToBeat, _loopFromBeat, _trackIndex, _loopCounter, _loopToTick, _loopFromTick) = (1, 1, 0, 0, 0, 0);
         _parser ??= new MidiParserRo();
         _parser.SetMidiDriver(this);
         _parser.SmartJump = true;
@@ -609,6 +857,103 @@ internal sealed class Player(IMuseEngine se) : IMidiReceiver
         return 0;
     }
 
+    /// <summary>Mirrors <c>hook_clear</c>.</summary>
+    private void HookClear()
+    {
+        (_hookJump, _hookTranspose) = (0, 0);
+        Array.Clear(_hookPartOnOff);
+        Array.Clear(_hookPartVolume);
+        Array.Clear(_hookPartProgram);
+        Array.Clear(_hookPartTranspose);
+    }
+
+    /// <summary>
+    /// Reads or writes the player: its first part, its sound and how it plays, its place in the
+    /// music (the parser's tick, for RO counted in markers), the hooks and the faders. A read
+    /// leaves the parser to <see cref="FixAfterLoad"/>. Mirrors <c>Player::saveLoadWithSerializer</c>.
+    /// </summary>
+    public void SaveLoad(SaveSerializer s)
+    {
+        if (s.IsLoading)
+        {
+            _parser = null;
+        }
+
+        _musicTick = _parser is null ? 0 : (int)_parser.Tick;
+        int num = _parts is null ? 0 : _parts.Slot + 1;
+        s.Uint16(ref num);
+        if (s.IsLoading)
+        {
+            _parts = se.PartAt(num);
+        }
+
+        bool active = IsActive;
+        s.Bool(ref active, 8);
+        IsActive = active;
+        int id = Id, priority = Priority, volume = Volume, pan = _pan, transpose = _transpose, detune = _detune;
+        int volChan = (int)_volChan, volEff = EffectiveVolume, speed = _speed;
+        s.Uint16(ref id, 8);
+        s.Byte(ref priority, 8);
+        s.Byte(ref volume, 8);
+        s.SByte(ref pan, 8);
+        s.Byte(ref transpose, 8);
+        s.SByte(ref detune, 8, 115);
+        s.Int16(ref detune, 116);
+        s.Uint16(ref volChan, 8);
+        s.Byte(ref volEff, 8);
+        s.Byte(ref speed, 8);
+        (Id, Priority, Volume, _pan, _transpose, _detune) = ((ushort)id, (byte)priority, (byte)volume, (sbyte)pan, (sbyte)transpose, (short)detune);
+        (_volChan, EffectiveVolume, _speed) = ((uint)(ushort)volChan, (byte)volEff, (byte)speed);
+
+        s.Skip(2, 8, 19);
+        s.Uint16(ref _trackIndex, 8);
+        s.Skip(2, 8, 17);
+        s.Uint16(ref _loopToBeat, 8);
+        s.Uint16(ref _loopFromBeat, 8);
+        s.Uint16(ref _loopCounter, 8);
+        s.Uint16(ref _loopToTick, 8);
+        s.Uint16(ref _loopFromTick, 8);
+        s.Skip(4, 8, 19);
+        s.Skip(4, 8, 17);
+        s.Skip(4, 8, 17);
+        s.Skip(4, 8, 17);
+        s.Skip(2, 8, 17);
+        s.Skip(2, 8, 17);
+        s.Skip(2, 8, 17);
+        s.Uint32(ref _musicTick, 19);
+        s.Byte(ref _hookJump, 8);
+        s.Byte(ref _hookTranspose, 8);
+        s.Bytes(_hookPartOnOff, 16, 8);
+        s.Bytes(_hookPartVolume, 16, 8);
+        s.Bytes(_hookPartProgram, 16, 8);
+        s.Bytes(_hookPartTranspose, 16, 8);
+        foreach (var fader in _parameterFaders)
+        {
+            fader.SaveLoad(s);
+        }
+    }
+
+    /// <summary>
+    /// The sound read again and the parser taken to where the save had it, its notes not played on
+    /// the way, at the save's speed. Mirrors <c>fixAfterLoad</c> and <c>start_seq_sound</c> with
+    /// its variables kept.
+    /// </summary>
+    public void FixAfterLoad(Func<int, byte[]?> sound)
+    {
+        if (sound(Id) is { } data)
+        {
+            _parser = new MidiParserRo();
+            _parser.SetMidiDriver(this);
+            _parser.SmartJump = true;
+            _parser.LoadMusic(data, 0);
+            _parser.SetTrack(_trackIndex);
+            SetSpeed(_speed);
+        }
+
+        SetSpeed(_speed);
+        _parser?.JumpToTick((uint)_musicTick);
+    }
+
     /// <summary>A tick: the faders' time passes, and the music moves on. Mirrors <c>Player::onTimer</c>.</summary>
     public void OnTimer()
     {
@@ -632,7 +977,7 @@ internal sealed class Player(IMuseEngine se) : IMidiReceiver
 /// A channel of a sound being played: its volume, pan, transposition, pitch bend and instrument,
 /// sent to the MIDI channel the engine gives it, or to the rhythm part. Mirrors iMuse's
 /// <c>Part</c> (<c>imuse_part.cpp</c>) for the old system and a native MT-32; a part's own
-/// transposition, which only the scripts' commands set, is left out.
+/// transposition, which only the scripts' commands set, is only kept for a save.
 /// </summary>
 internal sealed class Part(IMuseEngine se, int slot)
 {
@@ -649,9 +994,15 @@ internal sealed class Part(IMuseEngine se, int slot)
     private sbyte _pri;
     private byte _effectLevel;
     private byte _chorus;
+    private sbyte _transpose;
+    private byte _bank;
+    private byte _polyphony;
+    private byte _volControlSensitivity = 127;
     private readonly Instrument _instrument = new();
 
     public int Slot => slot;
+
+    public Instrument Instrument => _instrument;
 
     public Part? Next { get; set; }
 
@@ -792,16 +1143,100 @@ internal sealed class Part(IMuseEngine se, int slot)
         _volEff = player.EffectiveVolume;
         _pan = (sbyte)Math.Clamp((int)player.Pan, -64, 63);
         _transposeEff = player.Transpose;
+        _transpose = 0;
         _detune = 0;
         _detuneEff = player.Detune;
         _pitchbendFactor = 2;
+        _volControlSensitivity = 127;
+        _polyphony = 1;
         _pitchbend = 0;
         _effectLevel = (byte)(se.IsNativeMt32 ? 127 : 64);
         _instrument.Clear();
         _chorus = 0;
         _modwheel = 0;
+        _bank = 0;
         _pedal = false;
         Mc = null;
+    }
+
+    /// <summary>
+    /// Reads or writes the part: its neighbours and player, by number, and its settings. Mirrors
+    /// <c>Part::saveLoadWithSerializer</c>; the instrument follows with the others'.
+    /// </summary>
+    public void SaveLoad(SaveSerializer s)
+    {
+        int next = Next is null ? 0 : Next.Slot + 1, prev = Prev is null ? 0 : Prev.Slot + 1, player = se.NumberOf(Player);
+        s.Uint16(ref next);
+        s.Uint16(ref prev);
+        s.Uint16(ref player);
+        if (s.IsLoading)
+        {
+            (Next, Prev, Player) = (se.PartAt(next), se.PartAt(prev), se.PlayerAt(player));
+        }
+
+        int pitchbend = _pitchbend, pitchbendFactor = _pitchbendFactor, transpose = _transpose, vol = Vol, detune = _detune, pan = _pan;
+        bool on = On, pedal = _pedal, percussion = Percussion;
+        int modwheel = _modwheel, pri = _pri, chan = Chan, effectLevel = _effectLevel, chorus = _chorus, bank = _bank;
+        int polyphony = _polyphony, volControlSensitivity = _volControlSensitivity;
+        s.Int16(ref pitchbend, 8);
+        s.Byte(ref pitchbendFactor, 8);
+        s.SByte(ref transpose, 8);
+        s.Byte(ref vol, 8);
+        s.SByte(ref detune, 8);
+        s.SByte(ref pan, 8);
+        s.Bool(ref on, 8);
+        s.Byte(ref modwheel, 8);
+        s.Bool(ref pedal, 8);
+        s.Skip(1, 8, 16);
+        s.Byte(ref pri, 8);
+        s.Byte(ref chan, 8);
+        s.Byte(ref effectLevel, 8);
+        s.Byte(ref chorus, 8);
+        s.Bool(ref percussion, 8);
+        s.Byte(ref bank, 8);
+        s.Byte(ref polyphony, 116);
+        s.Byte(ref volControlSensitivity, 116);
+        (_pitchbend, _pitchbendFactor, _transpose, Vol, _detune, _pan) = ((short)pitchbend, (byte)pitchbendFactor, (sbyte)transpose, (byte)vol, (sbyte)detune, (sbyte)pan);
+        (On, _pedal, Percussion, _modwheel, _pri, Chan) = (on, pedal, percussion, (byte)modwheel, (sbyte)pri, (byte)chan);
+        (_effectLevel, _chorus, _bank, _polyphony, _volControlSensitivity) = ((byte)effectLevel, (byte)chorus, (byte)bank, (byte)polyphony, (byte)volControlSensitivity);
+    }
+
+    /// <summary>
+    /// The part's settings sent again with its player's: transposed within an octave either way,
+    /// as for a native MT-32. Mirrors <c>fix_after_load</c> with dynamic channel allocation.
+    /// </summary>
+    public void FixAfterLoad()
+    {
+        SetTranspose(_transpose, -12, 12);
+        SetVolume(Vol);
+        SetDetune(_detune);
+        SetPri(_pri);
+        SetPan(_pan);
+        SendAll();
+    }
+
+    /// <summary>Mirrors <c>set_transpose</c> (not for the Amiga).</summary>
+    private void SetTranspose(sbyte transpose, int clipRangeLow, int clipRangeHi)
+    {
+        _transpose = transpose;
+        _transposeEff = _transpose == -128 ? (sbyte)0 : (sbyte)TransposeClamp(_transpose + Player!.Transpose, clipRangeLow, clipRangeHi);
+        SendTranspose();
+    }
+
+    /// <summary>Mirrors <c>transpose_clamp</c>: brought within the range by octaves.</summary>
+    private static int TransposeClamp(int a, int b, int c)
+    {
+        if (b > a)
+        {
+            a += (b - a + 11) / 12 * 12;
+        }
+
+        if (c < a)
+        {
+            a -= (a - c + 11) / 12 * 12;
+        }
+
+        return a;
     }
 
     /// <summary>The part let go: its notes off, its channel to a part waiting or freed. Mirrors <c>uninit</c>.</summary>
@@ -899,7 +1334,8 @@ internal sealed class Part(IMuseEngine se, int slot)
 
     public void ProgramChange(byte value)
     {
-        _instrument.Program(value);
+        _bank = 0;
+        _instrument.Program(value, 0, Player!.IsMt32);
         if (ClearToTransmit())
         {
             _instrument.Send(Mc!);

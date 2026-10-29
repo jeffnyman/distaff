@@ -1,3 +1,4 @@
+using Distaff.Scumm.Saves;
 using Distaff.Scumm.Sound.IMuse;
 
 namespace Distaff.Scumm.Sound;
@@ -20,6 +21,7 @@ public sealed class PlayerImuse : MusicPlayer
     private readonly object _sync = new();
     private readonly IMidiDevice _device;
     private readonly IMuseEngine _imuse;
+    private int _musicVolume;
 
     /// <param name="sampleRate">The output's rate, which the device renders at.</param>
     /// <param name="device">The MT-32.</param>
@@ -98,9 +100,61 @@ public sealed class PlayerImuse : MusicPlayer
     {
         lock (_sync)
         {
+            _musicVolume = music;
             _imuse.SetMusicVolume(music);
         }
     }
+
+    /// <summary>iMuse's state as a save of a version keeps it (<c>saveLoadIMuse</c>).</summary>
+    public byte[] SaveState(int version)
+    {
+        lock (_sync)
+        {
+            var s = SaveSerializer.ForSaving(version);
+            _imuse.SaveLoad(s, _ => null);
+            return s.ToArray();
+        }
+    }
+
+    /// <summary>
+    /// The first of a load, before every sound stops: the music volume to 0, as <c>loadState</c>
+    /// sets it "to minimize stuttering". <see cref="LoadState"/> sets it again.
+    /// </summary>
+    public void BeginLoad()
+    {
+        lock (_sync)
+        {
+            _imuse.SetMusicVolume(0);
+        }
+    }
+
+    /// <summary>
+    /// The rest of a load, the sounds stopped: iMuse paused, its state read when the save has one
+    /// (the sounds it plays read again from <paramref name="sound"/>, as RO resources), started
+    /// again, and the music volume set again, as <c>syncSoundSettings</c> sets it after the load.
+    /// A save without iMuse's state, such as the AdLib's, leaves the music stopped; ScummVM would
+    /// read it as iMuse's state all the same.
+    /// </summary>
+    /// <param name="data">What <see cref="SaveState"/> wrote.</param>
+    /// <param name="version">The save's version.</param>
+    /// <param name="sound">A sound by number, as iMuse takes it.</param>
+    public void LoadState(byte[] data, int version, Func<int, byte[]?> sound)
+    {
+        lock (_sync)
+        {
+            _imuse.Pause(true);
+            if (data.Length >= MinimumStateSize)
+            {
+                _imuse.SaveLoad(SaveSerializer.ForLoading(data, version), sound);
+            }
+
+            _imuse.Pause(false);
+            _imuse.SetMusicVolume(_musicVolume);
+        }
+    }
+
+    /// <summary>The bytes of iMuse's state with nothing playing, at the oldest version read.</summary>
+    private static int MinimumStateSize { get; } = new PlayerImuse(1, new NullDevice(), "").SaveState(ScummState.OldestVersion).Length;
 
     /// <summary>Silences the music and turns its notes off while the game is paused (<c>IMuseInternal::pause</c>).</summary>
     public void Pause(bool paused)
@@ -116,6 +170,24 @@ public sealed class PlayerImuse : MusicPlayer
         lock (_sync)
         {
             _device.Render(interleavedStereo);
+        }
+    }
+
+    /// <summary>A device that takes everything and plays nothing.</summary>
+    private sealed class NullDevice : IMidiDevice
+    {
+        public void Send(uint message)
+        {
+        }
+
+        public void SysEx(ReadOnlySpan<byte> message)
+        {
+        }
+
+        public void Render(Span<short> interleavedStereo) => interleavedStereo.Clear();
+
+        public void SetTimer(int ticksPerSecond, Action? tick)
+        {
         }
     }
 }

@@ -118,6 +118,81 @@ public class RolandTests
         Assert.True(world.Engine.Variables[Vars.MusicTimer] > timer);
     }
 
+    /// <summary>
+    /// A save keeps iMuse's state (<c>saveLoadIMuse</c>, as <see cref="ImuseTests"/> checks it
+    /// against ScummVM's), at version 124 and at 108, and a load plays the overture on from it:
+    /// saved at a music timer of 96, it goes on from 39, as ScummVM takes it back (its parser sent
+    /// to a tick counted in markers), and the title follows it from there.
+    /// </summary>
+    [Theory]
+    [InlineData(124, 3492)]
+    [InlineData(108, 3372)]
+    public void A_save_keeps_the_music_and_a_load_plays_it_on(int version, int stateSize)
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        var world = Overture(loader, SoundDevice.Mt32);
+        Assert.Equal(96, world.Engine.Variables[Vars.MusicTimer]);
+        var state = world.Capture(version);
+        Assert.Equal(stateSize, state.SoundEngineData.Length);
+        Assert.Equal(((PlayerImuse)world.Sound.Player).SaveState(version), state.SoundEngineData);
+
+        var loaded = Loaded(SoundDevice.Mt32, world.Save("overture", DateTime.Now, version));
+        Assert.True(loaded.Sound.IsRunning(56));
+        Assert.Equal(39, loaded.Engine.Variables[Vars.MusicTimer]);
+        Run(loaded, 300);
+        Assert.True(loaded.Sound.IsRunning(56));
+        Assert.True(loaded.Engine.Variables[Vars.MusicTimer] > 39);
+        Assert.Equal(69, loaded.CurrentRoomNumber);
+    }
+
+    /// <summary>
+    /// A save made with the AdLib and loaded with the MT-32, or the other way, leaves the music
+    /// stopped: neither player reads the other's state. ScummVM reads it all the same, and plays
+    /// from what it makes of it.
+    /// </summary>
+    [Theory]
+    [InlineData(SoundDevice.AdLib, SoundDevice.Mt32)]
+    [InlineData(SoundDevice.Mt32, SoundDevice.AdLib)]
+    public void A_save_of_the_other_device_leaves_the_music_stopped(SoundDevice saved, SoundDevice loading)
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        var loaded = Loaded(loading, Overture(loader, saved).Save("overture", DateTime.Now, 124));
+        Run(loaded, 100);
+        Assert.False(loaded.Sound.IsRunning(25));
+        Assert.False(loaded.Sound.IsRunning(56));
+        Assert.Equal(0, loaded.Engine.Variables[Vars.MusicTimer]);
+    }
+
+    /// <summary>A world playing the title's music, 600 frames after PRACTICE was chosen.</summary>
+    private static GameWorld Overture(ResourceLoader loader, SoundDevice device)
+    {
+        var world = new GameWorld(loader, sound: device, mt32: rate => new Silent(rate));
+        world.Boot();
+        Run(world, 100);
+        world.Click(160, 92);
+        Run(world, 600);
+        return world;
+    }
+
+    /// <summary>A fresh world with a device, a save loaded into it and a frame played.</summary>
+    private static GameWorld Loaded(SoundDevice device, byte[] save)
+    {
+        var world = new GameWorld(Open()!, sound: device, mt32: rate => new Silent(rate));
+        world.Boot();
+        Run(world, 5);
+        world.Load(save);
+        Run(world, 1);
+        return world;
+    }
+
     /// <summary>The MT-32 without a sound: a device that renders silence on the emulator's timing, and keeps what it is sent.</summary>
     private sealed class Silent(int outputRate) : EmulatedMidiDevice(32000, outputRate)
     {

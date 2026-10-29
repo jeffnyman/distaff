@@ -51,7 +51,7 @@ public sealed partial class GameWorld
 
     /// <summary>Saves the game as a ScummVM save file, as ScummVM's own menu does between steps.</summary>
     public byte[] Save(string name, DateTime saved, int version = SaveFile.CompatibleVersion)
-        => SaveFile.Write(Capture(), name, Time, saved, version);
+        => SaveFile.Write(Capture(version), name, Time, saved, version);
 
     /// <summary>
     /// Loads a ScummVM save file, as a load from ScummVM's launcher does: the state is put back now,
@@ -367,7 +367,7 @@ public sealed partial class GameWorld
             return false;
         }
 
-        var data = SaveFile.Write(Capture(), name, Time, DateTime.Now, SaveVersion);
+        var data = SaveFile.Write(Capture(SaveVersion), name, Time, DateTime.Now, SaveVersion);
         using var output = SaveStore.OpenWrite(SaveFileName(slot));
         output.Write(data);
         return true;
@@ -401,7 +401,8 @@ public sealed partial class GameWorld
     }
 
     /// <summary>The world as a ScummVM save state. Mirrors the state <c>saveLoadWithSerializer</c> writes for Loom version 3.</summary>
-    public ScummState Capture()
+    /// <param name="version">The save version it is for, which iMuse's state depends on.</param>
+    public ScummState Capture(int version = SaveFile.CompatibleVersion)
     {
         var s = new ScummState(_owners.Length, _loader.Version, FmTowns);
         var room = CurrentRoom;
@@ -520,6 +521,11 @@ public sealed partial class GameWorld
             // Distaff does not have, and writes nothing in its place
             s.SoundEngineData = adLib.SaveState();
         }
+        else if (_loader.Version == 3 && Sound.Player is PlayerImuse imuse)
+        {
+            // the Roland Upgrade's: iMuse's state (saveLoadIMuse)
+            s.SoundEngineData = imuse.SaveState(version);
+        }
         (s.EgoPositioned, s.ScreenEffectFlag, s.ScreenB, s.ScreenH) = (_egoPositioned ? 1 : 0, _screenEffectFlag ? 1 : 0, ViewTop, ViewTop + ViewHeight);
         (s.DoEffect, s.SwitchRoomEffect, s.NewEffect, s.SwitchRoomEffect2) = (_doEffect ? 1 : 0, _switchRoomEffect, _newEffect, _switchRoomEffect2);
         // a save from the menu, as ScummVM's, keeps the shake as the menu left it: stopped
@@ -573,6 +579,8 @@ public sealed partial class GameWorld
     /// </summary>
     public void Restore(ScummState s)
     {
+        // loadState sets iMuse's music volume to 0 before the sounds stop
+        (Sound.Player as PlayerImuse)?.BeginLoad();
         Sound.StopAll();
         Sound.Cd.Stop();
         CdTrack = null;
@@ -721,6 +729,12 @@ public sealed partial class GameWorld
             // the AdLib's music starts again where the save left it, and its effects with it; a VGA
             // CD save's sound state is ScummVM's iMuse's, and is passed over
             adLib.LoadState(s.SoundEngineData, LoadSound);
+        }
+        else if (_loader.Version == 3 && Sound.Player is PlayerImuse imuse)
+        {
+            // the Roland Upgrade's music starts again where the save left it, iMuse paused meanwhile
+            // as loadState pauses the sounds, at the music volume syncSoundSettings sets after
+            imuse.LoadState(s.SoundEngineData, s.SaveVersion, LoadSound);
         }
 
         // initScreens with the save's bands clears them; nothing drawn over the room is left

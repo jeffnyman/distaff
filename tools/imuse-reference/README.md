@@ -24,6 +24,13 @@ every 128 frames after, 250 a second), one line each: `<frame> M <packed message
 driver writes those straight to Munt's memory), the music timer as it changes `<frame> T <value>`,
 and `<frame> E` at the end. It is `mt32-reference`'s script format, so Munt can render it.
 
+`... save <frame> <state.bin>` also writes iMuse's state as ScummVM saves it (`saveLoadIMuse`, at
+save version 124) before the first tick at or after a frame. `... load <state.bin> <version>`
+plays no sound of its own: it reads a state at a save version as ScummVM's `loadState` does (the
+music volume to 0, the sounds stopped, iMuse paused, the state read and its players and parts set
+up again, iMuse going on, the music volume set again as `syncSoundSettings` does after a load)
+and plays on from there. `shim/common/serializer.h` reads and writes as ScummVM's `Serializer`.
+
 `out\rate-reference.exe <input.raw> <output.raw> <rate>` converts a 32 kHz stereo render to
 `rate` as ScummVM's mixer plays `MidiDriver_MT32`'s stream at full volume, reading 512 samples at a
 time.
@@ -31,4 +38,5 @@ time.
 `ImuseTests` holds the SHA-256 of three minutes of `imuse-reference`'s output for every sound read
 as the Roland Upgrade reads it (lines ending in a line feed), and of the overture's first
 2,640,000 frames at 44100 Hz through `mt32-reference` (its chunk 128) and `rate-reference`, on the
-MT-32 1.07 and the CM-32L 1.02.
+MT-32 1.07 and the CM-32L 1.02; and the SHA-256 of the overture's state saved at three places, and
+of a minute played on after loading each.

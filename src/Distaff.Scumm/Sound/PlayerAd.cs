@@ -351,13 +351,14 @@ public sealed class PlayerAd : MusicPlayer
     /// Plays on from a save's state: the music starts again and is wound on, silent, to where
     /// the save left it, with its timers as they were; then the effects start again. Mirrors the
     /// loading half of <c>Player_AD::saveLoadWithSerializer</c> and <c>musicSeekTo</c>. A save
-    /// without the state leaves the player as it is.
+    /// without the state, or with another player's (an MT-32 save's iMuse state), leaves the player
+    /// as it is; ScummVM would read the other's as its own, and play from what it makes of it.
     /// </summary>
     /// <param name="data">What <see cref="SaveState"/> wrote.</param>
     /// <param name="resource">A sound's data as <see cref="StartSound"/> takes it, or null.</param>
     public void LoadState(byte[] data, Func<int, byte[]?> resource)
     {
-        if (data.Length < SaveStateSize)
+        if (data.Length != SaveStateSize)
         {
             return;
         }

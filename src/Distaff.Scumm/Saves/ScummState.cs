@@ -152,6 +152,9 @@ public sealed class ScummState
     public List<(int Type, int Index)> Locked = [];
     public int[] AudioCdStatus = new int[5];
     public byte[] SoundEngineData = [];
+
+    /// <summary>The version the state was read at, which the sound engine's state is read at too.</summary>
+    public int SaveVersion = SaveFile.CurrentVersion;
     public int CharsetId, CharsetRendererColor;
 
     /// <summary>The four cursor pictures, 16 rows of 16 bits each, and their hotspots as x and y bytes (<c>_cursorImages</c>, <c>_cursorHotspots</c>).</summary>
@@ -164,6 +167,11 @@ public sealed class ScummState
     /// <summary>Reads or writes the whole state. Mirrors <c>ScummEngine::saveLoadWithSerializer</c>, then <c>ScummEngine_v5</c>'s.</summary>
     public void Sync(SaveSerializer s)
     {
+        if (s.IsLoading)
+        {
+            SaveVersion = s.Version;
+        }
+
         s.Bytes(GameMd5, 16, 39);
         s.Skip(2, 8, 50);
         s.Skip(2, 8, 50);

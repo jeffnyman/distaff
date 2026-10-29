@@ -1056,8 +1056,8 @@ MT-32 (`Distaff.Scumm/Sound/IMuse`, and `PlayerImuse`, which carries it).
 - Left out, as Loom never reaches them: the scripts' commands to iMuse (only `soundKludge`
   reaches them, which Loom's scripts do not use), and with them the command queue, triggers,
   hooks, jumps, loops, scans and faders' targets; iMuse's own sysex messages and Roland
-  instruments (an RO sound has none); the AdLib and other drivers. Saving iMuse's state is step
-  4.
+  instruments (an RO sound has none); the AdLib and other drivers. Saving iMuse's state came
+  with step 4 (see "iMuse in saves").
 
 ## The Roland Upgrade in the game
 
@@ -1080,8 +1080,41 @@ to choose between the two when it holds both).
   sound 57, and its first line), the same on the emulator with the ROMs; pausing.
 - Not checked against ScummVM's window: the timeline is iMuse's, which `ImuseTests` checks
   against ScummVM's, and the scripts' as for the AdLib.
-- iMuse's state in saves is step 4: until then a save made with the MT-32 keeps no music, and a
-  load stops the music that was playing.
+- iMuse's state in saves came with step 4 (see "iMuse in saves").
+
+## iMuse in saves
+
+The fourth and last step of the Roland Upgrade: a save made with the MT-32 keeps iMuse's state, as
+ScummVM's does, and a load plays the music on from it.
+
+- `IMuseEngine.SaveLoad` is `saveLoadIMuse`: the command queue, the volumes, the 8 players (their
+  first part, sound, priority, volume, pan, transposition, speed, track and loop, the parser's
+  tick, the hooks and the faders), the 32 parts (their neighbours, player and settings) and their
+  instruments, each field at the versions that have it; what Loom never changes (the queue,
+  triggers, hooks, loops, faders) is kept as read. A read then starts each player's sound again
+  and takes its parser to the saved tick, its notes not played on the way (`fixAfterLoad`), sets
+  each part up again (`fix_after_load`) and gives out the channels.
+- `PlayerImuse` loads as ScummVM's `loadState` does: the music volume to 0 before the sounds stop,
+  iMuse paused, the state read, iMuse going on, and the music volume set again as
+  `syncSoundSettings` sets it right after the load. The save writes the state at its version:
+  3492 bytes for the overture at 124, 3372 at 108 (Distaff's default, ScummVM 2.7's), where a
+  player's detune and faders and a part's polyphony and volume sensitivity are as that version
+  had them and a program has no bank or module kind.
+- ScummVM's own quirk, kept: a player saves its parser's tick, which for RO is counted in markers
+  (`getTick`, the markers times half a beat), and a load takes the parser to that tick as if it
+  were the music's own. The music goes on from earlier than it was: the overture saved at a
+  music timer of 96 goes on from 39, and the title waits for it again.
+- `tools/imuse-reference` gained `save` and `load` (a real `Serializer` in its shim):
+  `ImuseTests` saves the overture at three places and each state is ScummVM's byte for byte, and
+  a load of each then plays a minute with every message and music timer ScummVM's. ScummVM's
+  loader reads the state Distaff writes at 108 and plays on as from its own at 124.
+  `RolandTests` saves in the game and loads into a fresh one at both versions.
+- A save made with one device and loaded with the other: the AdLib's state is 36 bytes and
+  iMuse's thousands, and neither player now reads the other's (`PlayerAd.LoadState` took the
+  first 36 bytes of iMuse's as its own, played garbage and could stop the game); the music stays
+  stopped, and the music timer at 0. ScummVM reads either as its own all the same.
+- Left out: mapping a saved program between the MT-32's and General MIDI, which only a save made
+  with ScummVM on a General MIDI device would ask for.
 
 ## The VGA CD's menu against ScummVM's window
 
@@ -1695,7 +1728,7 @@ Coverage of the game's scripts:
 
 Larger features:
 
-17. MT-32 music for the EGA (the Roland Upgrade's sounds, with the player's own ROMs). The emulator, iMuse and the game's Roland mode are in (see "The MT-32 emulator", "iMuse" and "The Roland Upgrade in the game"); to come: iMuse's state in saves.
+17. (Done: MT-32 music for the EGA, the Roland Upgrade's sounds with the player's own ROMs, `--mt32-roms`; see "The MT-32 emulator", "iMuse", "The Roland Upgrade in the game" and "iMuse in saves".)
 18. (Done: `--sound cms`, sample for sample as ScummVM's `Player_V2CMS`; see "The CMS".)
 19. (Dropped: other releases, as other languages of the EGA, the Amiga, Atari ST and Macintosh releases, the PC-Engine CD, and the FM Towns' Japanese text; Distaff plays the EGA, the VGA CD and the FM Towns.)
 

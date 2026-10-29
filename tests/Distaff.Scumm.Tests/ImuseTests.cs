@@ -126,6 +126,132 @@ public class ImuseTests
         Assert.Equal(referenceHash, Convert.ToHexStringLower(SHA256.HashData(MemoryMarshal.AsBytes(samples.AsSpan()))));
     }
 
+    /// <summary>
+    /// iMuse's state saved while the overture plays is ScummVM's, byte for byte
+    /// (<c>imuse-reference ... save &lt;frame&gt;</c>, at save version 124): its eight parts on
+    /// the module's programs, 3492 bytes. The hashes are the SHA-256 of the state.
+    /// </summary>
+    [Theory]
+    [InlineData(320000, "c6fdd5592a65b637")]
+    [InlineData(1600000, "8bcb97e41978436e")]
+    [InlineData(3200000, "82b303273c76f84d")]
+    public void A_save_holds_what_scummvms_imuse_saves(uint frame, string referenceHash)
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        var state = SaveOverture(loader, frame);
+        Assert.Equal(3492, state.Length);
+        Assert.Equal(referenceHash, Convert.ToHexStringLower(SHA256.HashData(state))[..16]);
+    }
+
+    /// <summary>
+    /// A load plays on as ScummVM's does (<c>imuse-reference ... load</c>, the state saved as
+    /// above): the volume to 0, the sounds stopped, iMuse paused, the state read and the overture
+    /// started again, iMuse going on and the volume set again, then a minute played, every message
+    /// and music timer ScummVM's. ScummVM takes the parser back to the saved tick, which for RO is
+    /// counted in markers, as if it were the music's own: saved at a music timer of 81, the
+    /// overture goes on from 33, and Distaff does the same.
+    /// </summary>
+    [Theory]
+    [InlineData(320000, "5d9bb7c23456b176")]
+    [InlineData(1600000, "51318e342385ce44")]
+    [InlineData(3200000, "e6ee7f16c88d3ad1")]
+    public void A_load_plays_on_as_scummvms_imuse_does(uint frame, string referenceHash)
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        var state = SaveOverture(loader, frame);
+        var recorder = new Recorder();
+        var player = new PlayerImuse(44100, recorder, "ScummVM 2026.4.0");
+        player.SetVolumes(192, 192);
+        player.BeginLoad();
+        player.StopAllSounds();
+        player.LoadState(state, 124, n => PlayerImuse.RoResource(loader.LoadRolandSound(n)!.Value.Span));
+        Play(player, recorder, 60 * 32000);
+        Assert.Equal(referenceHash, Convert.ToHexStringLower(SHA256.HashData(Encoding.ASCII.GetBytes(recorder.Log.ToString())))[..16]);
+    }
+
+    /// <summary>
+    /// A save at version 108, as Distaff writes by default for ScummVM 2.7, holds the faders and
+    /// the instruments as that version had them, and loads (as ScummVM loads it) to play on as
+    /// the one at 124 does.
+    /// </summary>
+    [Fact]
+    public void A_save_at_version_108_plays_on_as_one_at_124()
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        Func<int, byte[]?> sound = n => PlayerImuse.RoResource(loader.LoadRolandSound(n)!.Value.Span);
+        string PlayedOn(byte[] state, int version)
+        {
+            var recorder = new Recorder();
+            var player = new PlayerImuse(44100, recorder, "ScummVM 2026.4.0");
+            player.SetVolumes(192, 192);
+            player.BeginLoad();
+            player.StopAllSounds();
+            player.LoadState(state, version, sound);
+            Play(player, recorder, 10 * 32000);
+            return recorder.Log.ToString();
+        }
+
+        var old = SaveOverture(loader, 1600000, 108);
+        // a byte less for each player's detune and each of its faders, two for each part's polyphony
+        // and volume sensitivity, two for each program's bank and module
+        Assert.Equal(3492 - 8 - 8 * 4 - 32 * 2 - 8 * 2, old.Length);
+        Assert.Equal(PlayedOn(SaveOverture(loader, 1600000), 124), PlayedOn(old, 108));
+    }
+
+    /// <summary>The overture's state, saved before the first tick at or after a frame.</summary>
+    private static byte[] SaveOverture(ResourceLoader loader, uint frame, int version = 124)
+    {
+        var recorder = new Recorder();
+        var player = new PlayerImuse(44100, recorder, "ScummVM 2026.4.0");
+        player.SetVolumes(192, 192);
+        player.StartSound(56, PlayerImuse.RoResource(loader.LoadRolandSound(56)!.Value.Span));
+        byte[]? state = null;
+        Play(player, recorder, frame + 128, at => state ??= at >= frame ? player.SaveState(version) : null);
+        return state!;
+    }
+
+    /// <summary>
+    /// The timer at frame 0 and every 128 frames after, the last at the end, as MidiDriver_Emulated
+    /// calls it at 32 kHz, the music timer written as it changes; <paramref name="beforeTick"/>
+    /// sees each frame before its tick.
+    /// </summary>
+    private static void Play(PlayerImuse player, Recorder recorder, uint frames, Action<uint>? beforeTick = null)
+    {
+        int timer = -1;
+        while (true)
+        {
+            beforeTick?.Invoke(recorder.Frame);
+            recorder.Tick!();
+            int now = player.MusicTimer;
+            if (now != timer)
+            {
+                recorder.Log.Append($"{recorder.Frame} T {now}\n");
+                timer = now;
+            }
+
+            if (recorder.Frame >= frames)
+            {
+                break;
+            }
+
+            recorder.Frame += 128;
+        }
+
+        recorder.Log.Append($"{recorder.Frame} E\n");
+    }
+
     /// <summary>A device that writes what reaches it as <c>imuse-reference</c> writes it.</summary>
     private sealed class Recorder : IMidiDevice
     {

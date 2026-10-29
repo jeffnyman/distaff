@@ -5,7 +5,7 @@
 // writes what reaches it, timed as ScummVM's MidiDriver_MT32 times it (MidiDriver_Emulated at
 // 32000 Hz, a timer tick every 128 frames, 250 a second).
 //
-// imuse-reference <sound.bin> <number> <output.txt> <frames>
+// imuse-reference <sound.bin> <number> <output.txt> <frames> [save <frame> <state.bin>] [load <state.bin> <version>]
 //
 // The sound is the resource as ScummVM loads it for the Roland Upgrade: "RO", then the block
 // after its 4-byte header (readSoundResourceSmallHeader for isRolandLoom). iMuse is set up as
@@ -15,6 +15,12 @@
 // "<frame> W <device> <address and data hex>" (MidiDriver_MT32::sysEx writes these straight to
 // the synth's memory); the music timer as it changes, "<frame> T <value>"; and "<frame> E" at
 // the end. It is mt32-reference's script format, so that Munt can render it.
+//
+// "save" writes iMuse's state as ScummVM saves it (saveLoadIMuse, at save version 124) before the
+// first tick at or after a frame. "load" plays no sound of its own: it reads a state at a save
+// version as ScummVM loads a save (loadState: the music volume to 0, every sound stopped, iMuse
+// paused, the state read and its players and parts set up again, iMuse going on, and the music
+// volume set again as syncSoundSettings sets it after the load), and plays on from there.
 #include "common/scummsys.h"
 #include "common/system.h"
 #include "audio/mididrv.h"
@@ -23,6 +29,7 @@
 #include "scumm/imuse/drivers/midi.h"
 
 #include <vector>
+#include <string.h>
 
 const char *gScummVMVersion = "2026.4.0";
 static OSystem systemInstance;
@@ -69,8 +76,19 @@ MidiDriver *MidiDriver::createMidi(DeviceHandle) { return &recorder; }
 
 int main(int argc, char **argv) {
 	if (argc < 5) {
-		fprintf(stderr, "usage: imuse-reference <sound.bin> <number> <output.txt> <frames>\n");
+		fprintf(stderr, "usage: imuse-reference <sound.bin> <number> <output.txt> <frames> [save <frame> <state.bin>] [load <state.bin> <version>]\n");
 		return 2;
+	}
+
+	uint32 saveFrame = 0xFFFFFFFF;
+	const char *saveFile = nullptr, *loadFile = nullptr;
+	uint32 loadVersion = 124;
+	if (argc >= 8 && !strcmp(argv[5], "save")) {
+		saveFrame = (uint32)atol(argv[6]);
+		saveFile = argv[7];
+	} else if (argc >= 8 && !strcmp(argv[5], "load")) {
+		loadFile = argv[6];
+		loadVersion = (uint32)atol(argv[7]);
 	}
 
 	FILE *in = fopen(argv[1], "rb");
@@ -92,7 +110,26 @@ int main(int argc, char **argv) {
 
 	Scumm::IMuse *imuse = Scumm::IMuse::create(&vm, new Scumm::IMuseDriver_MT32(0, false), nullptr, MDT_MIDI, true);
 	imuse->setMusicVolume(192);
-	imuse->startSound(number);
+	if (loadFile) {
+		FILE *f = fopen(loadFile, "rb");
+		if (!f) {
+			fprintf(stderr, "cannot read %s\n", loadFile);
+			return 1;
+		}
+		std::vector<byte> state;
+		for (int c; (c = fgetc(f)) != EOF;)
+			state.push_back((byte)c);
+		fclose(f);
+		imuse->setMusicVolume(0);
+		imuse->stopAllSounds();
+		imuse->pause(true);
+		Common::Serializer s(&state, true, loadVersion);
+		imuse->saveLoadIMuse(s, &vm);
+		imuse->pause(false);
+		imuse->setMusicVolume(192);
+	} else {
+		imuse->startSound(number);
+	}
 
 	// MidiDriver_Emulated::readBuffer: the timer at frame 0 and then every 128 frames
 	const int samplesPerTick = (32000 / 250) << 16;
@@ -103,6 +140,15 @@ int main(int argc, char **argv) {
 		frame += step;
 		nextTick -= step << 16;
 		if (!(nextTick >> 16)) {
+			if (saveFile && frame >= saveFrame) {
+				std::vector<byte> state;
+				Common::Serializer s(&state, false, 124);
+				imuse->saveLoadIMuse(s, &vm);
+				FILE *f = fopen(saveFile, "wb");
+				fwrite(state.data(), 1, state.size(), f);
+				fclose(f);
+				saveFile = nullptr;
+			}
 			if (recorder.timerProc)
 				recorder.timerProc(recorder.timerParam);
 			nextTick += samplesPerTick;
