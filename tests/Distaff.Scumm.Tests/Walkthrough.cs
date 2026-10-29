@@ -66,7 +66,10 @@ internal sealed class Walkthrough(GameWorld world)
             {
                 int n = Exported.TryGetValue(release, out int last) ? last + 1 : 1;
                 Exported[release] = n;
-                File.WriteAllBytes(Path.Combine(folder, $"{release}-{n:D2}-{section.Method.Name}.s{n:D2}"), save);
+                // a lambda's method is named by the compiler, as <Test>b__1: its test's name, the
+                // brackets and what follows left out, as a file name cannot have them
+                string name = section.Method.Name is ['<', .. var rest] && rest.IndexOf('>') is >= 0 and var end ? rest[..end] : section.Method.Name;
+                File.WriteAllBytes(Path.Combine(folder, $"{release}-{n:D2}-{name}.s{n:D2}"), save);
             }
         }
 

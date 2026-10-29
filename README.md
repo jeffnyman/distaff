@@ -1,60 +1,127 @@
 # Distaff
 
-Distaff is a C# implementation of the SCUMM interpreter for Loom. It is a port of the parts of
-ScummVM's `engines/scumm` that Loom uses (SCUMM versions 3 and 4), restructured as a .NET library
-on a small host contract of its own, so the same engine can run headless (as the tests run it) and
-on the desktop.
+[![Build](https://github.com/jeffnyman/distaff/actions/workflows/build.yml/badge.svg)](https://github.com/jeffnyman/distaff/actions/workflows/build.yml)
+[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
-Distaff is not a ScummVM fork and does not aim to run any other SCUMM game.
+Distaff is a player for Lucasfilm Games' *Loom*, written in C#. It is a port of the parts of
+ScummVM's SCUMM engine that Loom uses (SCUMM versions 3 and 4), rebuilt as a .NET library on a
+small host of its own, so the same engine plays in a window on the desktop and runs headless under
+test.
 
-## Status
+It plays all three of Loom's English releases, the DOS EGA, the FM Towns and the DOS VGA CD, from
+the start to the end, with their sound, and saves in ScummVM's format: a save made in either one
+loads in the other.
 
-Early. Releases are identified by ScummVM's MD5 table, and `distaff <folder>` reports which one a
-folder holds. For the EGA release the index, rooms (objects, walkboxes, entry, exit and local
-scripts), global scripts, sounds and the charset are read, and rooms are drawn with their
-objects and masks: `distaff <folder> --room N` writes a room as a PNG and lists it. Every script
-decodes; `--script N` and `--room-scripts N` disassemble them. `distaff <folder>` plays the game
-in a window with the mouse and keys: the distaff and its drafts, text, the cursor and dark
-rooms are drawn, and the game's own save screen (F5; the VGA CD's menu) saves and loads in ScummVM's save format, named as ScummVM names each release's saves (`loom-ega.s01`, `loom-vga.s01`, `loom-fm.s01`)
-(`--load file` starts from a save), with sound on the AdLib, the PCjr, the CMS (Game Blaster) or the PC speaker (`--sound adlib|pcjr|cms|speaker`, the AdLib by default), or the Roland Upgrade's music on an emulated MT-32 or CM-32L from your own ROMs (`--mt32-roms folder`, `--mt32-model mt32|cm32l` to choose when the folder holds both), and its lines going by at ScummVM's text speed (`--text-speed 0-9`, 6 by default; '+' and '-' on the VGA CD; `--no-subtitles` hides the VGA CD's lines while the CD speaks them, as a fresh ScummVM does), its music and effects at ScummVM's volumes (`--music-volume` and `--sfx-volume`, 0 to 256, 192 by default), and its random numbers ScummVM's, seeded from the clock unless `--random-seed N` gives the seed. It also runs headless, with the seed 1 unless given, as the tests
-run it: `distaff <folder> --run 2000 --click 100:160,92 --key 200:esc --screenshot end.png`.
-The walkthrough tests play the whole game, the EGA, VGA CD and FM Towns releases all three, from the
-start to the end, a section at a time, each section starting from the save the one
-before it made, at each of the three proficiency levels, and some ways off it: the opening played
-through, Crystalgard's graves and chalice, the waterspout's ride out to sea, and the distaff's answers to drafts gone
-wrong. The coverage report (`DISTAFF_COVERAGE`) lists what they leave unplayed, and sweeps every object the walkthrough
-finds, looking at it and spinning every draft Bobbin knows at it from a save of the room. With `DISTAFF_EXPORT_SAVES` naming a folder, they also write those saves there,
-and each has been loaded in ScummVM 2026.4.0, which drew the same screen, and saved again by it
-and loaded here.
-[ROADMAP.md](ROADMAP.md) gives the order of work.
+Distaff is not a ScummVM fork, and it plays no other SCUMM game.
 
-| Release | SCUMM version | Data | State |
+| EGA (1990) | FM Towns (1991) | VGA CD (1992) |
+|---|---|---|
+| ![The Loom in the EGA release](assets/loom-ega.png) | ![The Loom in the FM Towns release](assets/loom-fmtowns.png) | ![The Loom in the VGA CD release](assets/loom-vga.png) |
+| ![The woods in the EGA release](assets/woods-ega.png) | ![The woods in the FM Towns release](assets/woods-fmtowns.png) | ![The woods in the VGA CD release](assets/woods-vga.png) |
+
+## Features
+
+- **All three English releases**, identified by ScummVM's own table of MD5s, and played to the
+  end at each of the three proficiency levels (Practice, Standard and Expert).
+- **The game's own interface**: the distaff and its drafts, the save screen of the EGA and the FM
+  Towns and the VGA CD's menu (F5), the pause and other banners, and the keys ScummVM's original
+  interface keeps.
+- **Sound as ScummVM plays it**, checked sample for sample against ScummVM's own code:
+  - the EGA on the PC speaker, the PCjr/Tandy, the Creative Music System (Game Blaster) or the
+    AdLib, and the Roland Upgrade's music on an emulated MT-32 or CM-32L from your own ROMs;
+  - the FM Towns' sound on its FM and PCM chips, and its music from its CD audio tracks;
+  - the VGA CD's voices and music from its CD audio track, with subtitles.
+- **ScummVM-compatible saves**: Distaff's saves load in ScummVM and ScummVM's load here, the
+  music playing on from where it was saved.
+- **The FM Towns' smooth scrolling**, and ScummVM's semi-smooth option.
+- **One self-contained file** for Windows, Linux and macOS, with nothing to install.
+- **A headless mode** that plays from scripted clicks and keys and writes screenshots and sound,
+  as the tests use it.
+
+## The releases
+
+Loom came out three times in English, and each release differs in more than its pictures.
+
+| | DOS EGA | FM Towns | DOS VGA CD |
 |---|---|---|---|
-| DOS EGA (1990) | 3 (ScummVM's `v3old`) | `00.LFL` to `99.LFL`, XOR 0xFF | Playable to the end, with saves and sound |
-| DOS VGA CD (1992) | 4 | `000.LFL`, `DISK01.LEC` (XOR 0x69), `90x.LFL`, one CD audio track | Playable to the end, with its voices and music, and its own menu (F5) to save and load |
-| FM Towns (1991) | 3, 256 colours (`GF_OLD256`) | `00.LFL` to `99.LFL`, not encoded, 16 CD audio tracks | Playable to the end (it asks for the proficiency level first, as ScummVM does, unless `--difficulty` gives it), with its CD music, its sound on the Towns' emulated FM and PCM chips, its own save screen (F5), and its smooth scrolling, on as in ScummVM unless `--no-smooth-scroll` turns it off (`--semi-smooth-scroll` lets the opening's fast camera scroll 4 pixels a tick, as ScummVM's option, off by default) |
+| Released | 1990 | 1991 | 1992 |
+| SCUMM version | 3 | 3, in 256 colours | 4 |
+| Screen | 320 x 200, 16 colours | 320 x 240, 256 colours | 320 x 200, 256 colours |
+| Words | The original script, as text | The EGA's script, as text | Rewritten and shortened for the voices, spoken, with subtitles |
+| Music | On the sound card | 16 CD audio tracks | On one CD audio track, with the voices |
+| Sound | PC speaker, PCjr/Tandy, Game Blaster or AdLib; the MT-32 with the Roland Upgrade | The Towns' FM and PCM chips | The CD |
+| Saving | The game's save screen | The game's save screen | The game's own menu |
+| Proficiency | Chosen on screen | Given at boot (`--difficulty`; ScummVM asks for it) | Chosen on screen |
 
-## Layout
+- **The EGA release** is the first, with the original script, and sound for every card of its
+  day. Its copy protection asks for a draft from the Book of Patterns that came in the box;
+  Distaff skips it, as ScummVM does, unless `--copy-protection` keeps it. The Roland Upgrade, sold
+  apart, added music for the MT-32 to the same release.
+- **The FM Towns release** is the EGA's scripts in 256 colours. Many of its backgrounds are the ones
+  the VGA CD later used, though not all: the Loom itself, above, is its own. Its screen is 240
+  rows tall, with a text layer of its own over the picture; its camera scrolls smoothly; and its
+  music plays from the CD.
+- **The VGA CD release** gave Loom its voices. Its dialogue was rewritten for them, and is shorter
+  throughout; its actors scale with their distance; its glass bell has a scene of its own; and its
+  music and voices play from one long CD audio track.
 
-| Path | What it is |
+## Getting started
+
+### Game data
+
+Distaff ships no game data: point it at a folder holding one of the releases, as it came on its
+disks or CD. The FM Towns' and the VGA CD's audio is read from their CD tracks kept as files beside
+the game (`Track1.flac` and on, or `.ogg`), as ScummVM keeps them.
+
+| Release | Index | MD5 | CD audio |
+|---|---|---|---|
+| DOS EGA, English | `00.LFL` | `37f56ceb13e401a7ac7d9e6b37fecaf7` | |
+| FM Towns, English | `00.LFL` | `c5d10e190d4b4d59114b824f2fdbd00e` | `Track1` to `Track16` |
+| DOS VGA CD, English | `000.LFL` | `5d88b9d6a88e6f8e90cded9d01b7f082` | `Track1` |
+
+### Running
+
+Download the player for your system from the latest
+[build](https://github.com/jeffnyman/distaff/actions/workflows/build.yml), or build it (see
+[Building](#building)), and run:
+
+```
+distaff <game folder>
+```
+
+| Option | What it does |
 |---|---|
-| `src/Distaff.Scumm` | The interpreter: the host contract, detection, resources, rooms and drawing them, the script decoder and engine, the game loop, costumes and walking actors, the font and text, verbs and the cursor, ScummVM-compatible saves, sound (PC speaker, PCjr, CMS on an emulated SAA1099, AdLib on an emulated OPL2, the FM Towns' FM and PCM chips, iMuse on the MT-32 for the EGA's Roland Upgrade). |
-| `src/Distaff.Audio` | Decoders for CD audio tracks kept as files: FLAC, its own, and Ogg Vorbis, on [NVorbis](https://github.com/NVorbis/NVorbis); and the MT-32 emulator (`Mt32`), a port of [Munt](https://github.com/munt/munt) by way of Daventry, for the EGA's Roland Upgrade. The interpreter takes tracks through an interface (`ICdTrack`) and carries no decoder of its own. |
-| `src/Distaff.Player` | The `distaff` player: an SDL window (`Sdl`, from Maniacal), and the headless tools. |
-| `tests/Distaff.Scumm.Tests` | Unit tests, and tests that run against the real game data when it is present, the player's window among them (SDL offscreen, to check that it keeps the game's pace). |
-| `.github/workflows` | The build workflow: builds, tests and publishes the player on Windows, Linux and macOS on every push. |
-| `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`, `port_sound_tables.py`), and `opl-reference`, `pcjr-reference`, `cms-reference`, `mt32-reference`, `imuse-reference` and `towns-reference`, which build ScummVM's OPL2 emulator, its PC speaker and PCjr player, its CMS player and emulator, its copy of Munt, its iMuse and mixer rate converter and its FM Towns sound to check the ports against; `icon`, which writes the player's `distaff.ico` from the drawing in `AppIcon`. |
+| `--scale N`, `--fullscreen` | The window's size (1 to 8, 3 by default), or the full screen. |
+| `--sound speaker\|pcjr\|cms\|adlib\|mt32` | The EGA's sound card; the AdLib by default. |
+| `--mt32-roms folder`, `--mt32-model mt32\|cm32l` | The Roland Upgrade on an emulated MT-32, from a folder holding a control and a PCM ROM; the model, when the folder holds both. |
+| `--music-volume N`, `--sfx-volume N` | 0 to 256, 192 by default, as ScummVM's. |
+| `--text-speed N` | 0 to 9, 6 by default; '+' and '-' change it on the VGA CD. |
+| `--no-subtitles` | Hides the VGA CD's lines while they are spoken, as a fresh ScummVM does. |
+| `--difficulty practice\|standard\|expert` | The proficiency level, which the FM Towns takes at boot. |
+| `--copy-protection` | Keeps the EGA's Book of Patterns check. |
+| `--no-smooth-scroll`, `--semi-smooth-scroll` | The FM Towns' scrolling: off, or ScummVM's semi-smooth option. |
+| `--load file`, `--saves folder`, `--target name` | Starts from a save; where saves are kept; the name they take (`loom-ega`, `loom-fm`, `loom-vga`, as ScummVM names them). |
+| `--random-seed N` | The random numbers' seed, from the clock otherwise. |
 
-The host contract is part of `Distaff.Scumm`: the engine base class, the graphics, input and audio
-drivers it is given and a headless host (`Hosting`, `Input`), screen surfaces and PNG writing
-(`Graphics`), and game folders and save stores (`Storage`). It comes from
-[Daventry](https://github.com/jeffnyman/daventry), the AGI and SCI interpreter, by way of
-[Maniacal](https://github.com/jeffnyman/maniacal), the Maniac Mansion interpreter. Distaff shares
-no code with either at build time.
+In the game, F5 opens the save screen or the VGA CD's menu, the space bar pauses, Escape skips a
+cutscene, and Ctrl+C or Alt+X quits. On starting, Distaff says which release the folder holds and
+its index's MD5.
+
+### Headless
+
+The same engine runs without a window, from scripted clicks and keys, and writes what it shows
+and plays:
+
+```
+distaff <game folder> --run 2000 --click 100:160,92 --key 200:esc --screenshot end.png --wav sound.wav
+```
+
+`--save step:file` saves along the way. Other tools: `--room N` draws a room as a PNG and lists
+its objects, and `--script N` and `--room-scripts N` disassemble scripts.
 
 ## Building
 
-Distaff needs the .NET 10 SDK.
+Distaff needs the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```
 dotnet build
@@ -62,30 +129,64 @@ dotnet test
 dotnet run --project src/Distaff.Player -- <game folder>
 ```
 
-A release is one file that needs nothing installed (the .NET runtime and SDL3 inside):
+A release is one file with the .NET runtime and SDL3 inside:
 
 ```
 dotnet publish src/Distaff.Player -c Release -r win-x64 -o publish
-publish/distaff <game folder>
 ```
 
-## Game data
+with `linux-x64` or `osx-arm64` for the other systems. Every push builds, tests and publishes on
+all three (`.github/workflows/build.yml`).
 
-Distaff ships no game data. Point it at a folder holding a release. The tests look for the folders
-`loom-ega`, `loom-vga` and `loom-fmtowns` in the folder named by the `DISTAFF_GAMES` environment
-variable, or, walking up from the test binary, in any folder above it or in a `games` folder beside
-it. The repository's own `games` folder is the usual place, and `.gitignore` keeps it and all game
-files out of the repository. A test whose folder is absent passes without checking.
+## How it is checked
 
-| Folder | Release | Index MD5 |
-|---|---|---|
-| `loom-ega` | DOS EGA, English | `37f56ceb13e401a7ac7d9e6b37fecaf7` |
-| `loom-vga` | DOS VGA CD, English, with `Track1.ogg` | `5d88b9d6a88e6f8e90cded9d01b7f082` |
-| `loom-fmtowns` | FM Towns, English, with `Track1.flac` to `Track16.flac` | `c5d10e190d4b4d59114b824f2fdbd00e` |
+Distaff follows ScummVM's code closely, and is checked against ScummVM's own results rather than
+by eye:
+
+- **The whole game**: walkthrough tests play each release from the start to the end, at all three
+  levels, a section at a time, each starting from the save the one before made, with the optional
+  scenes, deaths and wrong drafts as detours. A coverage report lists what they leave unplayed,
+  and a sweep tries every draft Bobbin knows on every object the walkthrough finds.
+- **Saves**: the walkthrough's saves load in ScummVM, which draws the same screen, and ScummVM's
+  saves load and play on here.
+- **Sound**: the AdLib, PCjr, CMS, FM Towns and MT-32 output is pinned sample for sample against
+  reference tools built from ScummVM's own source (`tools/*-reference`), and iMuse, which plays
+  the Roland Upgrade, message for message.
+- **Screens**: the banners, the VGA CD's menu and frames after a load, compared pixel for pixel
+  with ScummVM's window.
+
+Tests that need the game data look for `loom-ega`, `loom-fmtowns` and `loom-vga` in the folder
+`DISTAFF_GAMES` names, or in a `games` folder beside the repository (which `.gitignore` keeps
+out); the MT-32 tests look for ROMs in `DISTAFF_MT32_ROMS` or `games/mt32-roms`. A test whose data
+is absent passes without checking. [ROADMAP.md](ROADMAP.md) records the work, phase by phase, and
+what is left.
+
+## Project layout
+
+| Path | What it is |
+|---|---|
+| `src/Distaff.Scumm` | The engine: detection, resources, rooms, scripts, actors, text, the interface, saves and sound. |
+| `src/Distaff.Audio` | CD audio decoders (FLAC, and Ogg Vorbis on [NVorbis](https://github.com/NVorbis/NVorbis)), and the MT-32 emulator, a port of [Munt](https://github.com/munt/munt). |
+| `src/Distaff.Player` | The `distaff` player: the SDL window and the headless tools. |
+| `tests/Distaff.Scumm.Tests` | Unit tests, and the tests that play the real game data. |
+| `tools` | Generators that port tables from ScummVM's source, and the reference tools built from it. |
+| `assets` | Images: the screenshots above. |
+
+The host contract (the engine base class, the graphics, input and audio drivers, and a headless
+host) comes from [Daventry](https://github.com/jeffnyman/daventry), the AGI and SCI interpreter,
+by way of [Maniacal](https://github.com/jeffnyman/maniacal), the Maniac Mansion interpreter.
+Distaff shares no code with either at build time.
+
+## Acknowledgements
+
+Distaff stands on [ScummVM](https://www.scummvm.org/)'s SCUMM engine, whose code it follows and
+checks itself against, and on [Munt](https://github.com/munt/munt)'s MT-32 emulation. Loom is a
+trademark of Lucasfilm Ltd.; the screenshots are of the game as Distaff plays it, for
+illustration.
 
 ## License
 
 GPL-3.0-or-later, as ScummVM is. See [LICENSE](LICENSE). NVorbis, which `Distaff.Audio` uses, is
-under the MIT license. The MT-32 emulator in `Distaff.Audio/Mt32` is a port of Munt, whose license
-is the LGPL 2.1 or later; each of its files keeps Munt's copyright notice. Distaff ships no MT-32
-ROMs.
+under the MIT license. The MT-32 emulator in `Distaff.Audio/Mt32` is a port of Munt, under the LGPL
+2.1 or later; each of its files keeps Munt's copyright notice. Distaff ships no game data and no
+MT-32 ROMs.
