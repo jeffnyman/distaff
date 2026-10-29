@@ -14,4 +14,11 @@ public interface IMidiDevice
 
     /// <summary>Renders interleaved stereo.</summary>
     void Render(Span<short> interleavedStereo);
+
+    /// <summary>
+    /// Calls <paramref name="tick"/> <paramref name="ticksPerSecond"/> times a second of the
+    /// device's own output, before the frame it falls on, as ScummVM's emulated MIDI drivers
+    /// call their timer (<c>MidiDriver_Emulated::readBuffer</c>); null stops it.
+    /// </summary>
+    void SetTimer(int ticksPerSecond, Action? tick);
 }

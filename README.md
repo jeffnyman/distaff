@@ -43,7 +43,7 @@ and loaded here.
 | `src/Distaff.Player` | The `distaff` player: an SDL window (`Sdl`, from Maniacal), and the headless tools. |
 | `tests/Distaff.Scumm.Tests` | Unit tests, and tests that run against the real game data when it is present, the player's window among them (SDL offscreen, to check that it keeps the game's pace). |
 | `.github/workflows` | The build workflow: builds, tests and publishes the player on Windows, Linux and macOS on every push. |
-| `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`, `port_sound_tables.py`), and `opl-reference`, `pcjr-reference`, `cms-reference`, `mt32-reference` and `towns-reference`, which build ScummVM's OPL2 emulator, its PC speaker and PCjr player, its CMS player and emulator, its copy of Munt and its FM Towns sound to check the ports against; `icon`, which writes the player's `distaff.ico` from the drawing in `AppIcon`. |
+| `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`, `port_sound_tables.py`), and `opl-reference`, `pcjr-reference`, `cms-reference`, `mt32-reference`, `imuse-reference` and `towns-reference`, which build ScummVM's OPL2 emulator, its PC speaker and PCjr player, its CMS player and emulator, its copy of Munt, its iMuse and mixer rate converter and its FM Towns sound to check the ports against; `icon`, which writes the player's `distaff.ico` from the drawing in `AppIcon`. |
 
 The host contract is part of `Distaff.Scumm`: the engine base class, the graphics, input and audio
 drivers it is given and a headless host (`Hosting`, `Input`), screen surfaces and PNG writing

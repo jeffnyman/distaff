@@ -11,15 +11,20 @@ generator returning 0 too.
 Build (MSVC Build Tools 2022): `build.cmd [path to scummvm]` (default `F:\Apostle\_loom\scummvm`),
 which writes `out\mt32-reference.exe`.
 
-Run: `out\mt32-reference.exe <control.rom> <pcm.rom> <script.txt> <output.raw>`. The output is the
-16-bit little-endian stereo samples at 32 kHz.
+Run: `out\mt32-reference.exe <control.rom> <pcm.rom> <script.txt> <output.raw> [chunk]`. The
+output is the 16-bit little-endian stereo samples at 32 kHz. With `chunk` the synth renders at most
+that many frames at a time, on multiples of it: Munt's output depends on how its rendering is
+split, and ScummVM's `MidiDriver_MT32` renders it 128 frames at a time (its timer's ticks).
 
 `genscript.py <seed> <seconds> <out.txt>` writes a seeded script of notes on all nine parts,
 program changes, controllers (modulation, volume, pan, expression, hold, the pitch bend range,
 reset, all notes off), pitch bends, and Roland data sets to the timbres, patches, patch temp areas,
 rhythm key map, reverb, partial reserve, master volume and master tune, and a display message.
-Each line is `<frame> M <packed message>`, `<frame> S <sysex hex>` or `<frame> E` (the end); the
-harness renders up to each frame and then plays the event with `playMsg` or `playSysex`.
+Each line is `<frame> M <packed message>`, `<frame> S <sysex hex>`, `<frame> W <device> <address and
+data hex>` (a Roland data set written straight to the synth's memory with `writeSysex`, as ScummVM's
+`MidiDriver_MT32::sysEx` writes one; `imuse-reference` writes these) or `<frame> E` (the end); the
+harness renders up to each frame and then plays the event. Other lines, as `imuse-reference`'s
+music timer lines, are passed over.
 
 `scripts` holds `script1.txt` and `script2.txt` (seeds 1 and 2, 10 seconds each); `Mt32Tests`
 holds the SHA-256 of what the harness renders from each with the CM-32L 1.02 and the MT-32 1.07

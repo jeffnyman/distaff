@@ -7,13 +7,18 @@ namespace Distaff.Audio.Mt32;
 /// The MT-32 / CM-32L emulator as a MIDI device: Munt's synth driven the way ScummVM's
 /// MidiDriver_MT32 drives it (audio/softsynth/mt32.cpp) - messages played immediately, Roland data
 /// sets written straight to memory, the output gains at ScummVM's default - and its native 32 kHz
-/// output converted to the host's rate by linear interpolation, as ScummVM's mixer does.
+/// output converted to the host's rate as ScummVM's mixer converts it.
 /// </summary>
 public sealed class Mt32Emulator : IMidiDevice
 {
-    private const int FracBits = 16;
-    private const long FracOne = 1L << FracBits;
-    private const int BlockFrames = 32;
+    // the mixer's rate converter's fraction (rate.cpp's FRAC_BITS_LOW)
+    private const int FracBits = 14;
+    private const int FracOne = 1 << FracBits;
+    private const int FracHalf = 1 << (FracBits - 1);
+    // the synth renders 128 frames at a time, as ScummVM's MidiDriver_MT32 renders it: its rate
+    // converter reads 256 frames at a time, which MidiDriver_Emulated splits at its timer's ticks,
+    // 250 a second; Munt's output depends on how its rendering is split
+    private const int BlockFrames = 128;
 
     // SysEx commands MidiDriver_MT32::sysEx writes directly
     private const byte SysexCmdDt1 = 0x12;
@@ -21,14 +26,20 @@ public sealed class Mt32Emulator : IMidiDevice
 
     private readonly Synth _synth;
     private readonly ILog _log;
-    private readonly long _step;
+    private readonly int _step;
     private readonly short[] _block = new short[BlockFrames * 2];
     private int _blockPos = BlockFrames;
-    private long _opos = FracOne;
+    private int _opos = FracOne;
     private int _lastL;
     private int _lastR;
     private int _curL;
     private int _curR;
+
+    // the timer, in the synth's frames, 16.16 (MidiDriver_Emulated's FIXP_SHIFT)
+    private const int TimerFracBits = 16;
+    private Action? _tick;
+    private int _samplesPerTick;
+    private int _nextTick;
 
     /// <summary>Opens the emulator with a pair of ROMs. Throws <see cref="InvalidDataException"/> when the synth refuses them.</summary>
     public Mt32Emulator(Mt32RomSet roms, int outputRate, ILog? log = null)
@@ -49,7 +60,7 @@ public sealed class Mt32Emulator : IMidiDevice
 
         OutputRate = outputRate;
         Description = roms.Description;
-        _step = (long)Synth.SampleRate * FracOne / outputRate;
+        _step = (Synth.SampleRate << FracBits) / outputRate;
     }
 
     public int OutputRate { get; }
@@ -112,31 +123,94 @@ public sealed class Mt32Emulator : IMidiDevice
         _synth.WriteSysex((byte)channel, [0, 0, 4, (byte)range]);
     }
 
+    /// <summary>
+    /// The timer, counted in the synth's own frames at 32 kHz: before the frame each tick falls on,
+    /// as <c>MidiDriver_Emulated::readBuffer</c> calls it, whose rate is the synth's
+    /// (<c>getActualStereoOutputSamplerate</c>).
+    /// </summary>
+    public void SetTimer(int ticksPerSecond, Action? tick)
+    {
+        _tick = tick;
+        _samplesPerTick = ((Synth.SampleRate / ticksPerSecond) << TimerFracBits) + ((Synth.SampleRate % ticksPerSecond) << TimerFracBits) / ticksPerSecond;
+        _nextTick = 0;
+    }
+
+    /// <summary>A block of the synth's frames, the timer called where it falls among them.</summary>
+    private void RenderBlock()
+    {
+        if (_tick is null)
+        {
+            _synth.Render(_block, BlockFrames);
+            return;
+        }
+
+        int done = 0;
+        do
+        {
+            int step = Math.Min(BlockFrames - done, _nextTick >> TimerFracBits);
+            if (step > 0)
+            {
+                _synth.Render(_block.AsSpan(done * 2), step);
+            }
+
+            done += step;
+            _nextTick -= step << TimerFracBits;
+            if ((_nextTick >> TimerFracBits) == 0)
+            {
+                _tick();
+                _nextTick += _samplesPerTick;
+            }
+        }
+        while (done < BlockFrames);
+    }
+
+    /// <summary>
+    /// The synth's output at the output's rate, as ScummVM's mixer converts a stream's rate: copied
+    /// at the same rate, and otherwise interpolated linearly with a 14-bit fraction, rounded,
+    /// starting a frame in (<c>RateConverter_Impl::copyConvert</c> and <c>interpolateConvert</c>).
+    /// </summary>
     public void Render(Span<short> interleavedStereo)
     {
         int frames = interleavedStereo.Length / 2;
+        if (OutputRate == Synth.SampleRate)
+        {
+            for (int i = 0; i < frames; i++)
+            {
+                NextFrame();
+                interleavedStereo[i * 2] = (short)_curL;
+                interleavedStereo[i * 2 + 1] = (short)_curR;
+            }
+
+            return;
+        }
+
         for (int i = 0; i < frames; i++)
         {
             while (_opos >= FracOne)
             {
-                if (_blockPos == BlockFrames)
-                {
-                    _synth.Render(_block, BlockFrames);
-                    _blockPos = 0;
-                }
-
-                _lastL = _curL;
-                _lastR = _curR;
-                _curL = _block[_blockPos * 2];
-                _curR = _block[_blockPos * 2 + 1];
-                _blockPos++;
+                NextFrame();
                 _opos -= FracOne;
             }
 
-            interleavedStereo[i * 2] = (short)(_lastL + (int)((_curL - _lastL) * _opos >> FracBits));
-            interleavedStereo[i * 2 + 1] = (short)(_lastR + (int)((_curR - _lastR) * _opos >> FracBits));
+            interleavedStereo[i * 2] = (short)(_lastL + (((_curL - _lastL) * _opos + FracHalf) >> FracBits));
+            interleavedStereo[i * 2 + 1] = (short)(_lastR + (((_curR - _lastR) * _opos + FracHalf) >> FracBits));
             _opos += _step;
         }
+    }
+
+    private void NextFrame()
+    {
+        if (_blockPos == BlockFrames)
+        {
+            RenderBlock();
+            _blockPos = 0;
+        }
+
+        _lastL = _curL;
+        _lastR = _curR;
+        _curL = _block[_blockPos * 2];
+        _curR = _block[_blockPos * 2 + 1];
+        _blockPos++;
     }
 
     /// <summary>Sends the LCD messages and debug output to the log.</summary>

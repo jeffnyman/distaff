@@ -1015,7 +1015,49 @@ The first step of the EGA's Roland Upgrade (item 17): the MT-32 itself.
   MT-32 1.07 ROMs, and every sample is Munt's. ROMs come from the folder `DISTAFF_MT32_ROMS` names
   or a `mt32-roms` folder beside the games; without them those tests pass without checking.
   Distaff ships no ROMs.
-- Not yet played by anything: iMuse, which plays Loom's Roland sounds in ScummVM, is next.
+- Not yet played by anything: iMuse, which plays Loom's Roland sounds in ScummVM, is next (see
+  "iMuse").
+
+## iMuse
+
+The second step of the Roland Upgrade: the music engine ScummVM plays its sounds with, on the
+MT-32 (`Distaff.Scumm/Sound/IMuse`, and `PlayerImuse`, which carries it).
+
+- `MidiParserRo` reads the Upgrade's own format (ScummVM's `MidiParser_RO`): "RO", then channel
+  messages, delays (F0, and F1 for 256 more), markers (A0 to AF, the music timer counting them),
+  a loop marker and the end; `MidiParser` is ScummVM's generic parser under it, the timing of
+  events against the timer rate, notes left hanging by a jump, the end looping round or stopping.
+- `IMuseEngine` is `IMuseInternal` for a native MT-32 and the old system: 8 players, 32 parts,
+  parts given channels by priority (dynamic allocation, as Loom has it), volumes, the music
+  timer (the most any player has counted); `Player` and `Part` are iMuse's, for RO sounds.
+  `IMuseDriverMt32` is `IMuseDriver_MT32` for the old system: nine channels on the module's
+  parts 1 to 8 and its rhythm part, programs set through each part's patch temp area, repeated
+  controllers and bends left out, and the module's setup when it opens (its display greeted,
+  reset, master tune, reverb, channels, partial reserve, volume, rhythm keys, bend ranges).
+- `PlayerImuse` sets it up as ScummVM's `setupMusic` does for an MT-32, at the music volume
+  (192 unless set); the MT-32's timer, 250 times a second of its own 32 kHz output, moves iMuse
+  on, as `MidiDriver_MT32` (a `MidiDriver_Emulated`) calls it. `ResourceLoader.LoadRolandSound`
+  reads a sound as the Upgrade's single block, and `PlayerImuse.RoResource` makes it what iMuse
+  takes ("RO" and the block after its header).
+- Found on the way: Munt's output depends on how its rendering is split (rendered straight
+  through, or 32 or 128 or 1000 frames at a time, its own C++ gives four different results).
+  ScummVM's driver renders it 128 frames at a time: its mixer's rate converter reads 256 frames
+  at a time, which `MidiDriver_Emulated` splits at its timer's ticks. `Mt32Emulator` (Daventry's,
+  which rendered 32 at a time) now renders 128 at a time, and converts its rate as ScummVM's
+  mixer does (`RateConverter_Impl`: copied at the same rate, otherwise interpolated with a
+  14-bit fraction, rounded, from a frame in), where it had interpolated with 16 bits, truncated.
+- `tools/imuse-reference` builds ScummVM's own iMuse, its RO and MIDI parsers and its MT-32
+  driver to play a sound to a device that writes what reaches it, timed as ScummVM's driver
+  times it, and `rate-reference` from ScummVM's rate converter; `tools/mt32-reference` renders
+  what the first writes through Munt, 128 frames at a time. `ImuseTests` plays every sound read
+  as the Upgrade reads it for three minutes and every message, data set and music timer is
+  ScummVM's (sounds 1 to 32, not Roland data, stop at their first byte as there); the overture's
+  first minute at 44100 Hz is ScummVM's sample for sample, on the MT-32 1.07 and the CM-32L 1.02.
+- Left out, as Loom never reaches them: the scripts' commands to iMuse (only `soundKludge`
+  reaches them, which Loom's scripts do not use), and with them the command queue, triggers,
+  hooks, jumps, loops, scans and faders' targets; iMuse's own sysex messages and Roland
+  instruments (an RO sound has none); the AdLib and other drivers. Saving iMuse's state is step
+  4. Not yet played by the game: the Roland Upgrade's sound card and sounds are step 3.
 
 ## The VGA CD's menu against ScummVM's window
 
@@ -1629,7 +1671,7 @@ Coverage of the game's scripts:
 
 Larger features:
 
-17. MT-32 music for the EGA (the Roland Upgrade's sounds, with the player's own ROMs). The emulator is in (see "The MT-32 emulator"); to come: iMuse and its MT-32 driver, Loom's Roland mode (sound card 4, the single-block sounds, the music timer), and iMuse's state in saves.
+17. MT-32 music for the EGA (the Roland Upgrade's sounds, with the player's own ROMs). The emulator and iMuse are in (see "The MT-32 emulator" and "iMuse"); to come: Loom's Roland mode (sound card 4, its sounds, the music timer), and iMuse's state in saves.
 18. (Done: `--sound cms`, sample for sample as ScummVM's `Player_V2CMS`; see "The CMS".)
 19. (Dropped: other releases, as other languages of the EGA, the Amiga, Atari ST and Macintosh releases, the PC-Engine CD, and the FM Towns' Japanese text; Distaff plays the EGA, the VGA CD and the FM Towns.)
 

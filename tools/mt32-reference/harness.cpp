@@ -1,6 +1,8 @@
 // Renders a scripted MIDI sequence through Munt (ScummVM's copy) for comparison with Distaff's port (by way of Daventry).
 //   harness <control.rom> <pcm.rom> <script.txt> <out.raw>
-// Script lines: "<frame> M <msg hex>" (short message, packed), "<frame> S <sysex hex bytes>", "<frame> E" (end).
+// Script lines: "<frame> M <msg hex>" (short message, packed), "<frame> S <sysex hex bytes>",
+// "<frame> W <device> <address and data hex>" (a Roland data set written to memory), "<frame> E" (end);
+// others, as imuse-reference's "T" lines, are passed over.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -16,6 +18,7 @@ using namespace MT32Emu;
 
 int main(int argc, char **argv) {
 	if (argc < 5) { fprintf(stderr, "usage\n"); return 2; }
+	unsigned int chunk = argc > 5 ? (unsigned int)atoi(argv[5]) : 0;
 	FileStream c, p;
 	if (!c.open(argv[1]) || !p.open(argv[2])) { fprintf(stderr, "rom open failed\n"); return 1; }
 	const ROMImage *ci = ROMImage::makeROMImage(&c);
@@ -35,12 +38,15 @@ int main(int argc, char **argv) {
 		unsigned int frame; char kind;
 		int consumed = 0;
 		if (sscanf(line, "%u %c %n", &frame, &kind, &consumed) < 2) continue;
-		if (frame > pos) {
+		// rendered up to the event, in pieces of at most `chunk` frames on multiples of it when given
+		while (frame > pos) {
 			unsigned int n = frame - pos;
+			if (chunk && n > chunk - pos % chunk)
+				n = chunk - pos % chunk;
 			buf.resize(n * 2);
 			synth.render(buf.data(), n);
 			fwrite(buf.data(), 2, n * 2, out);
-			pos = frame;
+			pos += n;
 		}
 		if (kind == 'M') {
 			unsigned int msg = (unsigned int)strtoul(line + consumed, NULL, 16);
@@ -55,6 +61,19 @@ int main(int argc, char **argv) {
 				q += 2;
 			}
 			synth.playSysex(bytes.data(), (Bit32u)bytes.size());
+		} else if (kind == 'W') {
+			// a Roland data set written straight to the synth's memory, as ScummVM's
+			// MidiDriver_MT32::sysEx writes one: "<device> <address and data hex>"
+			char *q = line + consumed;
+			unsigned int device = (unsigned int)strtoul(q, &q, 16);
+			std::vector<Bit8u> bytes;
+			while (*q) {
+				while (*q == ' ') q++;
+				if (!q[0] || q[0] == '\n' || q[0] == '\r') break;
+				bytes.push_back((Bit8u)strtoul(std::string(q, 2).c_str(), NULL, 16));
+				q += 2;
+			}
+			synth.writeSysex((Bit8u)device, bytes.data(), (Bit32u)bytes.size());
 		} else if (kind == 'E') {
 			break;
 		}

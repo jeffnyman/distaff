@@ -166,6 +166,33 @@ public sealed class ResourceLoader
     }
 
     /// <summary>
+    /// An EGA sound read as the Roland Upgrade's, a single block from its size word, or null when
+    /// the index has no such sound. Mirrors the <c>isRolandLoom</c> branch of
+    /// <c>readSoundResourceSmallHeader</c>, which ScummVM takes for every sound while the sound
+    /// card variable says Roland. Throws <see cref="InvalidDataException"/> when it does not fit.
+    /// </summary>
+    public ReadOnlyMemory<byte>? LoadRolandSound(int sound)
+    {
+        if (Layout != ResourceLayout.V3Old)
+        {
+            throw new NotSupportedException("Only the EGA release has the Roland Upgrade.");
+        }
+
+        if (Find(ResourceType.Sound, sound) is not var (file, offset))
+        {
+            return null;
+        }
+
+        int size = offset + 2 <= file.Length ? BinaryPrimitives.ReadUInt16LittleEndian(file.Span[offset..]) : 0;
+        if (size < 4 || offset + size > file.Length)
+        {
+            throw new InvalidDataException($"Sound {sound}: the Roland block at {offset} has a bad size {size}.");
+        }
+
+        return file.Slice(offset, size);
+    }
+
+    /// <summary>
     /// A charset, or null when its file is missing. These files are not encoded. For the EGA and
     /// FM Towns releases it is <c>99.LFL</c> for charset 0, counting down, and the data follows the
     /// size word, as <c>ScummEngine_v3::loadCharset</c> reads it. For the VGA CD it is <c>901.LFL</c> for
