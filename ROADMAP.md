@@ -1298,6 +1298,34 @@ script slot (its script, place, delay and state), every object's state and every
 - Not compared: a load from inside the game (the save screen, or the VGA CD's menu), which
   ScummVM does partway through a frame (`requestLoad`); it would need clicks in ScummVM's window.
 
+## The CMS
+
+The EGA's fourth sound card, the Creative Music System (Game Blaster), as ScummVM plays it
+(`--sound cms`; the scripts' sound card variable is 2, `setSoundCardVarToCurrentConfig`):
+
+- Which block of a sound it plays (`readSoundResourceSmallHeader` for `MDT_CMS`): the AdLib
+  block, from its size word, when its seventh byte is 0x80, a music track; the speaker and PCjr
+  block otherwise. In Loom sounds 13 to 32 are tracks (24 is not on the disks), 1 to 12 effects.
+- `CmsSynth` ports DOSBox's SAA1099 emulator (`audio/softsynth/cms.cpp`): two chips of six
+  square-wave channels, with a volume for each side, two noise generators and two envelope
+  generators, mixed into stereo, written through ports 0x220 to 0x223.
+- `PlayerV2Cms` ports `Player_V2CMS`, ticked 236 times a second between runs of samples as
+  ScummVM's emulated chips are (`EmulatedChip::readBuffer`). A track plays on 8 voices, 4 on
+  each chip, each note taking a free voice and its channel's instrument: an attack, decay,
+  sustain and release, a vibrato and a tremolo, from the track's header; the voices move on every
+  other tick, the notes at the track's tempo; a track goes round unless it says to end. An
+  effect runs the PCjr's programs through `PlayerV2`'s sequencer, its three voices and noise set
+  on the first chip; while a track plays, effects wait. ScummVM plays the chips at full volume,
+  whatever the music and effects volumes (`setMusicVolume` does nothing), and keeps nothing of
+  them in a save, as for the PCjr.
+- `tools/cms-reference` builds ScummVM's `Player_V2CMS` and its emulator to play a sound. Every
+  sound the CMS plays, 1 to 32, renders sample for sample as there for 10 seconds; `SoundTests`
+  pins 25 seconds of the title's music and 10 of an effect (sound 5) to its hashes, the title's
+  music in the game, the sound card variable, and the full volume. Sounds 33 to 64 are the Roland
+  Upgrade's, which the scripts start only for the MT-32; read as two blocks they are not sounds,
+  and ScummVM's PCjr player, like its CMS one, runs off them.
+- Not listened to against ScummVM's window.
+
 ## The FM Towns' picture layer
 
 The rest of the FM Towns' smooth scrolling (`gfx_towns.cpp`):
@@ -1339,7 +1367,8 @@ The player published for a platform is one file that needs nothing installed:
   they were.
 - Trimming gives no warnings (and warnings are errors here).
 - Checked on Windows against the debug build, headless: 900 steps of each release give the same
-  screenshot and the same recording, the CD's track included; a save made at a step is the same
+  screenshot and the same recording, the CD's track included (the EGA's silent: its music waits
+  for PRACTICE to be chosen); a save made at a step is the same
   but for its name; ScummVM's FM Towns save at the Bishop and an EGA save of Distaff's load to
   the same screen. The window opened on the VGA CD for 5 seconds and closed cleanly, playing 5.2
   seconds in 5.2. Other platforms are item 21's.
@@ -1360,7 +1389,8 @@ and macOS (`windows-latest`, `ubuntu-latest`, `macos-latest`), one not stopping 
   in a second. Not yet run on GitHub, the repository having no remote.
 - On Linux, before any of it: the `linux-x64` player published from Windows, run headless under
   WSL (Ubuntu 24.04, no .NET installed), gave the same screenshot and recording as on Windows
-  for 900 steps of each release, the game's files read from the Windows folders, and loaded
+  for 900 steps of each release (the EGA's recording silent, as above), the game's files read
+  from the Windows folders, and loaded
   ScummVM's FM Towns save at the Bishop to the same screen.
 
 ## The VGA CD's subtitles
@@ -1508,7 +1538,7 @@ Coverage of the game's scripts:
 Larger features:
 
 17. MT-32 music for the EGA (the Roland Upgrade's sounds; needs an MT-32 emulator and the player's own ROMs).
-18. CMS music for the EGA.
+18. (Done: `--sound cms`, sample for sample as ScummVM's `Player_V2CMS`; see "The CMS".)
 19. (Dropped: other releases, as other languages of the EGA, the Amiga, Atari ST and Macintosh releases, the PC-Engine CD, and the FM Towns' Japanese text; Distaff plays the EGA, the VGA CD and the FM Towns.)
 
 Sharing Distaff:

@@ -8,13 +8,14 @@ using Distaff.Scumm.Storage;
 
 namespace Distaff.Scumm.Tests;
 
-/// <summary>Sound on the PC speaker, the PCjr and the AdLib. Tests against the game data pass without checking when it is absent.</summary>
+/// <summary>Sound on the PC speaker, the PCjr, the CMS and the AdLib. Tests against the game data pass without checking when it is absent.</summary>
 public class SoundTests
 {
-    /// <summary>The scripts read which card plays (<c>setSoundCardVarToCurrentConfig</c>): 0, 1 and 3.</summary>
+    /// <summary>The scripts read which card plays (<c>setSoundCardVarToCurrentConfig</c>): 0, 1, 2 and 3.</summary>
     [Theory]
     [InlineData(SoundDevice.Speaker, 0)]
     [InlineData(SoundDevice.Pcjr, 1)]
+    [InlineData(SoundDevice.Cms, 2)]
     [InlineData(SoundDevice.AdLib, 3)]
     public void The_sound_card_variable_names_the_device(SoundDevice device, int value)
     {
@@ -35,6 +36,7 @@ public class SoundTests
     [Theory]
     [InlineData(SoundDevice.Speaker, "12fdde4a7ecf765b")]
     [InlineData(SoundDevice.Pcjr, "b6d0b1d66966526b")]
+    [InlineData(SoundDevice.Cms, "2d9f37fdd5845b78")]
     [InlineData(SoundDevice.AdLib, "886e7bc1dba85688")]
     public void The_title_music_plays_from_the_title_on(SoundDevice device, string firstSeconds)
     {
@@ -177,6 +179,57 @@ public class SoundTests
         }
 
         Assert.Equal(referenceHash, Convert.ToHexStringLower(SHA256.HashData(MemoryMarshal.AsBytes(samples.AsSpan()))));
+    }
+
+    /// <summary>
+    /// The title's music (sound 25, the AdLib block's track) for 25 seconds, and an effect (sound
+    /// 5, the speaker block's PCjr programs) for 10, read 1024 frames at a time, are sample for
+    /// sample what ScummVM's own <c>Player_V2CMS</c> renders on its CMS emulator
+    /// (<c>tools/cms-reference</c> builds them to play the same sound; the hashes are the SHA-256
+    /// of its output). So is every other sound the CMS plays, 1 to 32, for 10 seconds each.
+    /// </summary>
+    [Theory]
+    [InlineData(25, 25, "087af8d5ef77d4a0bb2e4c347def59af27703eb532acade1f002b941f9976117")]
+    [InlineData(5, 10, "971cd97c3d9549de277ab6a40c341cc03696ee06fd864d6560450ebdc3620b99")]
+    public void The_cms_renders_as_scummvms_player_v2cms(int sound, int seconds, string referenceHash)
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        var resource = loader.LoadSound(sound)!;
+        var player = new PlayerV2Cms(GameWorld.DefaultSampleRate);
+        player.StartSound(sound, resource.AdLib.Span[6] == 0x80 ? resource.AdLib.ToArray() : resource.Speaker.ToArray());
+        var samples = new short[seconds * 44100 * 2];
+        for (int o = 0; o < samples.Length; o += 2048)
+        {
+            player.Read(samples.AsSpan(o, Math.Min(2048, samples.Length - o)));
+        }
+
+        Assert.Equal(referenceHash, Convert.ToHexStringLower(SHA256.HashData(MemoryMarshal.AsBytes(samples.AsSpan()))));
+    }
+
+    /// <summary>The CMS plays at full volume whatever the music volume, as ScummVM's does (<c>Player_V2CMS::setMusicVolume</c> does nothing).</summary>
+    [Fact]
+    public void The_cms_plays_at_full_volume()
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        string Render(int volume)
+        {
+            var player = new PlayerV2Cms(GameWorld.DefaultSampleRate);
+            player.SetVolumes(volume, volume);
+            player.StartSound(25, loader.LoadSound(25)!.AdLib.ToArray());
+            var samples = new short[44100 * 2];
+            player.Read(samples);
+            return Convert.ToHexStringLower(SHA256.HashData(MemoryMarshal.AsBytes(samples.AsSpan())));
+        }
+
+        Assert.Equal(Render(256), Render(0));
     }
 
     /// <summary>

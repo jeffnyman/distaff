@@ -13,7 +13,7 @@ namespace Distaff.Scumm.Sound;
 /// A sound resource starts with its 4-byte header, then its priority and whether it may be
 /// resumed, then the start of each channel's program: one set for the speaker, one for the PCjr.
 /// </remarks>
-public sealed class PlayerV2 : SpeakerSynth
+public class PlayerV2 : SpeakerSynth
 {
     // the 16-bit fields of channel_data, by index
     private const int TimeLeft = 0, NextCommand = 1, BaseFreq = 2, FreqDelta = 3, Freq = 4, Volume = 5,
@@ -37,6 +37,10 @@ public sealed class PlayerV2 : SpeakerSynth
     {
         _frequencies = (pcjr ? SoundTables.PcjrFrequencies : SoundTables.SpeakerFrequencies).ToArray();
     }
+
+    /// <summary>Whether a channel's program runs, and the frequency and volume it sets (<c>time_left</c>, <c>freq</c> and <c>volume</c>).</summary>
+    protected (bool Running, ushort Freq, ushort Volume) ChannelState(int channel)
+        => (_channels[channel][TimeLeft] != 0, _channels[channel][Freq], _channels[channel][Volume]);
 
     /// <summary>Version 3's own music timer. Mirrors <c>Player_V2Base::getMusicTimer</c> for <c>_isV3Game</c>.</summary>
     public override int MusicTimer

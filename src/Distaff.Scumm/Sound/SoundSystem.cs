@@ -7,6 +7,7 @@ public enum SoundDevice
     Speaker,
     Pcjr,
     AdLib,
+    Cms,
 }
 
 /// <summary>
@@ -15,7 +16,8 @@ public enum SoundDevice
 /// <c>processSoundQueues</c>, <c>triggerSound</c>, <c>stopSound</c>, <c>stopAllSounds</c> and
 /// <c>isSoundRunning</c>). The PC speaker and the PCjr play the sounds' first block with
 /// <see cref="PlayerV2"/>, the AdLib their second with <see cref="PlayerAd"/> on an emulated
-/// OPL2, MAME's, as ScummVM picks by default (<c>setupMusic</c>). Ported by way of Maniacal.
+/// OPL2, MAME's, as ScummVM picks by default (<c>setupMusic</c>), and the CMS one or the other
+/// with <see cref="PlayerV2Cms"/>. Ported by way of Maniacal.
 /// The VGA CD's voices and music come from its CD track instead (<see cref="Cd"/>), mixed in. The
 /// FM Towns has a player of its own, which plays its music from the CD's tracks and its effects
 /// on an emulation of its PCM and FM chips (<see cref="PlayerTowns"/>).
@@ -35,9 +37,12 @@ public sealed class SoundSystem : IDisposable
         _load = load;
         Device = device;
         Cd = new CdPlayer(cdTracks, sampleRate);
-        Player = player?.Invoke(Cd) ?? (device == SoundDevice.AdLib
-            ? new PlayerAd(sampleRate, new Opl.MameOpl(sampleRate))
-            : new PlayerV2(sampleRate, device == SoundDevice.Pcjr));
+        Player = player?.Invoke(Cd) ?? device switch
+        {
+            SoundDevice.AdLib => new PlayerAd(sampleRate, new Opl.MameOpl(sampleRate)),
+            SoundDevice.Cms => new PlayerV2Cms(sampleRate),
+            _ => new PlayerV2(sampleRate, device == SoundDevice.Pcjr),
+        };
         _mix = new AudioMix(Player, Cd);
         Output = new ClockedSource(_mix, sampleRate);
         SyncVolumes();
@@ -92,6 +97,7 @@ public sealed class SoundSystem : IDisposable
     public int SoundCardValue => Device switch
     {
         SoundDevice.Pcjr => 1,
+        SoundDevice.Cms => 2,
         SoundDevice.AdLib => 3,
         _ => 0,
     };

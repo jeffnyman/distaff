@@ -376,7 +376,8 @@ public sealed partial class GameWorld
 
     /// <summary>
     /// A sound's data as the device plays it: the speaker and PCjr block, or the AdLib block after
-    /// its 4-byte header (<c>readSoundResourceSmallHeader</c>). Some index entries point past their
+    /// its 4-byte header (<c>readSoundResourceSmallHeader</c>); for the CMS, the whole AdLib block
+    /// when it holds a music track (its seventh byte 0x80), the speaker block otherwise. Some index entries point past their
     /// room file, and the Roland Upgrade's sounds are single blocks; these play nothing. The FM
     /// Towns' player takes the whole resource.
     /// </summary>
@@ -388,7 +389,12 @@ public sealed partial class GameWorld
             {
                 data = _loader.FmTowns ? _loader.Load(ResourceType.Sound, number)?.ToArray()
                     : _loader.Index.Locate(ResourceType.Sound, number).IsPresent && _loader.LoadSound(number) is { } resource
-                    ? Sound.Device == SoundDevice.AdLib ? resource.AdLib[4..].ToArray() : resource.Speaker.ToArray()
+                    ? Sound.Device switch
+                    {
+                        SoundDevice.AdLib => resource.AdLib[4..].ToArray(),
+                        SoundDevice.Cms when resource.AdLib.Span[6] == 0x80 => resource.AdLib.ToArray(),
+                        _ => resource.Speaker.ToArray(),
+                    }
                     : null;
             }
             catch (InvalidDataException)

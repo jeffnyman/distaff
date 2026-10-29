@@ -237,10 +237,10 @@ internal static class Program
 
     private static int Usage()
     {
-        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--difficulty practice|standard|expert] [--sound speaker|pcjr|adlib] [--load file] [--saves folder] [--target name]");
+        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--difficulty practice|standard|expert] [--sound speaker|pcjr|cms|adlib] [--load file] [--saves folder] [--target name]");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
-        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|adlib] [--wav file.wav] [--trace-actor N] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--screenshot file.png] [--zoom N]");
+        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|cms|adlib] [--wav file.wav] [--trace-actor N] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--screenshot file.png] [--zoom N]");
         return 2;
     }
 
