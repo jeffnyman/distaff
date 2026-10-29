@@ -36,6 +36,9 @@ public sealed partial class GameWorld
     /// <summary>Whether a restart was asked for, by the restart key's question or a script (<c>restart</c>); the host starts the game again.</summary>
     public bool RestartRequested { get; private set; }
 
+    /// <summary>The restart asked for, once the effect before it has been shown.</summary>
+    private bool _restartAfterEffect;
+
     /// <summary>
     /// Shows a banner until a key or a click, or for <paramref name="waitTime"/> quarter-frames
     /// (-1 for no limit), then does what follows with the key. Mirrors
@@ -138,7 +141,8 @@ public sealed partial class GameWorld
     /// <summary>
     /// Asks whether to restart, the game's question but for its last letter, which is the answer
     /// that restarts. Mirrors <c>queryRestart</c>: Loom restarts without fading out on version 3;
-    /// the VGA CD's dissolve out (134) is not shown, the host starting the game afresh.
+    /// on the VGA CD the banner goes (<c>clearBanner</c>) and the room dissolves to black pixel by
+    /// pixel (<c>fadeOut(134)</c>), and the restart waits for the dissolve to be shown.
     /// </summary>
     private void QueryRestart()
     {
@@ -154,7 +158,20 @@ public sealed partial class GameWorld
             if (key is { } k && char.ToLowerInvariant(k.Ascii) == yes)
             {
                 RestoreCharsetBg();
-                RestartRequested = true;
+                if (_loader.Version == 4)
+                {
+                    _display = ComposeFrame();
+                    FadeOut(134);
+                }
+
+                if (InEffect)
+                {
+                    _restartAfterEffect = true;
+                }
+                else
+                {
+                    RestartRequested = true;
+                }
             }
         });
     }

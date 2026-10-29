@@ -1125,7 +1125,7 @@ ScummVM draws them (`showOldStyleBannerAndPause`, `GameWorld.Banners`):
   CD asks in its own banner. A restart, or a script's `o5_systemOps` 1 (2 and 3 quit), sets
   `RestartRequested`, and `ScummEngine` starts a new world and boots it with the boot parameter
   it was first given or the FM Towns' dialog chose (`restart`, `_bootParam`). The VGA CD's
-  dissolve out before it (effect 134) is not shown.
+  dissolve out before it (effect 134): see "The VGA CD's restart".
 - Alt+I on version 3 (Ctrl+R on version 4) switches the screen between snapping to the camera
   and scrolling, saying "Screen reposition instantly" or "Screen reposition by Scrolling"
   ("Horizontal Screen Snap" or "Scroll") in colour 9 for 90 quarter-frames, and sets variable 26
@@ -1295,6 +1295,25 @@ script slot (its script, place, delay and state), every object's state and every
 - Not compared: a load from inside the game (the save screen, or the VGA CD's menu), which
   ScummVM does partway through a frame (`requestLoad`); it would need clicks in ScummVM's window.
 
+## The VGA CD's restart
+
+ScummVM's `queryRestart`, answered yes, fades the screen out before it restarts: Loom's version
+3 not at all, the VGA CD with effect 134 (`fadeOut(134)`), which dissolves the room band to
+colour 0 a pixel at a time (`dissolveEffect(1, 1)`), the screen shown after each eighteenth of
+its pixels. Distaff had restarted at once.
+
+- `FadeOut` takes 134 as that dissolve. The restart question's banner goes first, the room
+  drawn back where it was (`clearBanner`), so the dissolve starts from the room; then the
+  restart waits for the effect's last frame to be shown, and only then asks the engine to start
+  the game again (`RestartRequested`).
+- A script's restart (`o5_systemOps` 1) does not fade, as in ScummVM, and neither do the EGA and
+  the FM Towns.
+- `BannerTests` pins it on the cliff: Y to F8's question gives 18 frames of the dissolve, the
+  first with the room still showing and the last black, and the restart after them; without
+  the dissolve the test fails.
+- Worked out from ScummVM's code; not compared with ScummVM's window, which would need F8 and Y
+  pressed there.
+
 ## The CD timer while the menu is up
 
 A menu or banner pauses the engine (`pauseEngine`), and that pauses the sounds
@@ -1356,7 +1375,7 @@ Not yet checked against ScummVM:
 Known differences, not fixed:
 
 5. (Done: the music and effects play at ScummVM's volumes; see "The music and effects volumes".)
-6. The VGA CD's restart does not show the dissolve out (effect 134) first.
+6. (Done: the VGA CD's restart dissolves out first, as ScummVM's does; see "The VGA CD's restart".)
 7. (Not a difference: ScummVM's own gap after a load varies from run to run; see "Sound after a load".)
 8. (Done: the AdLib's music plays on from a save; see "Sound after a load".)
 9. (Done: the CD timer pauses with the menu as ScummVM's does; see "The CD timer while the menu is up".)

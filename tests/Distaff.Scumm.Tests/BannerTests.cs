@@ -85,6 +85,49 @@ public class BannerTests
     }
 
     /// <summary>
+    /// On the VGA CD, Y to the restart question dissolves the room to black pixel by pixel first
+    /// (<c>fadeOut(134)</c> in <c>queryRestart</c>), the screen shown after each eighteenth of its
+    /// pixels, and the restart is asked for once the dissolve has been shown.
+    /// </summary>
+    [Fact]
+    public void The_vga_cd_dissolves_out_before_it_restarts()
+    {
+        if (GameFolders.Find(GameFolders.Vga) is not { } path)
+        {
+            return;
+        }
+
+        // PRACTICE, and the opening skipped, to Bobbin on the cliff
+        var world = new GameWorld(ResourceLoader.Open(new DirectoryGameContainer(path)));
+        world.Boot();
+        new Walkthrough(world).Wait(300).ClickAt(160, 95).Wait(100).Key(Key.Escape, (char)27).Ready(8000);
+        Assert.Equal(2, world.CurrentRoomNumber);
+
+        world.KeyDown(Key.F8, KeyModifiers.None, '\0');
+        Assert.Equal("Are you sure you want to restart? (Y or N)", world.BannerText);
+        world.KeyDown(Key.Y, KeyModifiers.None, 'y');
+        world.Step();
+        Assert.Null(world.BannerText);
+        Assert.True(world.InEffect);
+        Assert.False(world.RestartRequested);
+
+        var black = world.DisplayPalette()[0];
+        bool Dark(RgbFrame f) => Enumerable.Range(world.ViewTop, world.ViewHeight).All(y => f.Row(y).ToArray().All(p => p == black));
+        var frames = new List<RgbFrame>();
+        while (world.InEffect)
+        {
+            frames.Add(world.Frame(cursor: false));
+            Assert.False(world.RestartRequested);
+            world.Step();
+        }
+
+        Assert.True(world.RestartRequested);
+        Assert.Equal(18, frames.Count);
+        Assert.False(Dark(frames[0]));
+        Assert.True(Dark(frames[^1]));
+    }
+
+    /// <summary>
     /// Alt+I switches the screen between snapping to the camera and scrolling, says which for 90
     /// quarter-frames, and sets the camera's variable to match.
     /// </summary>

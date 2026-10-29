@@ -60,7 +60,8 @@ public sealed partial class GameWorld
     /// <summary>
     /// Hides the room before another is loaded. Mirrors <c>fadeOut</c>: unless the screen is
     /// already hidden, the room band goes to colour 0 by the effect asked for (129 at once,
-    /// without showing it; 128 dissolving).
+    /// without showing it; 128 dissolving; 134 dissolving pixel by pixel, as the VGA CD's restart
+    /// does).
     /// </summary>
     private void FadeOut(int effect)
     {
@@ -76,6 +77,9 @@ public sealed partial class GameWorld
                     break;
                 case 129:
                     FillMain(display, black);
+                    break;
+                case 134:
+                    DissolveEffect(display, (x, y) => black, 1, 1);
                     break;
                 default:
                     _unhandled.Add($"fadeOut({effect})");
@@ -248,6 +252,7 @@ public sealed partial class GameWorld
         if (_effectFrames.Count == 0)
         {
             EndFrame();
+            RestartRequested |= _restartAfterEffect;
         }
     }
 
