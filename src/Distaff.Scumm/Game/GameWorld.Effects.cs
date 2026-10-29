@@ -101,6 +101,7 @@ public sealed partial class GameWorld
         if (effect == 128)
         {
             var display = Display();
+            UpdateTownsPicture();
             var room = ComposeFrame();
             DissolveEffectSelector(display, (x, y) => room[x, y]);
         }
@@ -226,8 +227,7 @@ public sealed partial class GameWorld
 
     /// <summary>The screen as it is drawn now, without the cursor.</summary>
     private RgbFrame ComposeFrame() => FmTowns
-        ? Screens.ComposeTowns(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, ShownLeft,
-            Math.Min(ViewHeight, CurrentRoom?.Height ?? 0), DisplayPalette(), [.. TownsTextPalette.Select(To15Bit)])
+        ? Screens.ComposeTowns(PictureLeft, DisplayPalette(), [.. TownsTextPalette.Select(To15Bit)])
         : RgbFrame.FromIndexed(Screen(), DisplayPalette());
 
     private void FillMain(RgbFrame display, Rgb color)

@@ -28,6 +28,9 @@ public sealed class ScummEngine : Engine
     /// <summary>Whether the FM Towns' picture scrolls smoothly, as ScummVM has it by default (<see cref="GameWorld.SmoothScrolling"/>). Set before <see cref="Initialize"/>.</summary>
     public bool SmoothScrolling { get; set; } = true;
 
+    /// <summary>Whether the FM Towns' picture may scroll 4 pixels a tick for the opening's fast camera, as ScummVM's <c>semi_smooth_scroll</c>, off by default (<see cref="GameWorld.SemiSmoothScrolling"/>). Set before <see cref="Initialize"/>.</summary>
+    public bool SemiSmoothScrolling { get; set; }
+
     /// <summary>How fast the game's lines go by, 0 to 9, as ScummVM's text speed (<see cref="GameWorld.TextSpeed"/>). Set before <see cref="Initialize"/>.</summary>
     public int TextSpeed { get; set; } = GameWorld.DefaultTextSpeed;
 
@@ -104,6 +107,7 @@ public sealed class ScummEngine : Engine
         {
             CopyProtection = CopyProtection,
             SmoothScrolling = SmoothScrolling,
+            SemiSmoothScrolling = SemiSmoothScrolling,
             TextSpeed = TextSpeed,
             Subtitles = Subtitles,
             SaveStore = Host.Saves,

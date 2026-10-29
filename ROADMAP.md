@@ -1097,10 +1097,9 @@ player's `--no-smooth-scroll` turns it off) ports it from `gfx_towns.cpp` and `S
   184 pixels and the strip asked for, and is with it again when it stops; that without smooth
   scrolling the picture is where the camera is; and the messenger's first words at both
   timings. `StepFrame` in the tests steps through the scroll's steps as well as an effect's.
-- Not ported: what the layer keeps of the columns that scroll out of view (Distaff shows the
-  room and its objects there, without what was last drawn over them), the catch-up ScummVM
-  falls into when its screen updates are slow (`_refreshNeedCatchUp`), and the semi-smooth
-  scrolling of the opening's fast camera (`semi_smooth_scroll`, off by default).
+- Not ported then: what the layer keeps of the columns that scroll out of view, the catch-up
+  ScummVM falls into when its screen updates are slow, and semi-smooth scrolling; see "The FM
+  Towns' picture layer" below.
 
 ## Banners on the EGA and the FM Towns
 
@@ -1299,6 +1298,36 @@ script slot (its script, place, delay and state), every object's state and every
 - Not compared: a load from inside the game (the save screen, or the VGA CD's menu), which
   ScummVM does partway through a frame (`requestLoad`); it would need clicks in ScummVM's window.
 
+## The FM Towns' picture layer
+
+The rest of the FM Towns' smooth scrolling (`gfx_towns.cpp`):
+
+- The picture layer is 512 columns going round (`VirtScreens.TownsPicture`). The camera's view,
+  the room under what is drawn over it, is copied in at the end of each frame and when a room's
+  effect is drawn, from a column that moves 8 when the camera moves a strip
+  (`towns_drawStripToScreen`, `_scrollDestOffset`); the screen shows the layer from a column of
+  its own that follows a pixel a tick (`hScroll`). So the columns shown behind the camera keep
+  what was copied there while the camera had them in view: in the opening's climb, 150 frames
+  show an actor there in the place and pose it had, where the room drawn now would have it moved
+  on or animated. Loom never clears the layer (`_townsClearLayerFlag`). ScummVM copies only the
+  strips drawn again; Distaff copies the whole view, which holds the same where nothing was
+  drawn again. Without smooth scrolling the layer shows just the camera's view, as before.
+- Semi-smooth scrolling (`semi_smooth_scroll`, off by default as in ScummVM; the player's
+  `--semi-smooth-scroll`): while the game runs without waits between frames
+  (`VAR_TIMER_NEXT` 0), as the opening's fast camera does, the layer scrolls 4 pixels a tick.
+  The climb then falls at most 132 pixels behind instead of 192, and the messenger's first words
+  come at 30.52 seconds instead of 32.91.
+- Not ported, and not a difference: ScummVM's catch-up (`_refreshNeedCatchUp`), which takes
+  several ticks of scroll in one screen update once its updates average longer than a 60th of a
+  second. Distaff's game time does not wait on the screen: every tick scrolls as its own step,
+  as ScummVM's does on a machine that keeps up.
+- The room's own picture is now decoded once for its colours and drawn over in a copy, since
+  the view is copied every frame; the tests take about 15% longer than before, not twice as
+  long.
+- `TownsScreenTests` pins the layer going round and keeping the columns the view has left;
+  `TownsScrollingTests` the 150 frames, and the climb and the messenger's words with and
+  without semi-smooth scrolling. Not compared with ScummVM's window.
+
 ## A release build
 
 The player published for a platform is one file that needs nothing installed:
@@ -1468,8 +1497,8 @@ Known differences, not fixed:
 Not ported, by choice:
 
 12. Dissolves paced by the display's refresh, as ScummVM's are.
-13. Of the FM Towns' smooth scrolling: what the layer keeps in columns scrolling out of view, the catch-up mode for slow screens, and semi-smooth scrolling.
-14. The FM Towns' text at twice the resolution.
+13. (Done: the picture layer keeps what was drawn in the columns behind the camera, and semi-smooth scrolling is `--semi-smooth-scroll`; the catch-up mode is not a difference. See "The FM Towns' picture layer".)
+14. (Dropped: ScummVM's 640 x 480 mode for the FM Towns, `force_fmtowns_hires_mode`, is off by default, and for English text only doubles its pixels; only the banners would differ.)
 
 Coverage of the game's scripts:
 

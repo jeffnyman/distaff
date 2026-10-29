@@ -84,14 +84,88 @@ public class TownsScrollingTests
         Assert.Equal(seconds, world.Time.TotalSeconds, 2);
     }
 
-    private static GameWorld? Boot(bool smooth)
+    /// <summary>
+    /// The columns the picture shows behind the camera keep what was drawn there while the camera
+    /// had them in view, as ScummVM's picture layer does: in the climb, 150 frames show an actor
+    /// there as it was last drawn, in the place and the pose it had then, where the room drawn now
+    /// would have it moved on or animated.
+    /// </summary>
+    [Fact]
+    public void The_columns_behind_the_camera_keep_what_was_drawn_there()
+    {
+        if (Boot(smooth: true) is not { } world)
+        {
+            return;
+        }
+
+        int differing = 0;
+        while (world.Time.TotalSeconds < 45)
+        {
+            world.Step();
+            int lag = world.Camera.Left - world.ShownLeft;
+            if (world.CurrentRoomNumber != 2 || world.InEffect || lag <= 0)
+            {
+                continue;
+            }
+
+            var frame = world.Frame(cursor: false);
+            var picture = world.RoomPicture(world.CurrentRoom!).Pixels;
+            var colors = world.DisplayPalette();
+            bool differs = false;
+            for (int y = 0; y < Math.Min(picture.Height, world.ViewHeight) && !differs; y++)
+            {
+                for (int x = 0; x < lag && !differs; x++)
+                {
+                    // where text is drawn over the picture, the text shows
+                    differs = world.Screens.TextSurface[x, world.ViewTop + y] == 0
+                        && frame[x, world.ViewTop + y] != GameWorld.To15Bit(colors[picture[world.ShownLeft + x, y]]);
+                }
+            }
+
+            differing += differs ? 1 : 0;
+        }
+
+        Assert.Equal(150, differing);
+    }
+
+    /// <summary>
+    /// With ScummVM's semi-smooth scrolling the picture scrolls 4 pixels a tick while the opening's
+    /// camera climbs without waits between frames: it falls less far behind, and the messenger's
+    /// first words come sooner.
+    /// </summary>
+    [Theory]
+    [InlineData(false, 192, 32.91)]
+    [InlineData(true, 132, 30.52)]
+    public void Semi_smooth_scrolling_keeps_up_with_the_climb(bool semiSmooth, int mostLag, double seconds)
+    {
+        if (Boot(smooth: true, semiSmooth) is not { } world)
+        {
+            return;
+        }
+
+        int most = 0;
+        while (world.MessageText != "Rise, son of Cygna.")
+        {
+            world.Step();
+            Assert.True(world.Time.TotalSeconds < 60, "no words");
+            if (world.CurrentRoomNumber == 2 && !world.InEffect)
+            {
+                most = Math.Max(most, world.Camera.Left - world.ShownLeft);
+            }
+        }
+
+        Assert.Equal(mostLag, most);
+        Assert.Equal(seconds, world.Time.TotalSeconds, 2);
+    }
+
+    private static GameWorld? Boot(bool smooth, bool semiSmooth = false)
     {
         if (TownsResourceTests.Open() is not { } loader)
         {
             return null;
         }
 
-        var world = new GameWorld(loader) { SmoothScrolling = smooth };
+        var world = new GameWorld(loader) { SmoothScrolling = smooth, SemiSmoothScrolling = semiSmooth };
         world.Boot();
         return world;
     }

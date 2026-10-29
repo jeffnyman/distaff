@@ -45,6 +45,9 @@ public sealed class VirtScreens
 
     public const int ScreenWidth = 320;
 
+    /// <summary>The FM Towns' picture layer's width (<c>setupLayer(0, 512, ...)</c>).</summary>
+    public const int TownsPictureWidth = 512;
+
     private const int Strips = ScreenWidth / 8;
 
     // the rows of each strip of the text and verb bands drawn since the FM Towns' text layer was
@@ -61,6 +64,7 @@ public sealed class VirtScreens
         TextSurface = new Surface8(ScreenWidth, height);
         TextSurface.Fill(TextTransparent);
         TownsLayer = fmTowns ? new Surface8(ScreenWidth, height) : null;
+        TownsPicture = fmTowns ? new Surface8(TownsPictureWidth, height) : null;
         Init(16, 144, ScreenWidth);
     }
 
@@ -89,6 +93,15 @@ public sealed class VirtScreens
     /// at once. Over the main band the text surface shows as it is.
     /// </summary>
     public Surface8? TownsLayer { get; }
+
+    /// <summary>
+    /// The FM Towns' picture layer (the <c>TownsScreen</c>'s layer 0), null for the other releases:
+    /// 512 columns going round, into which the camera's view is copied from a column that moves 8
+    /// when the camera moves a strip (<c>_scrollDestOffset</c>), and which the screen shows from a
+    /// column of its own that follows a pixel a tick (<c>hScroll</c>). The columns the screen shows
+    /// behind the camera keep what was last copied there. Loom's never clears it.
+    /// </summary>
+    public Surface8? TownsPicture { get; }
 
     /// <summary>
     /// Lays the bands out: text above <paramref name="b"/>, the room to <paramref name="h"/>, verbs
@@ -234,17 +247,15 @@ public sealed class VirtScreens
     /// <paramref name="textColors"/> wherever it is not 0: the text surface over the main band, as
     /// <c>towns_drawStripToScreen</c> copies it there, and <see cref="TownsLayer"/> elsewhere.
     /// </summary>
-    public RgbFrame ComposeTowns(Surface8? roomPicture, int cameraLeft, int viewHeight, ReadOnlySpan<Rgb> roomColors, ReadOnlySpan<Rgb> textColors)
+    public RgbFrame ComposeTowns(int pictureLeft, ReadOnlySpan<Rgb> roomColors, ReadOnlySpan<Rgb> textColors)
     {
-        var picture = new Surface8(ScreenWidth, ScreenHeight);
-        ComposeMain(picture, roomPicture, cameraLeft, viewHeight);
         var frame = new RgbFrame(ScreenWidth, ScreenHeight);
         for (int y = 0; y < ScreenHeight; y++)
         {
             bool main = y >= Main.Top && y < Main.Top + Main.Height;
             var text = (main ? TextSurface : TownsLayer!).Row(y);
             var frameRow = frame.Row(y);
-            var pictureRow = picture.Row(y);
+            var pictureRow = TownsPicture!.Row(y);
             for (int x = 0; x < ScreenWidth; x++)
             {
                 if (text[x] != 0)
@@ -253,12 +264,32 @@ public sealed class VirtScreens
                 }
                 else if (main)
                 {
-                    frameRow[x] = roomColors[pictureRow[x]];
+                    frameRow[x] = roomColors[pictureRow[(pictureLeft + x) & (TownsPictureWidth - 1)]];
                 }
             }
         }
 
         return frame;
+    }
+
+    /// <summary>
+    /// The camera's view of the main band, the room under what is drawn over it, is copied into the
+    /// FM Towns' picture layer from column <paramref name="layerLeft"/> on, going round its 512
+    /// (<c>towns_drawStripToScreen</c>, the whole view rather than its strips drawn again).
+    /// </summary>
+    public void CopyToTownsPicture(Surface8? roomPicture, int cameraLeft, int viewHeight, int layerLeft)
+    {
+        var picture = new Surface8(ScreenWidth, ScreenHeight);
+        ComposeMain(picture, roomPicture, cameraLeft, viewHeight);
+        for (int y = Math.Max(0, Main.Top); y < Main.Top + Main.Height && y < ScreenHeight; y++)
+        {
+            var from = picture.Row(y);
+            var to = TownsPicture!.Row(y);
+            for (int x = 0; x < ScreenWidth; x++)
+            {
+                to[(layerLeft + x) & (TownsPictureWidth - 1)] = from[x];
+            }
+        }
     }
 
     /// <summary>The room's view, and what is drawn over it, into the main band of a screen.</summary>

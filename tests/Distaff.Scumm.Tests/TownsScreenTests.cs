@@ -118,13 +118,40 @@ public class TownsScreenTests
         screens.TownsLayer!.FillRect(new Rect(0, 144, 320, 96), 0);
         screens.FlushTownsLayer();
         var colors = Enumerable.Range(0, 256).Select(i => new Rgb((byte)i, 0, 0)).ToArray();
-        var frame = screens.ComposeTowns(null, 0, 144, colors, GameWorld.TownsTextPalette);
+        var frame = screens.ComposeTowns(0, colors, GameWorld.TownsTextPalette);
         Assert.Equal(Rgb.Black, frame[100, 200]);
 
         screens.MarkDirty(screens.Verb, 96, 103, 50, 60);
         screens.FlushTownsLayer();
-        frame = screens.ComposeTowns(null, 0, 144, colors, GameWorld.TownsTextPalette);
+        frame = screens.ComposeTowns(0, colors, GameWorld.TownsTextPalette);
         Assert.Equal((GameWorld.TownsTextPalette[12], Rgb.Black), (frame[100, 200], frame[110, 200]));
+    }
+
+    /// <summary>
+    /// The picture layer goes round its 512 columns: the camera's view copied a strip further on,
+    /// as when the camera moves a strip right, the screen shown from where it was copied before
+    /// shows the old view's first strip, then the new view.
+    /// </summary>
+    [Fact]
+    public void The_picture_layer_keeps_the_columns_the_view_has_left()
+    {
+        var screens = new VirtScreens(240, fmTowns: true);
+        screens.Init(0, 144, 640);
+        var room = new Surface8(640, 144);
+        for (int x = 0; x < room.Width; x++)
+        {
+            room.FillRect(new Rect(x, 0, 1, 144), (byte)(x / 8));
+        }
+
+        screens.CopyToTownsPicture(room, 0, 144, 508);
+        room.FillRect(new Rect(0, 0, 8, 144), 200);
+        screens.CopyToTownsPicture(room, 8, 144, 4);
+        var colors = Enumerable.Range(0, 256).Select(i => new Rgb((byte)i, 0, 0)).ToArray();
+
+        var frame = screens.ComposeTowns(508, colors, GameWorld.TownsTextPalette);
+        Assert.Equal([0, 0, 1, 2, 39], new[] { 0, 7, 8, 16, 319 }.Select(x => (int)frame[x, 10].R));
+        frame = screens.ComposeTowns(4, colors, GameWorld.TownsTextPalette);
+        Assert.Equal([1, 40], new[] { 0, 319 }.Select(x => (int)frame[x, 10].R));
     }
 
     /// <summary>The FM Towns' flashlight rounds each corner by one curve, mirrored: one pixel left at the top row's corner, all eight at the eighth row.</summary>

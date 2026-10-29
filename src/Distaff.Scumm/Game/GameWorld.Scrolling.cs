@@ -31,6 +31,9 @@ public sealed partial class GameWorld
     private int _scrollDeltaAdjust;
     private TimeSpan _scrollTimer;
 
+    // the picture layer's column the camera's view is copied to (_scrollDestOffset)
+    private int _layerOffset;
+
     /// <summary>When the frame being waited for runs, and its ticks, once its wait has begun.</summary>
     private TimeSpan? _waitEnd;
     private int _waitTicks;
@@ -45,6 +48,26 @@ public sealed partial class GameWorld
     public bool SmoothScrolling { get; set; } = true;
 
     private bool Smooth => FmTowns && SmoothScrolling;
+
+    /// <summary>
+    /// Whether the FM Towns' picture may scroll 4 pixels a tick instead of 1 while the game runs
+    /// without waiting between frames, as the opening's fast camera does; ScummVM's
+    /// <c>semi_smooth_scroll</c>, off by default.
+    /// </summary>
+    public bool SemiSmoothScrolling { get; set; }
+
+    /// <summary>The picture layer's column at the screen's left (<c>hScroll</c>): where the view is copied, as far behind as the scroll has still to go.</summary>
+    private int PictureLeft => (_layerOffset + _scrollRemainder + _scrollRequest) & (TownsLayerWidth - 1);
+
+    /// <summary>The camera's view goes into the picture layer, as ScummVM draws what changed to the screen.</summary>
+    private void UpdateTownsPicture()
+    {
+        if (FmTowns)
+        {
+            Screens.CopyToTownsPicture(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, Camera.Left,
+                Math.Min(ViewHeight, CurrentRoom?.Height ?? 0), _layerOffset);
+        }
+    }
 
     private bool Scrolling => _scrollRemainder != 0 || _scrollRequest != 0;
 
@@ -113,14 +136,19 @@ public sealed partial class GameWorld
         return false;
     }
 
-    /// <summary>A tick: the layer takes the request and scrolls a pixel towards it, and if it still has to scroll the next frame waits longer.</summary>
+    /// <summary>
+    /// A tick: the layer takes the request and scrolls a pixel towards it, or 4 with semi-smooth
+    /// scrolling while the game does not wait between frames (<c>VAR_TIMER_NEXT</c> 0), and if it
+    /// still has to scroll the next frame waits longer.
+    /// </summary>
     private void TickScroll()
     {
         _scrollRemainder += _scrollRequest;
         _scrollRequest = 0;
         if (_scrollRemainder != 0)
         {
-            _scrollRemainder += _scrollRemainder > 0 ? -1 : 1;
+            int step = _scrollRemainder > 0 ? -1 : 1;
+            _scrollRemainder += SemiSmoothScrolling && Engine.Variables[Vars.TimerNext] == 0 ? step * 4 : step;
         }
 
         if (_scrollRemainder != 0)
@@ -149,6 +177,7 @@ public sealed partial class GameWorld
     {
         WaitForScroll(-dir);
         WaitForScroll(dir, (TownsLayerWidth - ScreenWidth - 8) * dir);
+        _layerOffset = (_layerOffset - 8 * dir) & (TownsLayerWidth - 1);
         _scrollRequest += 8 * dir;
     }
 
@@ -184,11 +213,12 @@ public sealed partial class GameWorld
         }
     }
 
-    /// <summary>The scroll starts afresh: after a load, whose time is the save's.</summary>
+    /// <summary>The scroll starts afresh, the camera's view in the picture layer: after a load, whose time is the save's.</summary>
     private void ResetScroll()
     {
         _scrollRemainder = _scrollRequest = _scrollDeltaAdjust = 0;
         _scrollTimer = Time;
         _waitEnd = null;
+        UpdateTownsPicture();
     }
 }

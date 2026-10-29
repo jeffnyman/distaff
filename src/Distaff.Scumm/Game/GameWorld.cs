@@ -129,6 +129,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <summary>What the room's colours are drawn as (<c>_roomPalette</c>), which <c>roomOps</c> changes.</summary>
     public byte[] RoomPalette { get; } = new byte[256];
 
+    // the room's picture as last decoded, and the colours it was decoded in
+    private (Room Room, byte[] Palette, MaskedImage Image)? _background;
+
     /// <summary>What each colour on screen shows as (<c>_shadowPalette</c>, which <c>updatePalette</c> applies in version 3).</summary>
     public byte[] ShadowPalette { get; } = new byte[256];
 
@@ -317,8 +320,10 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         Sound.Update(Time);
         AnimateCursor();
 
-        // drawDirtyScreenParts: what was drawn in the text and verb bands shows in the FM Towns' text layer
+        // drawDirtyScreenParts: what was drawn in the text and verb bands shows in the FM Towns' text
+        // layer, and the camera's view in its picture layer
         Screens.FlushTownsLayer();
+        UpdateTownsPicture();
         _display = null;
     }
 
@@ -386,7 +391,13 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// </summary>
     public MaskedImage RoomPicture(Room room)
     {
-        var image = RoomRenderer.DrawBackground(room, RoomPalette);
+        // the room's own picture is decoded once for its colours, and drawn over in a copy
+        if (_background is not { } cached || cached.Room != room || !cached.Palette.AsSpan().SequenceEqual(RoomPalette))
+        {
+            _background = cached = (room, [.. RoomPalette], RoomRenderer.DrawBackground(room, RoomPalette));
+        }
+
+        var image = new MaskedImage(cached.Image.Pixels.Clone(), cached.Image.Mask.Clone());
         foreach (var obj in RoomRenderer.VisibleObjects(room, GetState))
         {
             RoomRenderer.DrawObject(room, obj, image, RoomPalette, _moved.TryGetValue(obj.Number, out var at) ? at : null);
