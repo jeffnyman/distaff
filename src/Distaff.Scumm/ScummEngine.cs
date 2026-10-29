@@ -31,6 +31,9 @@ public sealed class ScummEngine : Engine
     /// <summary>How fast the game's lines go by, 0 to 9, as ScummVM's text speed (<see cref="GameWorld.TextSpeed"/>). Set before <see cref="Initialize"/>.</summary>
     public int TextSpeed { get; set; } = GameWorld.DefaultTextSpeed;
 
+    /// <summary>Whether the VGA CD draws its lines while the CD plays (<see cref="GameWorld.Subtitles"/>). On by default, unlike ScummVM. Set before <see cref="Initialize"/>.</summary>
+    public bool Subtitles { get; set; } = true;
+
     /// <summary>The music's and the sound effects' volumes, 0 to 256, as ScummVM's settings (192 unless set). Set before <see cref="Initialize"/>.</summary>
     public int MusicVolume { get; set; } = AudioVolume.Default;
 
@@ -102,6 +105,7 @@ public sealed class ScummEngine : Engine
             CopyProtection = CopyProtection,
             SmoothScrolling = SmoothScrolling,
             TextSpeed = TextSpeed,
+            Subtitles = Subtitles,
             SaveStore = Host.Saves,
         };
         if (SaveTarget is not null)

@@ -315,7 +315,13 @@ public sealed partial class GameWorld
             _nextLeft = Math.Min(_nextLeft, ScreenWidth);
             _textLeft = _nextLeft;
             _textTop = _nextTop;
-            PrintChar(c, ignoreCharsetMask: false);
+
+            // the VGA CD's voice says the line instead, with the subtitles off (Loom's case in CHARSET_1)
+            if (_loader.Version <= 3 || Subtitles || !Sound.Cd.IsPlaying)
+            {
+                PrintChar(c, ignoreCharsetMask: false);
+            }
+
             _nextLeft = _textLeft;
             _nextTop = _textTop;
 

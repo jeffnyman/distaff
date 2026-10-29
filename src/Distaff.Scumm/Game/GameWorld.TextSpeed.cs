@@ -17,6 +17,13 @@ public sealed partial class GameWorld
 
     private int _textSpeed;
 
+    /// <summary>
+    /// Whether the VGA CD draws its lines while the CD plays, as ScummVM's <c>subtitles</c> setting;
+    /// off, a line's characters are not drawn while the CD plays, though they still keep it up as
+    /// long. ScummVM has it off unless set; Distaff has it on. The other releases always draw them.
+    /// </summary>
+    public bool Subtitles { get; set; } = true;
+
     /// <summary>How fast the game's lines go by, 0 to 9 (ScummVM's <c>talkspeed</c>): each character of a line keeps it up 9 less this many ticks.</summary>
     public int TextSpeed
     {

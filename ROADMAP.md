@@ -491,9 +491,8 @@ Then the interface and a playing check:
   its end; a recording of the opening has the three spoken lines of the proficiency screen with
   silence between, then the narration and music from PRACTICE to Bobbin on the cliff. Not yet
   listened to against ScummVM.
-- Left out: ScummVM's subtitles setting (with it off, Loom's text is not drawn while the CD
-  plays); Distaff always draws it, as ScummVM does by default. Restoring the CD after loading a
-  save is phase 16's.
+- Left out then: ScummVM's subtitles setting, since ported (see "The VGA CD's subtitles").
+  Restoring the CD after loading a save is phase 16's.
 
 ### Phase 16: saves and the whole game (done)
 
@@ -1300,6 +1299,23 @@ script slot (its script, place, delay and state), every object's state and every
 - Not compared: a load from inside the game (the save screen, or the VGA CD's menu), which
   ScummVM does partway through a frame (`requestLoad`); it would need clicks in ScummVM's window.
 
+## The VGA CD's subtitles
+
+ScummVM's `subtitles` setting, which on the VGA CD decides whether the lines the CD says are
+drawn (Loom's case in `CHARSET_1`):
+
+- Off, a line's characters are not drawn while the CD plays (`pollCD`), though each still adds to
+  how long the line stays up, so the line comes and goes at the same moments, unseen. With the
+  CD's track missing nothing plays, and the lines are drawn. Version 4 only: the EGA and the FM
+  Towns (version 3 in ScummVM) always draw them.
+- ScummVM has it off unless set (`registerDefault("subtitles", false)`, and nothing for Loom sets
+  it), so out of the box the VGA CD's spoken lines go undrawn; Loom's options hide the setting
+  (`GUIO_NOSPEECH`). Distaff has it on, the text drawn, and `--no-subtitles` turns it off, as a
+  fresh ScummVM has it. (An earlier note here had ScummVM drawing the text by default; it does
+  not.)
+- `SubtitlesTests` pins the proficiency screen's spoken line with the setting on and off: the same
+  line for the same steps, drawn only with it on. Not compared with ScummVM's window.
+
 ## The VGA CD's keys
 
 The keys of ScummVM's original interface that Distaff had left out (`processKeyboard`):
@@ -1410,7 +1426,7 @@ Known differences, not fixed:
 7. (Not a difference: ScummVM's own gap after a load varies from run to run; see "Sound after a load".)
 8. (Done: the AdLib's music plays on from a save; see "Sound after a load".)
 9. (Done: the CD timer pauses with the menu as ScummVM's does; see "The CD timer while the menu is up".)
-10. No subtitles setting: the text is always drawn, as ScummVM does by default.
+10. (Done: the subtitles setting, `--no-subtitles`, on by default unlike ScummVM's; see "The VGA CD's subtitles".)
 23. (Done: the text speed is ScummVM's setting; see "The text speed".)
 11. (Done: the text speed keys, the mouse wheel on the save list, and Ctrl+C and Alt+X; see "The VGA CD's keys".)
 

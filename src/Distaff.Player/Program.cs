@@ -39,6 +39,7 @@ internal static class Program
         string? wav = null;
         bool smoothScroll = true;
         int textSpeed = GameWorld.DefaultTextSpeed;
+        bool subtitles = true;
         int? randomSeed = null;
         (int Music, int Sfx) volumes = (AudioVolume.Default, AudioVolume.Default);
         int? traceActor = null;
@@ -122,6 +123,9 @@ internal static class Program
                 case "--no-smooth-scroll":
                     smoothScroll = false;
                     break;
+                case "--no-subtitles":
+                    subtitles = false;
+                    break;
                 case "--music-volume" when i + 1 < args.Length && int.TryParse(args[i + 1], out int music) && music is >= 0 and <= AudioVolume.Unity:
                     volumes = (music, volumes.Sfx);
                     i++;
@@ -194,7 +198,7 @@ internal static class Program
             if (run is { } runSteps)
             {
                 var store = new FileSaveStore(savesDirectory);
-                return Run(ResourceLoader.Open(game), runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, wav, CdTrackFiles.In(gamePath), smoothScroll, textSpeed, volumes, randomSeed ?? 1);
+                return Run(ResourceLoader.Open(game), runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, wav, CdTrackFiles.In(gamePath), smoothScroll, textSpeed, subtitles, volumes, randomSeed ?? 1);
             }
 
             if (script is { } scriptNo)
@@ -212,7 +216,7 @@ internal static class Program
                 return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
             }
 
-            return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, CdTrackFiles.In(gamePath), playFor, smoothScroll, textSpeed, volumes, randomSeed);
+            return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, CdTrackFiles.In(gamePath), playFor, smoothScroll, textSpeed, subtitles, volumes, randomSeed);
         }
         catch (Exception ex) when (ex is NotSupportedException or InvalidDataException)
         {
@@ -229,10 +233,10 @@ internal static class Program
 
     private static int Usage()
     {
-        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--no-smooth-scroll] [--text-speed 0-9] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--difficulty practice|standard|expert] [--sound speaker|pcjr|adlib] [--load file] [--saves folder] [--target name]");
+        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--no-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--difficulty practice|standard|expert] [--sound speaker|pcjr|adlib] [--load file] [--saves folder] [--target name]");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
-        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|adlib] [--wav file.wav] [--trace-actor N] [--copy-protection] [--no-smooth-scroll] [--text-speed 0-9] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--screenshot file.png] [--zoom N]");
+        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|adlib] [--wav file.wav] [--trace-actor N] [--copy-protection] [--no-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--screenshot file.png] [--zoom N]");
         return 2;
     }
 
@@ -245,11 +249,11 @@ internal static class Program
     /// unless a seed is given (<c>--random-seed</c>).
     /// </summary>
     private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int? bootParam, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound,
-        Func<int, ICdTrack?> cdTracks, TimeSpan? playFor, bool smoothScroll, int textSpeed, (int Music, int Sfx) volumes, int? randomSeed)
+        Func<int, ICdTrack?> cdTracks, TimeSpan? playFor, bool smoothScroll, int textSpeed, bool subtitles, (int Music, int Sfx) volumes, int? randomSeed)
     {
         using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen, Saves = new FileSaveStore(savesDirectory) });
         var detected = new DetectedGame("scumm", "loom", "Loom", release.Variant, release.Language, release.Platform);
-        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, TextSpeed = textSpeed, MusicVolume = volumes.Music, SfxVolume = volumes.Sfx, BootParam = bootParam, StartingSave = load, SaveTarget = target, SoundDevice = sound, CdTracks = cdTracks, RandomSeed = randomSeed };
+        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, TextSpeed = textSpeed, Subtitles = subtitles, MusicVolume = volumes.Music, SfxVolume = volumes.Sfx, BootParam = bootParam, StartingSave = load, SaveTarget = target, SoundDevice = sound, CdTracks = cdTracks, RandomSeed = randomSeed };
         SDL.SDL3.SDL_HideCursor();
         var clock = System.Diagnostics.Stopwatch.StartNew();
         host.Run(engine, duration: playFor);
@@ -295,9 +299,9 @@ internal static class Program
     /// so a run is the same each time.
     /// </summary>
     private static int Run(ResourceLoader loader, int steps, bool copyProtection, int? bootParam, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor,
-        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, string? wav, Func<int, ICdTrack?> cdTracks, bool smoothScroll, int textSpeed, (int Music, int Sfx) volumes, int randomSeed)
+        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, string? wav, Func<int, ICdTrack?> cdTracks, bool smoothScroll, int textSpeed, bool subtitles, (int Music, int Sfx) volumes, int randomSeed)
     {
-        var world = new GameWorld(loader, randomSeed, sound, cdTracks: wav is null ? null : cdTracks) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, TextSpeed = textSpeed, SaveStore = store, SaveTarget = target };
+        var world = new GameWorld(loader, randomSeed, sound, cdTracks: wav is null ? null : cdTracks) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, TextSpeed = textSpeed, Subtitles = subtitles, SaveStore = store, SaveTarget = target };
         world.Sound.MusicVolume = volumes.Music;
         world.Sound.SfxVolume = volumes.Sfx;
         var audio = new List<short>();
