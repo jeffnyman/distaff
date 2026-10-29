@@ -39,11 +39,11 @@ and loaded here.
 | Path | What it is |
 |---|---|
 | `src/Distaff.Scumm` | The interpreter: the host contract, detection, resources, rooms and drawing them, the script decoder and engine, the game loop, costumes and walking actors, the font and text, verbs and the cursor, ScummVM-compatible saves, sound (PC speaker, PCjr, CMS on an emulated SAA1099, AdLib on an emulated OPL2, the FM Towns' FM and PCM chips). |
-| `src/Distaff.Audio` | Decoders for CD audio tracks kept as files: FLAC, its own, and Ogg Vorbis, on [NVorbis](https://github.com/NVorbis/NVorbis). The interpreter takes tracks through an interface (`ICdTrack`) and carries no decoder of its own. |
+| `src/Distaff.Audio` | Decoders for CD audio tracks kept as files: FLAC, its own, and Ogg Vorbis, on [NVorbis](https://github.com/NVorbis/NVorbis); and the MT-32 emulator (`Mt32`), a port of [Munt](https://github.com/munt/munt) by way of Daventry, for the EGA's Roland Upgrade (not yet played). The interpreter takes tracks through an interface (`ICdTrack`) and carries no decoder of its own. |
 | `src/Distaff.Player` | The `distaff` player: an SDL window (`Sdl`, from Maniacal), and the headless tools. |
 | `tests/Distaff.Scumm.Tests` | Unit tests, and tests that run against the real game data when it is present, the player's window among them (SDL offscreen, to check that it keeps the game's pace). |
 | `.github/workflows` | The build workflow: builds, tests and publishes the player on Windows, Linux and macOS on every push. |
-| `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`, `port_sound_tables.py`), and `opl-reference`, `pcjr-reference`, `cms-reference` and `towns-reference`, which build ScummVM's OPL2 emulator, its PC speaker and PCjr player, its CMS player and emulator and its FM Towns sound to check the ports against; `icon`, which writes the player's `distaff.ico` from the drawing in `AppIcon`. |
+| `tools` | Generators that port tables from the ScummVM source (`port_md5_table.py`, `port_opcodes.py`, `port_sound_tables.py`), and `opl-reference`, `pcjr-reference`, `cms-reference`, `mt32-reference` and `towns-reference`, which build ScummVM's OPL2 emulator, its PC speaker and PCjr player, its CMS player and emulator, its copy of Munt and its FM Towns sound to check the ports against; `icon`, which writes the player's `distaff.ico` from the drawing in `AppIcon`. |
 
 The host contract is part of `Distaff.Scumm`: the engine base class, the graphics, input and audio
 drivers it is given and a headless host (`Hosting`, `Input`), screen surfaces and PNG writing
@@ -86,4 +86,6 @@ files out of the repository. A test whose folder is absent passes without checki
 ## License
 
 GPL-3.0-or-later, as ScummVM is. See [LICENSE](LICENSE). NVorbis, which `Distaff.Audio` uses, is
-under the MIT license.
+under the MIT license. The MT-32 emulator in `Distaff.Audio/Mt32` is a port of Munt, whose license
+is the LGPL 2.1 or later; each of its files keeps Munt's copyright notice. Distaff ships no MT-32
+ROMs.

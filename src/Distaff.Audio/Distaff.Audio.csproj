@@ -1,8 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Decoders for the CD audio tracks Loom's CD releases play from files: FLAC, and Ogg Vorbis.</Description>
+    <Description>Decoders for the CD audio tracks Loom's CD releases play from files: FLAC, and Ogg Vorbis; and the MT-32 emulator, a port of Munt (LGPL 2.1 or later), for the EGA's Roland Upgrade.</Description>
   </PropertyGroup>
   <ItemGroup>
+    <!-- the tests drive Munt's synth as its reference harness does -->
+    <InternalsVisibleTo Include="Distaff.Scumm.Tests" />
     <ProjectReference Include="..\Distaff.Scumm\Distaff.Scumm.csproj" />
     <PackageReference Include="NVorbis" />
   </ItemGroup>
