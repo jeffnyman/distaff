@@ -60,6 +60,12 @@ public sealed class ScummEngine : Engine
     /// <summary>Opens a track of the CD's audio from the game's folder, for the VGA CD. Set before <see cref="Initialize"/>; without it the CD is silent.</summary>
     public Func<int, ICdTrack?>? CdTracks { get; set; }
 
+    /// <summary>
+    /// The seed of the game's random numbers, as ScummVM's <c>--random-seed</c>; without it, the
+    /// host's, or else the clock's, as ScummVM seeds from the time. Set before <see cref="Initialize"/>.
+    /// </summary>
+    public int? RandomSeed { get; set; }
+
     /// <summary>The world being played, from <see cref="Initialize"/> on.</summary>
     public GameWorld World => _world ?? throw new InvalidOperationException("The engine is not initialized.");
 
@@ -91,7 +97,7 @@ public sealed class ScummEngine : Engine
 
     private GameWorld NewWorld(ResourceLoader loader)
     {
-        var world = new GameWorld(loader, Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate, CdTracks)
+        var world = new GameWorld(loader, RandomSeed ?? Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate, CdTracks)
         {
             CopyProtection = CopyProtection,
             SmoothScrolling = SmoothScrolling,
@@ -116,7 +122,11 @@ public sealed class ScummEngine : Engine
     {
         Host.Audio.Stop();
         _world!.Sound.Dispose();
+
+        // the engine's random numbers go on: restart does not seed them again (_rnd)
+        var random = _world.Engine.Random;
         _world = NewWorld(ResourceLoader.Open(Game));
+        _world.Engine.Random = random;
         StartAudio(_world);
         _world.Boot(_bootParam);
     }

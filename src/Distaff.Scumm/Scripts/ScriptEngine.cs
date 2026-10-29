@@ -48,7 +48,7 @@ public sealed class ScriptEngine
     private bool _discardResult;
 
     /// <summary>The game's random numbers, which the scripts and the dissolve share (<c>_rnd</c>).</summary>
-    public ScummRandom Random { get; }
+    public ScummRandom Random { get; internal set; }
 
     public ScriptEngine(IScriptHost host, int seed = 1, int version = 3, bool fmTowns = false)
     {

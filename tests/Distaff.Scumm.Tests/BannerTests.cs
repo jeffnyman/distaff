@@ -158,7 +158,7 @@ public class BannerTests
         Assert.Equal(0, world.Engine.Variables[Vars.CameraFastX]);
     }
 
-    /// <summary>A restart answered yes starts the game again: the engine boots a new world, back on the proficiency screen.</summary>
+    /// <summary>A restart answered yes starts the game again: the engine boots a new world, back on the proficiency screen, its random numbers going on.</summary>
     [Fact]
     public void The_engine_restarts_the_game()
     {
@@ -174,11 +174,15 @@ public class BannerTests
         host.Continue(engine, 200);
         var played = engine.World;
         Assert.NotEqual(69, played.CurrentRoomNumber);
+        var random = played.Engine.Random;
 
         host.Input.PushKey(Key.F8);
         host.Input.PushKey(Key.Y, KeyModifiers.None, 'y');
         host.Continue(engine, 3);
         Assert.NotSame(played, engine.World);
+
+        // the random numbers go on from where they were, not seeded again
+        Assert.Same(random, engine.World.Engine.Random);
         host.Continue(engine, 5);
         Assert.Equal(69, engine.World.CurrentRoomNumber);
     }

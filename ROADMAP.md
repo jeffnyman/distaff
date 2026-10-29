@@ -1286,6 +1286,11 @@ script slot (its script, place, delay and state), every object's state and every
 - Kept as ScummVM keeps it: a script started in a slot keeps the delay the slot's last script
   left (`runScript` does not clear it); only the saves see it, as a delay is set before it is
   read.
+- The seed: the window's random numbers are seeded from the clock, as ScummVM seeds them from
+  the time, and `--random-seed N` gives one, as ScummVM's does, in the window and in `--run`,
+  whose seed is otherwise 1. A restart from the engine keeps the random numbers going, as
+  ScummVM's `restart` does not seed them again. `RandomSeedTests` checks the engine's seed over
+  the host's, and `BannerTests` the restart.
 - `AfterLoadTests` pins two saves in each release against ScummVM's autosaves (kept beside the
   game data, in `games/scummvm-saves`, with the saves they were made from), and the random
   numbers against ScummVM's algorithm worked out by hand.
