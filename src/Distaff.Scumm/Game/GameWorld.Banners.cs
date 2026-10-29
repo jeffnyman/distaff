@@ -49,7 +49,7 @@ public sealed partial class GameWorld
             return;
         }
 
-        Sound.Paused = true;
+        PauseSounds(true);
         int top = FmTowns ? (Screens.Main.Top + Screens.Main.Top + Screens.Main.Height) / 2 - BannerHeight : 80;
         var pixels = new Surface8(ScreenWidth, BannerHeight);
         pixels.Fill(FmTowns ? (byte)8 : (byte)0);
@@ -85,7 +85,7 @@ public sealed partial class GameWorld
     private void EndOldStyleBanner(OldStyleBanner banner, (Key Key, char Ascii, KeyModifiers Modifiers)? key)
     {
         _oldBanner = null;
-        Sound.Paused = _menuActive;
+        PauseSounds(_menuActive);
         _input = 0;
         banner.Then(key);
     }

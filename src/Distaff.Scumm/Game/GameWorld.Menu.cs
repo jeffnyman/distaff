@@ -157,6 +157,9 @@ public sealed partial class GameWorld
     private void InterfaceStep()
     {
         int quarterFrames = StepTicks * 4;
+
+        // the CD timer runs on a thread of its own, through the menu unless the pause stopped it
+        AdvanceCdTimer(quarterFrames);
         for (int i = 0; i < quarterFrames; i++)
         {
             if ((_guiCursorAnimCounter++ & 16) != 0)
@@ -224,7 +227,7 @@ public sealed partial class GameWorld
     /// </summary>
     private void ShowMainMenu()
     {
-        Sound.Paused = true;
+        PauseSounds(true);
         SaveGuiSurfaces();
         _menuPage = PageMain;
         SetUpMainMenuControls();
@@ -259,7 +262,7 @@ public sealed partial class GameWorld
             RestoreGuiSurfaces();
         }
 
-        Sound.Paused = false;
+        PauseSounds(false);
         _guiClick = null;
         _guiKey = null;
     }
@@ -803,7 +806,7 @@ public sealed partial class GameWorld
             SaveGuiSurfaces();
         }
 
-        Sound.Paused = true;
+        PauseSounds(true);
         var font = _font;
         _font = _guiFont ??= _loader.LoadCharset(1) is { } data ? Charset.ParseClassic(data) : null;
         int height = (_font?.Height ?? 8) + 5;
@@ -847,7 +850,7 @@ public sealed partial class GameWorld
             RestoreGuiSurfaces();
         }
 
-        Sound.Paused = banner.OverMenu;
+        PauseSounds(banner.OverMenu);
         _controls[0].RelativeCenterX = -1;
         banner.Then(key);
     }

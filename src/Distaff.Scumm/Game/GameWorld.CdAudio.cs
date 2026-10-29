@@ -71,6 +71,27 @@ public sealed partial class GameWorld
     }
 
     /// <summary>
+    /// The sounds paused while a menu or banner is up, and started again when it goes, as ScummVM's
+    /// engine pause does (<c>pauseEngineIntern</c>, <c>pauseSounds</c>), only when that changes. On
+    /// the VGA CD and the FM Towns the CD timer stops with them, and starts again, if the music
+    /// timer is above 0 (<c>pauseCDSounds</c>); at 0, it runs on through the menu if it ran, and
+    /// stays stopped if it did not.
+    /// </summary>
+    private void PauseSounds(bool pause)
+    {
+        if (Sound.Paused == pause)
+        {
+            return;
+        }
+
+        Sound.Paused = pause;
+        if ((_loader.Version == 4 || FmTowns) && Engine.Variables[Vars.MusicTimer] > 0)
+        {
+            _cdTimerRunning = !pause;
+        }
+    }
+
+    /// <summary>
     /// After a load, plays again the part the save says was playing. Mirrors
     /// <c>SoundCD::restoreCDAudioAfterLoad</c> for a game that starts no CD sound by number: a part
     /// played once goes on from 1.25 CD frames for each count of the music timer the save holds,

@@ -188,6 +188,70 @@ public class VgaMenuTests
         Assert.Equal(before, Hash(world));
     }
 
+    /// <summary>
+    /// The menu pauses the sounds, and on the VGA CD that stops the CD timer only if the music
+    /// timer has counted (<c>pauseCDSounds</c>): opened while Bobbin's line on the leaf plays, the
+    /// music timer stands still while the menu is up and goes on from where it was after.
+    /// </summary>
+    [Fact]
+    public void The_menu_stops_the_cd_timer_once_it_has_counted()
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        var world = new GameWorld(loader);
+        var w = Skip(world);
+        var track = world.CdTrack;
+        w.Use(79, wait: false);
+        w.Until(() => world.CdTrack != track && world.Engine.Variables[Vars.MusicTimer] > 20, 2000, "a voice, and the music timer to count");
+        int before = world.Engine.Variables[Vars.MusicTimer];
+        world.KeyDown(Key.F5, KeyModifiers.None, '\0');
+        Assert.True(world.MenuActive);
+        Run(world, 200);
+        world.Click(PlayButton.X, PlayButton.Y);
+        w.Until(() => !world.MenuActive, 20, "the menu to close");
+        int frames = world.Frames;
+        w.Until(() => world.Frames > frames, 20, "a frame");
+        Assert.InRange(world.Engine.Variables[Vars.MusicTimer] - before, 1, 12);
+    }
+
+    /// <summary>
+    /// Opened just as Bobbin's line on the leaf starts, before the music timer has counted, the menu leaves the CD
+    /// timer running, as ScummVM's does: after it, the music timer has counted the time the menu
+    /// was up, at 60 counts a second (240 calls of the timer, one count for every four).
+    /// </summary>
+    [Fact]
+    public void The_menu_leaves_the_cd_timer_running_before_it_has_counted()
+    {
+        if (Open() is not { } loader)
+        {
+            return;
+        }
+
+        var world = new GameWorld(loader);
+        var w = Skip(world);
+        var track = world.CdTrack;
+        w.Use(79, wait: false);
+        w.Until(() => world.CdTrack != track, 2000, "a voice to start");
+        Assert.Equal(0, world.Engine.Variables[Vars.MusicTimer]);
+        world.KeyDown(Key.F5, KeyModifiers.None, '\0');
+        Assert.True(world.MenuActive);
+        int up = world.Steps;
+        Run(world, 200);
+        world.Click(PlayButton.X, PlayButton.Y);
+        w.Until(() => !world.MenuActive, 20, "the menu to close");
+        up = world.Steps - up;
+        int frames = world.Frames;
+        w.Until(() => world.Frames > frames, 20, "a frame");
+
+        // each step of the menu is 6 ticks of the DOS timer, at 236.7 a second; the frame after adds its own
+        int counts = (int)((up + 1) * 6 * 60 / GameWorld.TimerFrequency * 4);
+        Assert.True(up > 200);
+        Assert.InRange(world.Engine.Variables[Vars.MusicTimer], counts - 1, counts + 1);
+    }
+
     /// <summary>On the cliff after the opening, skipped with Escape.</summary>
     private static GameWorld? OnTheCliff(ISaveStore? store = null)
     {

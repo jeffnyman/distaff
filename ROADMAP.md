@@ -579,8 +579,8 @@ Then the interface and a playing check:
   `loom.sNN`: a save is only ever loaded into the release that made it. `--target loom` still
   finds saves made before.
 - Left out: the restart key's question, the text speed keys ('+' and '-'), the mouse wheel on the
-  list, and Ctrl+C and Alt+X (the window closes the player). The CD timer stops while the menu is
-  up; ScummVM's stops only once it has counted.
+  list, and Ctrl+C and Alt+X (the window closes the player). The CD timer while the menu is up:
+  see "The CD timer while the menu is up".
 - Checked against the VGA CD release: the menu over the cliff (its main page pinned), a game
   saved under a typed name and loaded back from the list in another game, which goes on in the
   sanctuary with the distaff; the arrows; Quit with and without the question; the pause banner,
@@ -1295,6 +1295,32 @@ script slot (its script, place, delay and state), every object's state and every
 - Not compared: a load from inside the game (the save screen, or the VGA CD's menu), which
   ScummVM does partway through a frame (`requestLoad`); it would need clicks in ScummVM's window.
 
+## The CD timer while the menu is up
+
+A menu or banner pauses the engine (`pauseEngine`), and that pauses the sounds
+(`pauseEngineIntern`, `pauseSounds`) when they are not paused already, and starts them again
+when it goes. On the VGA CD and the FM Towns (`GF_AUDIOTRACKS`), pausing the sounds stops the CD
+timer only if the music timer is above 0, and starting them again starts it only then
+(`pauseCDSounds`). Distaff had stopped the timer while the menu was up, whatever the music
+timer, and it went on as before after.
+
+- `PauseSounds` is now the one way the menu, its banners and the old-style banners pause and
+  start the sounds, acting only when that changes, as ScummVM's nested pauses do. On the CD
+  releases it stops and starts the CD timer as `pauseCDSounds` does, and the timer counts on in
+  the menu's steps when it was not stopped, as it does on its own thread in ScummVM.
+- So the menu opened while a line is being spoken holds the music timer where it was, and the
+  line's text and pictures wait with it; opened in the frame a line starts, before the music
+  timer has counted (it is 0 until the next frame's `updateMusicTimer`), it leaves the timer
+  running, and the line's timing has moved on by the time the menu was up when it goes. As in
+  ScummVM, the menu's key is taken before the frame sets the music timer (`processInput`
+  before `updateMusicTimer`).
+- `VgaMenuTests` pins both on the cliff, with Bobbin's line on the leaf: held once it has counted,
+  and counted through 200 steps of the menu, at 60 counts a second, when opened as it starts.
+- A load from the menu goes through `loadState`'s own pause (see "Frames after a load"): the
+  timer then runs on from the load if the loaded music timer is above 0.
+- Worked out from ScummVM's code; not compared with ScummVM's window, which would need the menu
+  opened there by a key at the right frame.
+
 ## The banners against ScummVM
 
 The banners, compared with ScummVM's window: each release's walkthrough save from the end of the
@@ -1333,7 +1359,7 @@ Known differences, not fixed:
 6. The VGA CD's restart does not show the dissolve out (effect 134) first.
 7. (Not a difference: ScummVM's own gap after a load varies from run to run; see "Sound after a load".)
 8. (Done: the AdLib's music plays on from a save; see "Sound after a load".)
-9. The VGA CD's CD timer stops while its menu is up; ScummVM's stops only once it has counted.
+9. (Done: the CD timer pauses with the menu as ScummVM's does; see "The CD timer while the menu is up".)
 10. No subtitles setting: the text is always drawn, as ScummVM does by default.
 23. (Done: the text speed is ScummVM's setting; see "The text speed".)
 11. Not ported on the VGA CD: the text speed keys ('+' and '-'), the mouse wheel on the save list, and Ctrl+C and Alt+X to quit.
