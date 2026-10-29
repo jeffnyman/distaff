@@ -994,12 +994,41 @@ tried in parallel; the whole report, walkthrough and all, takes about ten second
     against ScummVM's window.
 - The one try left set down is the ending: Unmaking spun at the Loom plays the game out, past
   the try's 3000 steps.
-- Left unrun: 144 entries (from 411), of objects the walkthrough never finds clickable with the
-  draft known: mostly exits it does not take (verb 56), looks at objects only clickable at another
-  moment (54), drafts known only after the walkthrough has left the room for good (58 to 73,
-  and 86, an object's answer to any draft it has no entry for), and the interface's own objects
-  in the proficiency screen (room 69) and the save screen (room 70). A save from another moment
-  or another way through would reach more of them.
+- Left unrun then: 144 entries (from 411), of objects the walkthrough never finds clickable with
+  the draft known; all since run (see "The rest of the objects' answers").
+
+## The rest of the objects' answers
+
+The 144 object verb entries the sweep left unrun, run (`ObjectSweep.Force` and
+`ObjectSweep.Interface`, in the coverage report):
+
+- A plain click on every object the sweep tries reaches none of them: they are objects the
+  walkthrough's saves never show as clickable at all (exits it does not take, verb 56; looks at
+  objects clickable only at another moment, 54), or drafts Bobbin learns only after the
+  walkthrough has left the room for good (58 to 73, and 86).
+- The 124 of them in rooms the walkthrough saved in are run by force: from the save of the room
+  with the most drafts known, the object's script for the verb is started as the sentence script
+  starts it (`startObject`), whether or not the object could be clicked then, and the game played
+  on until it gives back control. None throws, waits too long or reaches an instruction Distaff
+  does not handle, and each says what fits ("That draft won't work on the dragon.", "It's already
+  wide awake.", the Foreman and Edgewise's scene at the sword). What they say is written to the
+  report, to read. One reads oddly and is Loom's own: object 258, the third tapestry in the
+  Weavers' sanctuary, answers verb 63 already done with "Doubt if I could spin much color out of
+  it now." and then changes the colour anyway, as its script (local script 216) starts script 209
+  where its twin for object 257 (214) chains to it, ending there. Run by force, these are in
+  states the game may never be in: leads, not faults.
+- The other 20, the interface's own objects, are played: on the proficiency screen (room 69),
+  STANDARD and EXPERT, each played on to Bobbin on the cliff; with the copy protection kept, each
+  of its twelve threads, the secret weave it asks for (four threads, variables 82 to 85, as its
+  script checks them), and a wrong weave three times ("That's not right. Try again.", "That's
+  not right, either. Again?", then "Entering demonstration mode." and the opening); on the save
+  screen (room 70), opened with F5 from the walkthrough's first save, PLAY, the slots, and SAVE
+  or LOAD followed by a slot, OK and the other controls. Nothing goes wrong.
+- So every object verb entry of the EGA release has run, 267 by the walkthrough and the sweep
+  playing, 124 by force and 20 by the interface's tries. `GameLoopTests` pins the copy
+  protection's two ends. The global scripts never run are 9, 24, 38, 43, 51, 55, 67, 115 and 116
+  (4 now runs, from the save screen), and the Roland Upgrade's rooms, 82 to 85, are never entered.
+  Not compared with ScummVM's window.
 
 ## Screen transitions
 
@@ -1532,7 +1561,7 @@ Not ported, by choice:
 
 Coverage of the game's scripts:
 
-15. Objects' answers the walkthrough never reaches: 144 entries, from 411, after the object sweep (see "The object sweep").
+15. (Done: the 144 entries the sweep left are run, by force where the walkthrough saved and played for the interface's objects, with nothing found wrong; see "The rest of the objects' answers".)
 16. The glassmaker's greeting in the chalice's room (script 67), which looks unreachable; not confirmed in ScummVM.
 
 Larger features:

@@ -70,6 +70,128 @@ internal static class ObjectSweep
         return [.. findings.Distinct().OrderBy(f => f.Room).ThenBy(f => f.Object).ThenBy(f => f.Action, StringComparer.Ordinal)];
     }
 
+    /// <summary>
+    /// Runs object verb entries the sweep could not reach by playing, each from the save of its
+    /// room with the most drafts known: the object's script for the verb is started as the
+    /// sentence script would start it (<c>startObject</c>), whether or not the object could be
+    /// clicked then, and the game played on until it gives back control. What it finds is in a
+    /// state the game may never be in, so it is a lead to look into, not a fault in itself.
+    /// </summary>
+    public static List<Finding> Force(string path, IReadOnlyDictionary<(int Room, int Drafts), byte[]> saves, IEnumerable<(int Room, int Obj, int Verb)> entries, Action<GameWorld>? watch, ConcurrentBag<string>? answers = null)
+    {
+        var findings = new ConcurrentBag<Finding>();
+        var tries = entries.Where(e => saves.Keys.Any(k => k.Room == e.Room)).ToList();
+        Parallel.ForEach(tries, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, entry =>
+        {
+            Walkthrough.Watch = watch;
+            try
+            {
+                var loader = ResourceLoader.Open(new DirectoryGameContainer(path));
+                var save = saves.Where(s => s.Key.Room == entry.Room).MaxBy(s => int.PopCount(s.Key.Drafts)).Value;
+                Try(loader, save, entry.Room, entry.Obj, $"forced verb {entry.Verb}", findings, w =>
+                {
+                    int said = w.World.MessageLog.Count;
+                    w.World.Engine.RunObjectScript(entry.Obj, entry.Verb);
+                    w.Ready(TryPatience);
+                    answers?.Add($"room {entry.Room} object {entry.Obj} verb {entry.Verb}: {string.Join(" | ", w.World.MessageLog.Skip(said))}");
+                });
+            }
+            finally
+            {
+                Walkthrough.Watch = null;
+            }
+        });
+
+        return [.. findings.Distinct().OrderBy(f => f.Room).ThenBy(f => f.Object).ThenBy(f => f.Action, StringComparer.Ordinal)];
+    }
+
+    /// <summary>
+    /// The interface's own objects, played: on the proficiency screen (room 69) STANDARD and
+    /// EXPERT, each played on to Bobbin on the cliff; with the copy protection kept, each of the
+    /// twelve answers to its question; and on the save screen (room 70), opened with F5 from the
+    /// first save, each of its controls after SAVE or LOAD and a slot. Each from the start, or the
+    /// save, again.
+    /// </summary>
+    public static List<Finding> Interface(string path, byte[] save, Action<GameWorld>? watch, ConcurrentBag<string> answers)
+    {
+        var findings = new ConcurrentBag<Finding>();
+        var tries = new List<(int Room, int Obj, string Action, Func<ResourceLoader, Walkthrough> Start, Func<Walkthrough, int[]> Clicks)>();
+        foreach (int level in new[] { 877, 878 })
+        {
+            tries.Add((69, level, "pick", l => Boot(l, false), _ => [level]));
+        }
+
+        // the copy protection: each of its twelve threads once; the secret weave asked for, four
+        // threads (variables 82 to 85, as its script checks them); and a wrong one three times
+        Func<ResourceLoader, Walkthrough> asked = l => Press(Boot(l, true), 876, 400);
+        static int[] Weave(Walkthrough w) => [.. Enumerable.Range(82, 4).Select(v => 886 + w.World.Engine.Variables[v])];
+        for (int answer = 886; answer <= 897; answer++)
+        {
+            int a = answer;
+            tries.Add((69, a, "answer", asked, _ => [a]));
+        }
+
+        tries.Add((69, 886, "the secret weave", asked, Weave));
+        tries.Add((69, 886, "a wrong weave three times", asked, w =>
+        {
+            int[] wrong = [.. Weave(w).Select(o => o == 897 ? 886 : o + 1)];
+            return [.. wrong, .. wrong, .. wrong];
+        }));
+
+        foreach (int[] clicks in new[] { new[] { 899 }, [902], [900, 899, 902], [900, 910], [900, 911], [901, 899, 902], [901, 910], [901, 911] })
+        {
+            tries.Add((70, clicks[^1], string.Join(" then ", clicks), l =>
+            {
+                var w = Load(l, save);
+                w.World.SaveStore = new MemorySaveStore();
+                w.World.KeyDown(Input.Key.F5, Input.KeyModifiers.None, (char)0);
+                return w.InRoom(70, TryPatience).Wait(50);
+            }, _ => clicks));
+        }
+
+        Parallel.ForEach(tries, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, t =>
+        {
+            Walkthrough.Watch = watch;
+            try
+            {
+                var loader = ResourceLoader.Open(new DirectoryGameContainer(path));
+                Walkthrough? w = null;
+                Try(() => w = t.Start(loader), t.Room, t.Obj, t.Action, findings, w2 =>
+                {
+                    int said = w2.World.MessageLog.Count;
+                    foreach (int obj in t.Clicks(w2))
+                    {
+                        Press(w2, obj, 60);
+                    }
+
+                    w2.Wait(t.Room == 69 && t.Action != "answer" ? 1500 : 600);
+                    answers.Add($"room {t.Room} {t.Action} {t.Obj}: {string.Join(" | ", w2.World.MessageLog.Skip(said))}{(w2.World.QuitRequested ? " (quits)" : "")}, in room {w2.World.CurrentRoomNumber}");
+                });
+            }
+            finally
+            {
+                Walkthrough.Watch = null;
+            }
+        });
+
+        return [.. findings.Distinct().OrderBy(f => f.Room).ThenBy(f => f.Object).ThenBy(f => f.Action, StringComparer.Ordinal)];
+    }
+
+    /// <summary>Clicks an object where it shows and plays on for some steps, the game having control or not.</summary>
+    private static Walkthrough Press(Walkthrough w, int obj, int steps)
+    {
+        var (x, y) = w.OnScreen(obj);
+        w.World.Click(x, y);
+        return w.Wait(steps);
+    }
+
+    private static Walkthrough Boot(ResourceLoader loader, bool copyProtection)
+    {
+        var w = new Walkthrough(new GameWorld(loader) { CopyProtection = copyProtection });
+        w.World.Boot();
+        return w.Wait(100);
+    }
+
     private static void SweepRoom(ResourceLoader loader, int room, byte[] save, ConcurrentBag<Finding> findings)
     {
         var first = Load(loader, save);
@@ -87,6 +209,11 @@ internal static class ObjectSweep
 
         foreach (int obj in targets)
         {
+            Try(loader, save, room, obj, "click", findings, w =>
+            {
+                var (x, y) = w.OnScreen(obj);
+                w.ClickAt(x, y).Ready(TryPatience);
+            });
             Try(loader, save, room, obj, "look", findings, w => w.Use(obj, wait: false).Ready(TryPatience));
             foreach (int draft in drafts)
             {
@@ -107,8 +234,21 @@ internal static class ObjectSweep
     }
 
     private static void Try(ResourceLoader loader, byte[] save, int room, int obj, string action, ConcurrentBag<Finding> findings, Action<Walkthrough> act)
+        => Try(() => Load(loader, save), room, obj, action, findings, act);
+
+    private static void Try(Func<Walkthrough> start, int room, int obj, string action, ConcurrentBag<Finding> findings, Action<Walkthrough> act)
     {
-        var w = Load(loader, save);
+        Walkthrough w;
+        try
+        {
+            w = start();
+        }
+        catch (Exception ex)
+        {
+            findings.Add(new Finding(room, obj, action, $"getting there: {ex.GetType().Name}: {ex.Message}"));
+            return;
+        }
+
         int unhandled = w.World.Unhandled.Count;
         try
         {

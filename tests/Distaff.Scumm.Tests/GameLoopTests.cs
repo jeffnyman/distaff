@@ -75,6 +75,40 @@ public class GameLoopTests
         Assert.Contains(world.MessageLog, m => m.Contains("Book of Patterns"));
     }
 
+    /// <summary>
+    /// The copy protection's answer is a secret weave of four of its twelve threads (objects 886
+    /// to 897), checked against the four its script asks for (variables 82 to 85): given, the game
+    /// welcomes Bobbin and the opening plays; a wrong one is tried again twice, and then the game
+    /// says so and plays on in demonstration mode.
+    /// </summary>
+    [Theory]
+    [InlineData(true, "Welcome to the Age of the Great Guilds.")]
+    [InlineData(false, "Entering demonstration mode.")]
+    public void The_copy_protection_takes_the_secret_weave(bool right, string said)
+    {
+        if (Boot(copyProtection: true) is not { } world)
+        {
+            return;
+        }
+
+        Run(world, 100);
+        world.Click(PracticeX, PracticeY);
+        Run(world, 400);
+        int[] weave = [.. Enumerable.Range(82, 4).Select(v => world.Engine.Variables[v])];
+        int[] threads = right ? weave : [.. Enumerable.Repeat(weave.Select(t => (t + 1) % 12), 3).SelectMany(t => t)];
+        foreach (int thread in threads)
+        {
+            // the threads in two rows of six, 32 by 24 each, from (64, 88)
+            world.Click(64 + 32 * (thread % 6) + 16, 88 + 24 * (thread / 6) + 12);
+            Run(world, 60);
+        }
+
+        Run(world, 1500);
+        Assert.Contains(said, world.MessageLog);
+        Assert.Contains("Rise, son of Cygna.", world.MessageLog);
+        Assert.Equal(right ? 0 : 3, world.MessageLog.Count(m => m.StartsWith("That's not right") || m.StartsWith("The Secret Weave you entered")));
+    }
+
     /// <summary>The engine through the headless host: it boots, steps at the game's pace and presents the screen.</summary>
     [Fact]
     public void The_engine_runs_on_a_host()

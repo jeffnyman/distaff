@@ -11,8 +11,10 @@ namespace Distaff.Scumm.Tests;
 /// entered, the global scripts never started, and for each room the local scripts never started
 /// and each object's verb entries never run. Draft verbs are among them, and 86 is an object's
 /// answer to any draft it has no entry for. It is how the detours were found. After the walkthrough,
-/// <see cref="ObjectSweep"/> tries every object it found, and what went wrong is written next to the
-/// report (<c>.sweep.txt</c>); what the sweep runs counts as played. Run it on its own
+/// <see cref="ObjectSweep"/> tries every object it found; then it runs by force each verb entry
+/// left in a room it saved, and plays the proficiency screen's, the copy protection's and the save
+/// screen's objects. What went wrong, and what each forced entry and interface object said, is
+/// written next to the report (<c>.sweep.txt</c>); what the sweep runs counts as played. Run it on its own
 /// (<c>--filter CoverageReport</c>): the walkthrough's sections are played once per run, and a
 /// section another test played first is not seen.
 /// </summary>
@@ -72,9 +74,34 @@ public class CoverageReport
 
         // every object's answers, tried in every room the walkthrough had control in
         var findings = ObjectSweep.Run(path, snapshots.Saves, Record);
-        File.WriteAllLines(output + ".sweep.txt", [$"{snapshots.Saves.Count} saves tried, {findings.Count} findings", .. findings.Select(f => $"room {f.Room} object {f.Object} {f.Action}: {f.What}")]);
 
+        // what playing leaves unrun, run by force from its room's save
         var loader = ResourceLoader.Open(new DirectoryGameContainer(path));
+        var unrun = new List<(int Room, int Obj, int Verb)>();
+        for (int r = 1; r < loader.Index.Count(ResourceType.Room); r++)
+        {
+            if (loader.Index.Locate(ResourceType.Room, r).IsPresent && loader.LoadRoom(r) is { } room)
+            {
+                foreach (var obj in room.Objects)
+                {
+                    var ran = objects.Where(o => o.Obj == obj.Number).Select(o => obj.FindVerb((byte)o.Verb)).ToHashSet();
+                    unrun.AddRange(obj.Verbs.Where(e => !ran.Contains(e.Offset)).Select(e => (r, obj.Number, (int)e.Verb)));
+                }
+            }
+        }
+
+        var answers = new System.Collections.Concurrent.ConcurrentBag<string>();
+        var forced = ObjectSweep.Force(path, snapshots.Saves, unrun, Record, answers);
+
+        // the proficiency screen's levels and the copy protection's answers, and the save screen's controls, played
+        var played = ObjectSweep.Interface(path, snapshots.Saves.OrderBy(s => s.Key.Room).First().Value, Record, answers);
+        File.WriteAllLines(output + ".sweep.txt", [
+            $"{snapshots.Saves.Count} saves tried, {findings.Count} findings", .. findings.Select(f => $"room {f.Room} object {f.Object} {f.Action}: {f.What}"),
+            $"{unrun.Count} entries unrun by playing, {unrun.Count(e => snapshots.Saves.Keys.Any(k => k.Room == e.Room))} forced, {forced.Count} findings",
+            .. forced.Select(f => $"room {f.Room} object {f.Object} {f.Action}: {f.What}"),
+            $"the interface's objects: {played.Count} findings", .. played.Select(f => $"room {f.Room} object {f.Object} {f.Action}: {f.What}"),
+            "what each forced entry and interface object said:", .. answers.Order(StringComparer.Ordinal)]);
+
         var globals = Enumerable.Range(1, loader.Index.Count(ResourceType.Script) - 1)
             .Where(s => loader.Index.Locate(ResourceType.Script, s).IsPresent && !scripts.Contains(s));
         var lines = new List<string> { string.Empty, "global scripts never run: " + string.Join(' ', globals) };
