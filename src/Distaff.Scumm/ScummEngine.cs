@@ -174,6 +174,10 @@ public sealed class ScummEngine : Engine
                 case InputEventType.KeyDown:
                     world.KeyDown(input.Key, input.Modifiers, input.Ascii);
                     break;
+                case InputEventType.MouseWheel:
+                    world.MoveMouse(input.X, input.Y);
+                    world.Wheel(input.Wheel > 0);
+                    break;
             }
         }
 

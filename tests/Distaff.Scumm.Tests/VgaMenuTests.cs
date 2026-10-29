@@ -129,6 +129,99 @@ public class VgaMenuTests
     }
 
     /// <summary>
+    /// The mouse wheel over the save list is a click on the arrow that way, with the mouse where it
+    /// is (the menu loop's <c>_mouseWheelFlag</c>): turned down at the height of the arrow's foot,
+    /// it scrolls the same six slots; turned anywhere else, as over the Save button, nothing.
+    /// </summary>
+    [Fact]
+    public void The_mouse_wheel_scrolls_the_list()
+    {
+        if (OnTheCliff() is not { } world)
+        {
+            return;
+        }
+
+        world.KeyDown(Key.F5, KeyModifiers.None, '\0');
+        world.Step();
+        Click(world, LoadButton, 20);
+
+        world.MoveMouse(SaveButton.X, SaveButton.Y);
+        world.Wheel(up: false);
+        Run(world, 20);
+        Assert.Equal(" 1. ", world.SavegameLabels[0]);
+
+        world.MoveMouse(FirstSlot.X, ArrowDownBottom.Y);
+        world.Wheel(up: false);
+        Run(world, 20);
+        Assert.Equal(" 7. ", world.SavegameLabels[0]);
+        Assert.Equal("15. ", world.SavegameLabels[8]);
+    }
+
+    /// <summary>
+    /// '+' and '-' make the lines go faster and slower by one, as ScummVM's text speed keys do,
+    /// saying so in a banner: the slider's ten marks, the speed's lit. Another within 60
+    /// quarter-frames goes on; then the banner goes by itself. The speed stops at 0 and 9.
+    /// </summary>
+    [Fact]
+    public void Plus_and_minus_change_the_text_speed()
+    {
+        if (OnTheCliff() is not { } world)
+        {
+            return;
+        }
+
+        Assert.Equal(6, world.TextSpeed);
+        world.KeyDown(Key.Plus, KeyModifiers.None, '+');
+        Assert.Equal(7, world.TextSpeed);
+        Assert.Equal(2, world.Engine.Variables[Vars.CharInc]);
+        Assert.Equal("Text Speed   Slow  \v\v\v\v\v\v\v\f\v\v  Fast", world.BannerText);
+
+        world.KeyDown(Key.Plus, KeyModifiers.None, '+');
+        world.Step();
+        Assert.Equal(8, world.TextSpeed);
+        Assert.Equal("Text Speed   Slow  \v\v\v\v\v\v\v\v\f\v  Fast", world.BannerText);
+
+        int steps = 0;
+        while (world.BannerText is not null)
+        {
+            world.Step();
+            steps++;
+        }
+
+        Assert.Equal((60 + world.StepTicks * 4 - 1) / (world.StepTicks * 4), steps);
+
+        for (int i = 0; i < 12; i++)
+        {
+            world.KeyDown(Key.Minus, KeyModifiers.None, '-');
+            world.Step();
+        }
+
+        Assert.Equal(0, world.TextSpeed);
+        Assert.Equal(9, world.Engine.Variables[Vars.CharInc]);
+    }
+
+    /// <summary>Ctrl+C and Alt+X quit, as ScummVM's original interface has them, on the VGA CD and the EGA alike.</summary>
+    [Theory]
+    [InlineData(GameFolders.Vga, Key.C, KeyModifiers.Ctrl)]
+    [InlineData(GameFolders.Vga, Key.X, KeyModifiers.Alt)]
+    [InlineData(GameFolders.Ega, Key.C, KeyModifiers.Ctrl)]
+    [InlineData(GameFolders.Ega, Key.X, KeyModifiers.Alt)]
+    public void Ctrl_c_and_alt_x_quit(string release, Key key, KeyModifiers modifiers)
+    {
+        if (GameFolders.Find(release) is not { } path)
+        {
+            return;
+        }
+
+        var world = new GameWorld(ResourceLoader.Open(new DirectoryGameContainer(path)));
+        world.Boot();
+        Run(world, 100);
+        Assert.False(world.QuitRequested);
+        world.KeyDown(key, modifiers, '\0');
+        Assert.True(world.QuitRequested);
+    }
+
+    /// <summary>
     /// Quit quits, as ScummVM does by default; asked to confirm, it shows the game's question,
     /// and any answer but its last letter, Y, leaves the menu up.
     /// </summary>

@@ -30,7 +30,8 @@ public sealed partial class GameWorld
 
     // the game's strings the interface takes its words from (getGUIString, getPlainEngineString)
     private const int GsPause = 4, GsRestart = 5, GsQuitPrompt = 6, GsSave = 7, GsLoad = 8, GsPlay = 9, GsCancel = 10, GsQuit = 11, GsOk = 12,
-        GsInsertSaveDisk = 13, GsMustName = 14, GsGameNotLoaded = 16, GsSaving = 17, GsLoading = 18, GsNamePrompt = 19, GsSelectLoadPrompt = 20;
+        GsInsertSaveDisk = 13, GsMustName = 14, GsGameNotLoaded = 16, GsSaving = 17, GsLoading = 18, GsNamePrompt = 19, GsSelectLoadPrompt = 20,
+        GsTextSpeedSlider = 25;
 
     // what a save or load from the menu leaves for the scripts (GAME_PROPER_SAVE, GAME_PROPER_LOAD)
     private const int ProperSave = 201, ProperLoad = 203;
@@ -42,7 +43,11 @@ public sealed partial class GameWorld
         [7] = "Save", [8] = "Load", [9] = "Play", [10] = "Cancel", [11] = "Quit", [12] = "OK", [13] = "Insert save/load game disk",
         [14] = "You must enter a name", [15] = "The game was NOT saved (disk full?)", [16] = "The game was NOT loaded",
         [17] = "Saving '%s'", [18] = "Loading '%s'", [19] = "Name your SAVE game", [20] = "Select a game to LOAD",
+        [GsTextSpeedSlider] = "Text Speed   Slow  ==========  Fast",
     };
+
+    // the interface's words the game has none of: ScummVM's own, in English for every language (getStaticResString, string 0)
+    private static readonly HashSet<int> GuiHardCoded = [GsTextSpeedSlider];
 
     private readonly GuiControl[] _controls = [.. Enumerable.Range(0, 28).Select(_ => new GuiControl())];
     private Charset? _guiFont;
@@ -55,6 +60,7 @@ public sealed partial class GameWorld
     private int _saveScriptParam;
     private int _guiCursorAnimCounter;
     private (Surface8? Main, Surface8? Verb, Surface8 Text)? _guiSurfaces;
+    private bool? _guiWheel;
     private Banner? _banner;
 
     // a wait in quarter-frames (waitForTimer) and what follows it
@@ -121,6 +127,20 @@ public sealed partial class GameWorld
         if ((restartKey != 0 && code == restartKey) || (FmTowns && key == Key.F8 && modifiers == KeyModifiers.None))
         {
             QueryRestart();
+            return true;
+        }
+
+        // "Text Speed  Slow  ==========  Fast", from version 4 on
+        if (_loader.Version == 4 && ascii is '+' or '-')
+        {
+            ChangeTextSpeed(ascii);
+            return true;
+        }
+
+        // Ctrl+C and Alt+X quit, on every release with the original interface
+        if ((key == Key.C && modifiers.HasFlag(KeyModifiers.Ctrl)) || (key == Key.X && modifiers.HasFlag(KeyModifiers.Alt)))
+        {
+            QuitRequested = true;
             return true;
         }
 
@@ -191,8 +211,10 @@ public sealed partial class GameWorld
 
         var click = _guiClick;
         var key = _guiKey;
+        var wheel = _guiWheel;
         _guiClick = null;
         _guiKey = null;
+        _guiWheel = null;
         if (_banner is { } banner)
         {
             if (click is not null || key is not null)
@@ -210,6 +232,10 @@ public sealed partial class GameWorld
         if (_menuActive)
         {
             MenuInput(click, key);
+            if (click is null && wheel is { } up)
+            {
+                MenuWheel(up);
+            }
         }
     }
 
@@ -294,7 +320,12 @@ public sealed partial class GameWorld
             return;
         }
 
-        int clicked = ControlAt(c.X, c.Y);
+        ClickControl(ControlAt(c.X, c.Y), c.Y);
+    }
+
+    /// <summary>A control of the menu clicked, the mouse at a height: a slot is chosen; another control is lit a moment and does what it does.</summary>
+    private void ClickControl(int clicked, int mouseY)
+    {
         if (clicked == -1)
         {
             return;
@@ -315,13 +346,13 @@ public sealed partial class GameWorld
                 WaitThen(60, () =>
                 {
                     DrawControl(clicked, false);
-                    ExecuteMenuOperation(clicked, c.Y);
+                    ExecuteMenuOperation(clicked, mouseY);
                 });
             }
             else
             {
                 DrawControl(clicked, false);
-                ExecuteMenuOperation(clicked, c.Y);
+                ExecuteMenuOperation(clicked, mouseY);
             }
 
             return;
@@ -333,8 +364,87 @@ public sealed partial class GameWorld
         DrawControl(_savegameLabel, true);
         if (_menuPage == PageLoad)
         {
-            ExecuteMenuOperation(CtrlOk, c.Y);
+            ExecuteMenuOperation(CtrlOk, mouseY);
         }
+    }
+
+    /// <summary>
+    /// The mouse wheel turned while the menu is up. Mirrors the menu loop's <c>_mouseWheelFlag</c>:
+    /// over the save list (its slots, or the box between them within the list's bounds), it is a
+    /// click on the arrow that way, if that arrow shows, with the mouse where it is.
+    /// </summary>
+    private void MenuWheel(bool up)
+    {
+        int over = ControlAt(MouseX, MouseY);
+        var first = _controls[CtrlFirstSlot];
+        var last = _controls[CtrlLastSlot];
+        if (over == CtrlOuterBox && first.RelativeCenterX != -1 && last.RelativeCenterX != -1)
+        {
+            over = MouseX >= first.RelativeCenterX && MouseX <= last.XPos && MouseY >= first.RelativeCenterY && MouseY <= last.YPos ? CtrlFirstSlot : -1;
+        }
+
+        if (over is < CtrlFirstSlot or > CtrlLastSlot)
+        {
+            return;
+        }
+
+        int arrow = up ? CtrlArrowUp : CtrlArrowDown;
+        if (_controls[arrow].RelativeCenterX != -1)
+        {
+            ClickControl(arrow, MouseY);
+        }
+    }
+
+    /// <summary>The mouse wheel turned a step, up or down. Only the VGA CD's menu takes it, while it is up (<c>EVENT_WHEELUP</c>, <c>EVENT_WHEELDOWN</c>).</summary>
+    public void Wheel(bool up)
+    {
+        if (_menuActive)
+        {
+            _guiWheel = up;
+        }
+    }
+
+    /// <summary>
+    /// '+' or '-' makes the lines go faster or slower by one, within 0 to 9, and says so in a
+    /// banner ("Text Speed  Slow  ==========  Fast", the speed marked); another '+' or '-' within
+    /// 60 quarter-frames goes on, anything else or the time ends it. Mirrors the text speed keys
+    /// of <c>processKeyboard</c> for version 4, the banner drawn over a copy of the screen that
+    /// comes back when it goes.
+    /// </summary>
+    private void ChangeTextSpeed(char key)
+    {
+        int charInc = Math.Clamp(Engine.Variables[Vars.CharInc] + (key == '+' ? -1 : 1), 0, 9);
+        TextSpeed = 9 - charInc;
+        ShowBanner(SliderString(GsTextSpeedSlider, charInc), next =>
+        {
+            if (next is { Ascii: '+' or '-' } k)
+            {
+                ChangeTextSpeed(k.Ascii);
+            }
+        }, waitTime: 60);
+    }
+
+    /// <summary>A slider's words with its bar of ten marks, the one for the value lit (<c>getSliderString</c> for the text speed).</summary>
+    private string SliderString(int id, int value)
+    {
+        var chars = GuiString(id).ToCharArray();
+        int at = Array.IndexOf(chars, '=');
+        if (at < 0)
+        {
+            return new string(chars);
+        }
+
+        for (int i = at; i < at + 10 && i < chars.Length; i++)
+        {
+            chars[i] = '\v';
+        }
+
+        if (at + 9 - value < chars.Length)
+        {
+            chars[at + 9 - value] = '\f';
+        }
+
+        return new string(chars);
     }
 
     /// <summary>
@@ -896,7 +1006,7 @@ public sealed partial class GameWorld
     /// <summary>One of the game's strings the interface uses, to its end, or ScummVM's English when the game has not set it (<c>getPlainEngineString</c>).</summary>
     private string GuiString(int id)
     {
-        if (_strings[id] is not { } text)
+        if (GuiHardCoded.Contains(id) || _strings[id] is not { } text)
         {
             return GuiFallback.GetValueOrDefault(id, "");
         }

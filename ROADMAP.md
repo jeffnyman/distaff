@@ -578,9 +578,9 @@ Then the interface and a playing check:
   `loom-ega.sNN` and `loom-vga.sNN`, so the two releases keep apart, where both had been
   `loom.sNN`: a save is only ever loaded into the release that made it. `--target loom` still
   finds saves made before.
-- Left out: the restart key's question, the text speed keys ('+' and '-'), the mouse wheel on the
-  list, and Ctrl+C and Alt+X (the window closes the player). The CD timer while the menu is up:
-  see "The CD timer while the menu is up".
+- Left out then: the restart key's question, the text speed keys ('+' and '-'), the mouse wheel
+  on the list, and Ctrl+C and Alt+X; all since ported (see "The VGA CD's keys"). The CD timer
+  while the menu is up: see "The CD timer while the menu is up".
 - Checked against the VGA CD release: the menu over the cliff (its main page pinned), a game
   saved under a typed name and loaded back from the list in another game, which goes on in the
   sanctuary with the distaff; the arrows; Quit with and without the question; the pause banner,
@@ -1300,6 +1300,32 @@ script slot (its script, place, delay and state), every object's state and every
 - Not compared: a load from inside the game (the save screen, or the VGA CD's menu), which
   ScummVM does partway through a frame (`requestLoad`); it would need clicks in ScummVM's window.
 
+## The VGA CD's keys
+
+The keys of ScummVM's original interface that Distaff had left out (`processKeyboard`):
+
+- '+' and '-', from version 4 on: the text speed one faster or slower (`VAR_CHARINC` one less or
+  more, within 0 to 9), which becomes the setting (`_defaultTextSpeed`, as `--text-speed`), said
+  in a banner: "Text Speed   Slow  ==========  Fast", ScummVM's own words in English for every
+  language (`getStaticResString`, the game having no string of its own for it), the ten marks
+  drawn as the font's characters 11 and 12, the speed's lit (`getSliderString`). Another '+' or
+  '-' within 60 quarter-frames goes on; anything else, or the time, ends it. The banner is drawn
+  over a copy of the screen that comes back when it goes, as `saveSurfacesPreGUI` and
+  `restoreSurfacesPostGUI` have it. The setting is not kept from one run to the next; ScummVM
+  keeps it in its configuration (`original_gui_text_speed`).
+- Ctrl+C and Alt+X quit, on every release with the original interface, the EGA and the FM Towns
+  too, as ScummVM's `processKeyboard` has them (it says so "for consistency"). While a banner or
+  the menu is up they are its keys, as there.
+- The mouse wheel while the menu is up: over the save list (a slot, or the box between them
+  within the list's bounds), a turn is a click on the arrow that way, if it shows, with the
+  mouse where it is, as the menu loop takes `_mouseWheelFlag`; the arrow lights a moment and the
+  list scrolls by how far down the mouse is, as a click does. Elsewhere it does nothing. The
+  window sends a step a turn, flipped wheels taken into account, as ScummVM's SDL backend does.
+- `VgaMenuTests` pins the speed and its banner, the banner's 60 quarter-frames and the ends of
+  the speed; the wheel over the Save button and over the list, at the arrow's height scrolling
+  the arrow's six slots; and the two quit keys on the VGA CD and the EGA. The slider viewed, not
+  compared with ScummVM's window.
+
 ## The VGA CD's restart
 
 ScummVM's `queryRestart`, answered yes, fades the screen out before it restarts: Loom's version
@@ -1386,7 +1412,7 @@ Known differences, not fixed:
 9. (Done: the CD timer pauses with the menu as ScummVM's does; see "The CD timer while the menu is up".)
 10. No subtitles setting: the text is always drawn, as ScummVM does by default.
 23. (Done: the text speed is ScummVM's setting; see "The text speed".)
-11. Not ported on the VGA CD: the text speed keys ('+' and '-'), the mouse wheel on the save list, and Ctrl+C and Alt+X to quit.
+11. (Done: the text speed keys, the mouse wheel on the save list, and Ctrl+C and Alt+X; see "The VGA CD's keys".)
 
 Not ported, by choice:
 

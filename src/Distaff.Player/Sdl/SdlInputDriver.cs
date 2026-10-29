@@ -191,6 +191,19 @@ internal sealed unsafe class SdlInputDriver : IInputDriver
                     _queue.Enqueue(sdlEvent.button.down ? InputEvent.MouseDown(button, x, y) : InputEvent.MouseUp(button, x, y));
                     break;
                 }
+
+                case SDL_EventType.SDL_EVENT_MOUSE_WHEEL:
+                {
+                    // one step a turn, up or down, as ScummVM's SDL backend sends EVENT_WHEELUP or EVENT_WHEELDOWN
+                    float turn = sdlEvent.wheel.direction == SDL_MouseWheelDirection.SDL_MOUSEWHEEL_FLIPPED ? -sdlEvent.wheel.y : sdlEvent.wheel.y;
+                    if (turn != 0)
+                    {
+                        var (x, y) = _graphics.ToFramebuffer(sdlEvent.wheel.mouse_x, sdlEvent.wheel.mouse_y);
+                        _queue.Enqueue(InputEvent.MouseWheel(turn > 0 ? 1 : -1, x, y));
+                    }
+
+                    break;
+                }
             }
         }
     }
