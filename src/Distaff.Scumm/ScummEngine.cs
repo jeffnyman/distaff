@@ -66,6 +66,9 @@ public sealed class ScummEngine : Engine
     /// <summary>Opens a track of the CD's audio from the game's folder, for the VGA CD. Set before <see cref="Initialize"/>; without it the CD is silent.</summary>
     public Func<int, ICdTrack?>? CdTracks { get; set; }
 
+    /// <summary>Makes the MT-32 at a rate, for <see cref="Sound.SoundDevice.Mt32"/>. Set before <see cref="Initialize"/>.</summary>
+    public Func<int, IMidiDevice>? Mt32 { get; set; }
+
     /// <summary>
     /// The seed of the game's random numbers, as ScummVM's <c>--random-seed</c>; without it, the
     /// host's, or else the clock's, as ScummVM seeds from the time. Set before <see cref="Initialize"/>.
@@ -103,7 +106,7 @@ public sealed class ScummEngine : Engine
 
     private GameWorld NewWorld(ResourceLoader loader)
     {
-        var world = new GameWorld(loader, RandomSeed ?? Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate, CdTracks)
+        var world = new GameWorld(loader, RandomSeed ?? Host.RandomSeed ?? Environment.TickCount, SoundDevice, Host.Audio.SampleRate, CdTracks, Mt32)
         {
             CopyProtection = CopyProtection,
             SmoothScrolling = SmoothScrolling,

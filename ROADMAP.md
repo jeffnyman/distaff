@@ -1015,8 +1015,8 @@ The first step of the EGA's Roland Upgrade (item 17): the MT-32 itself.
   MT-32 1.07 ROMs, and every sample is Munt's. ROMs come from the folder `DISTAFF_MT32_ROMS` names
   or a `mt32-roms` folder beside the games; without them those tests pass without checking.
   Distaff ships no ROMs.
-- Not yet played by anything: iMuse, which plays Loom's Roland sounds in ScummVM, is next (see
-  "iMuse").
+- Played by iMuse (see "iMuse"), in the game since Loom's Roland mode (see "The Roland
+  Upgrade in the game").
 
 ## iMuse
 
@@ -1057,7 +1057,31 @@ MT-32 (`Distaff.Scumm/Sound/IMuse`, and `PlayerImuse`, which carries it).
   reaches them, which Loom's scripts do not use), and with them the command queue, triggers,
   hooks, jumps, loops, scans and faders' targets; iMuse's own sysex messages and Roland
   instruments (an RO sound has none); the AdLib and other drivers. Saving iMuse's state is step
-  4. Not yet played by the game: the Roland Upgrade's sound card and sounds are step 3.
+  4.
+
+## The Roland Upgrade in the game
+
+The third step: Loom's EGA plays its Roland Upgrade on the MT-32, as ScummVM does with an MT-32
+chosen (`--sound mt32`, or the ROMs' folder given, `--mt32-roms folder`, `--mt32-model mt32|cm32l`
+to choose between the two when it holds both).
+
+- The scripts read sound card 4, ScummVM's default for Loom's EGA with a MIDI device, and play
+  the Upgrade's overture (sound 56) on the title and its other music from there.
+- Every sound is read as the Upgrade's single block (`isRolandLoom`) and played by iMuse
+  (`PlayerImuse`); its music timer is the scripts' (`VAR_MUSIC_TIMER`, as for the AdLib), moved
+  on by the MT-32's own timer as it renders.
+- Pausing (the pause key, the menu) pauses iMuse before the mixer, as `pauseSounds` does: its
+  parts' volumes go to 0 and every channel's notes off, and the music timer holds.
+- `EmulatedMidiDevice` is `MidiDriver_Emulated` and the mixer's rate converter, the timing and
+  the rate conversion that were `Mt32Emulator`'s; the emulator renders on it, and the tests run
+  the game on a silent device on it, so they need no ROMs.
+- `RolandTests`: the card; the overture leading the title by its timer (Lucasfilm's logo at 204,
+  126.01 seconds in, the overture's end at 278, 162.11 seconds in, then the opening's music,
+  sound 57, and its first line), the same on the emulator with the ROMs; pausing.
+- Not checked against ScummVM's window: the timeline is iMuse's, which `ImuseTests` checks
+  against ScummVM's, and the scripts' as for the AdLib.
+- iMuse's state in saves is step 4: until then a save made with the MT-32 keeps no music, and a
+  load stops the music that was playing.
 
 ## The VGA CD's menu against ScummVM's window
 
@@ -1671,7 +1695,7 @@ Coverage of the game's scripts:
 
 Larger features:
 
-17. MT-32 music for the EGA (the Roland Upgrade's sounds, with the player's own ROMs). The emulator and iMuse are in (see "The MT-32 emulator" and "iMuse"); to come: Loom's Roland mode (sound card 4, its sounds, the music timer), and iMuse's state in saves.
+17. MT-32 music for the EGA (the Roland Upgrade's sounds, with the player's own ROMs). The emulator, iMuse and the game's Roland mode are in (see "The MT-32 emulator", "iMuse" and "The Roland Upgrade in the game"); to come: iMuse's state in saves.
 18. (Done: `--sound cms`, sample for sample as ScummVM's `Player_V2CMS`; see "The CMS".)
 19. (Dropped: other releases, as other languages of the EGA, the Amiga, Atari ST and Macintosh releases, the PC-Engine CD, and the FM Towns' Japanese text; Distaff plays the EGA, the VGA CD and the FM Towns.)
 

@@ -73,7 +73,8 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <param name="sound">The device the sounds play on.</param>
     /// <param name="sampleRate">The rate sound is made at.</param>
     /// <param name="cdTracks">Opens a track of the VGA CD's audio from the game's folder; without it the CD is silent.</param>
-    public GameWorld(ResourceLoader loader, int seed = 1, SoundDevice sound = SoundDevice.Speaker, int sampleRate = DefaultSampleRate, Func<int, ICdTrack?>? cdTracks = null)
+    /// <param name="mt32">Makes the MT-32 at a rate, for <see cref="SoundDevice.Mt32"/>.</param>
+    public GameWorld(ResourceLoader loader, int seed = 1, SoundDevice sound = SoundDevice.Speaker, int sampleRate = DefaultSampleRate, Func<int, ICdTrack?>? cdTracks = null, Func<int, IMidiDevice>? mt32 = null)
     {
         _loader = loader;
         Screens = loader.FmTowns ? new VirtScreens(TownsScreenHeight, fmTowns: true) : new VirtScreens();
@@ -85,7 +86,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         Engine = new ScriptEngine(this, seed, loader.Version, loader.FmTowns) { CharIncWriting = WriteCharInc };
         TextSpeed = DefaultTextSpeed;
         Sound = new SoundSystem(sound, LoadSound, sampleRate, cdTracks,
-            loader.FmTowns ? cd => new PlayerTowns(sampleRate, cd, PlayCdTrack, StopCdSound, s => Sound!.Stop(s)) : null);
+            loader.FmTowns ? cd => new PlayerTowns(sampleRate, cd, PlayCdTrack, StopCdSound, s => Sound!.Stop(s)) : null, mt32);
         Actors = [.. Enumerable.Range(0, ActorCount).Select(i => new Actor(i, this))];
         Verbs = [.. Enumerable.Range(0, VerbCount).Select(_ => new VerbSlot())];
         // version 4 has no charset 0; its scripts pick one before any text (initCharset)

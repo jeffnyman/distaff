@@ -8,6 +8,9 @@ public enum SoundDevice
     Pcjr,
     AdLib,
     Cms,
+
+    /// <summary>The Roland MT-32 or CM-32L of the EGA's Roland Upgrade, played by iMuse (<see cref="PlayerImuse"/>).</summary>
+    Mt32,
 }
 
 /// <summary>
@@ -32,7 +35,8 @@ public sealed class SoundSystem : IDisposable
     /// <param name="sampleRate">The output's rate.</param>
     /// <param name="cdTracks">Opens a track of the CD from the game's folder, or gives null; none leaves the CD silent.</param>
     /// <param name="player">Makes a player of the release's own, given the CD, in place of the device's.</param>
-    public SoundSystem(SoundDevice device, Func<int, byte[]?> load, int sampleRate, Func<int, ICdTrack?>? cdTracks = null, Func<CdPlayer, MusicPlayer>? player = null)
+    /// <param name="mt32">Makes the MT-32 at the output's rate, for <see cref="SoundDevice.Mt32"/>.</param>
+    public SoundSystem(SoundDevice device, Func<int, byte[]?> load, int sampleRate, Func<int, ICdTrack?>? cdTracks = null, Func<CdPlayer, MusicPlayer>? player = null, Func<int, IMidiDevice>? mt32 = null)
     {
         _load = load;
         Device = device;
@@ -41,12 +45,16 @@ public sealed class SoundSystem : IDisposable
         {
             SoundDevice.AdLib => new PlayerAd(sampleRate, new Opl.MameOpl(sampleRate)),
             SoundDevice.Cms => new PlayerV2Cms(sampleRate),
+            SoundDevice.Mt32 => new PlayerImuse(sampleRate, (mt32 ?? throw new ArgumentException("The MT-32 needs its ROMs.", nameof(mt32)))(sampleRate), Welcome),
             _ => new PlayerV2(sampleRate, device == SoundDevice.Pcjr),
         };
         _mix = new AudioMix(Player, Cd);
         Output = new ClockedSource(_mix, sampleRate);
         SyncVolumes();
     }
+
+    /// <summary>What the MT-32's display shows when iMuse sets it up, as ScummVM shows its name and version.</summary>
+    private static string Welcome => $"Distaff {typeof(SoundSystem).Assembly.GetName().Version?.ToString(3)}";
 
     private int _musicVolume = Hosting.AudioVolume.Default, _sfxVolume = Hosting.AudioVolume.Default;
 
@@ -99,6 +107,9 @@ public sealed class SoundSystem : IDisposable
         SoundDevice.Pcjr => 1,
         SoundDevice.Cms => 2,
         SoundDevice.AdLib => 3,
+
+        // the default for Loom's EGA with a MIDI device: the Roland Upgrade
+        SoundDevice.Mt32 => 4,
         _ => 0,
     };
 

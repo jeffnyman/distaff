@@ -84,6 +84,8 @@ public sealed partial class GameWorld
             return;
         }
 
+        // iMuse first, its players silenced and the module's notes turned off, then the mixer
+        (Sound.Player as PlayerImuse)?.Pause(pause);
         Sound.Paused = pause;
         if ((_loader.Version == 4 || FmTowns) && Engine.Variables[Vars.MusicTimer] > 0)
         {

@@ -377,7 +377,8 @@ public sealed partial class GameWorld
     /// <summary>
     /// A sound's data as the device plays it: the speaker and PCjr block, or the AdLib block after
     /// its 4-byte header (<c>readSoundResourceSmallHeader</c>); for the CMS, the whole AdLib block
-    /// when it holds a music track (its seventh byte 0x80), the speaker block otherwise. Some index entries point past their
+    /// when it holds a music track (its seventh byte 0x80), the speaker block otherwise; for the
+    /// MT-32, every sound as the Roland Upgrade's single block, for iMuse (<c>isRolandLoom</c>). Some index entries point past their
     /// room file, and the Roland Upgrade's sounds are single blocks; these play nothing. The FM
     /// Towns' player takes the whole resource.
     /// </summary>
@@ -388,6 +389,8 @@ public sealed partial class GameWorld
             try
             {
                 data = _loader.FmTowns ? _loader.Load(ResourceType.Sound, number)?.ToArray()
+                    : Sound.Device == SoundDevice.Mt32 && _loader.Version == 3
+                    ? _loader.Index.Locate(ResourceType.Sound, number).IsPresent && _loader.LoadRolandSound(number) is { } block ? PlayerImuse.RoResource(block.Span) : null
                     : _loader.Index.Locate(ResourceType.Sound, number).IsPresent && _loader.LoadSound(number) is { } resource
                     ? Sound.Device switch
                     {

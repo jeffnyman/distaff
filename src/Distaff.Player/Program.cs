@@ -1,4 +1,5 @@
 using Distaff.Audio;
+using Distaff.Audio.Mt32;
 using Distaff.Player.Sdl;
 using Distaff.Scumm;
 using Distaff.Scumm.Detection;
@@ -36,6 +37,9 @@ internal static class Program
         string savesDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Distaff", "saves");
         string? target = null;
         var sound = SoundDevice.AdLib;
+        bool soundGiven = false;
+        string? mt32Roms = null;
+        var mt32Model = Mt32Model.Auto;
         string? wav = null;
         bool smoothScroll = true;
         bool semiSmoothScroll = false;
@@ -109,6 +113,7 @@ internal static class Program
                     break;
                 case "--sound" when i + 1 < args.Length && Enum.TryParse<SoundDevice>(args[i + 1], ignoreCase: true, out var device):
                     sound = device;
+                    soundGiven = true;
                     i++;
                     break;
                 case "--wav" when i + 1 < args.Length:
@@ -126,6 +131,12 @@ internal static class Program
                     break;
                 case "--semi-smooth-scroll":
                     semiSmoothScroll = true;
+                    break;
+                case "--mt32-roms" when i + 1 < args.Length:
+                    mt32Roms = args[++i];
+                    break;
+                case "--mt32-model" when i + 1 < args.Length && args[i + 1].ToLowerInvariant() is "mt32" or "cm32l":
+                    mt32Model = args[++i].ToLowerInvariant() == "mt32" ? Mt32Model.Mt32 : Mt32Model.Cm32l;
                     break;
                 case "--no-subtitles":
                     subtitles = false;
@@ -197,12 +208,32 @@ internal static class Program
         Console.WriteLine($"Loom ({release.Variant}), SCUMM version {release.Version}, {release.Layout} layout");
         Console.WriteLine($"language {release.Language ?? "unknown"}, platform {release.Platform ?? "unknown"}, index MD5 {release.Entry.Md5}");
         target ??= release.PreferredTarget;
+
+        // the MT-32 of the Roland Upgrade, from the ROMs in a folder, which on their own ask for it
+        if (mt32Roms is not null && !soundGiven)
+        {
+            sound = SoundDevice.Mt32;
+        }
+
+        Func<int, IMidiDevice>? mt32 = null;
+        if (sound == SoundDevice.Mt32)
+        {
+            if (mt32Roms is null || !Directory.Exists(mt32Roms) || Mt32RomSet.FromDirectory(mt32Roms, mt32Model) is not { } roms)
+            {
+                Console.Error.WriteLine("distaff: the MT-32 needs its ROMs: --mt32-roms names a folder holding a control and a PCM ROM of an MT-32 or CM-32L");
+                return 2;
+            }
+
+            Console.WriteLine($"MT-32: {roms.Description}, {roms.Pcm.Info.Description}");
+            mt32 = rate => new Mt32Emulator(roms, rate);
+        }
+
         try
         {
             if (run is { } runSteps)
             {
                 var store = new FileSaveStore(savesDirectory);
-                return Run(ResourceLoader.Open(game), runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, wav, CdTrackFiles.In(gamePath), smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed ?? 1);
+                return Run(ResourceLoader.Open(game), runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, mt32, wav, CdTrackFiles.In(gamePath), smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed ?? 1);
             }
 
             if (script is { } scriptNo)
@@ -220,7 +251,7 @@ internal static class Program
                 return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
             }
 
-            return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, CdTrackFiles.In(gamePath), playFor, smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed);
+            return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, mt32, CdTrackFiles.In(gamePath), playFor, smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed);
         }
         catch (Exception ex) when (ex is NotSupportedException or InvalidDataException)
         {
@@ -237,10 +268,10 @@ internal static class Program
 
     private static int Usage()
     {
-        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--difficulty practice|standard|expert] [--sound speaker|pcjr|cms|adlib] [--load file] [--saves folder] [--target name]");
+        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--difficulty practice|standard|expert] [--sound speaker|pcjr|cms|adlib|mt32] [--mt32-roms folder] [--mt32-model mt32|cm32l] [--load file] [--saves folder] [--target name]");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
-        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|cms|adlib] [--wav file.wav] [--trace-actor N] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--screenshot file.png] [--zoom N]");
+        Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|cms|adlib|mt32] [--mt32-roms folder] [--mt32-model mt32|cm32l] [--wav file.wav] [--trace-actor N] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--screenshot file.png] [--zoom N]");
         return 2;
     }
 
@@ -252,12 +283,12 @@ internal static class Program
     /// file in the game's folder. The random numbers are seeded from the clock, as ScummVM's are,
     /// unless a seed is given (<c>--random-seed</c>).
     /// </summary>
-    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int? bootParam, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound,
+    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int? bootParam, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound, Func<int, IMidiDevice>? mt32,
         Func<int, ICdTrack?> cdTracks, TimeSpan? playFor, bool smoothScroll, bool semiSmoothScroll, int textSpeed, bool subtitles, (int Music, int Sfx) volumes, int? randomSeed)
     {
         using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen, Saves = new FileSaveStore(savesDirectory) });
         var detected = new DetectedGame("scumm", "loom", "Loom", release.Variant, release.Language, release.Platform);
-        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, SemiSmoothScrolling = semiSmoothScroll, TextSpeed = textSpeed, Subtitles = subtitles, MusicVolume = volumes.Music, SfxVolume = volumes.Sfx, BootParam = bootParam, StartingSave = load, SaveTarget = target, SoundDevice = sound, CdTracks = cdTracks, RandomSeed = randomSeed };
+        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, SemiSmoothScrolling = semiSmoothScroll, TextSpeed = textSpeed, Subtitles = subtitles, MusicVolume = volumes.Music, SfxVolume = volumes.Sfx, BootParam = bootParam, StartingSave = load, SaveTarget = target, SoundDevice = sound, Mt32 = mt32, CdTracks = cdTracks, RandomSeed = randomSeed };
         SDL.SDL3.SDL_HideCursor();
         var clock = System.Diagnostics.Stopwatch.StartNew();
         host.Run(engine, duration: playFor);
@@ -303,9 +334,9 @@ internal static class Program
     /// so a run is the same each time.
     /// </summary>
     private static int Run(ResourceLoader loader, int steps, bool copyProtection, int? bootParam, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int zoom, int? traceActor,
-        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, string? wav, Func<int, ICdTrack?> cdTracks, bool smoothScroll, bool semiSmoothScroll, int textSpeed, bool subtitles, (int Music, int Sfx) volumes, int randomSeed)
+        string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, Func<int, IMidiDevice>? mt32, string? wav, Func<int, ICdTrack?> cdTracks, bool smoothScroll, bool semiSmoothScroll, int textSpeed, bool subtitles, (int Music, int Sfx) volumes, int randomSeed)
     {
-        var world = new GameWorld(loader, randomSeed, sound, cdTracks: wav is null ? null : cdTracks) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, SemiSmoothScrolling = semiSmoothScroll, TextSpeed = textSpeed, Subtitles = subtitles, SaveStore = store, SaveTarget = target };
+        var world = new GameWorld(loader, randomSeed, sound, cdTracks: wav is null ? null : cdTracks, mt32: mt32) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, SemiSmoothScrolling = semiSmoothScroll, TextSpeed = textSpeed, Subtitles = subtitles, SaveStore = store, SaveTarget = target };
         world.Sound.MusicVolume = volumes.Music;
         world.Sound.SfxVolume = volumes.Sfx;
         var audio = new List<short>();
