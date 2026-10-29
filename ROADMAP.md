@@ -1311,9 +1311,28 @@ The player published for a platform is one file that needs nothing installed:
 - Trimming gives no warnings (and warnings are errors here).
 - Checked on Windows against the debug build, headless: 900 steps of each release give the same
   screenshot and the same recording, the CD's track included; a save made at a step is the same
-  but for its name; ScummVM's FM Towns save and a save of Distaff's load to the same screen. The
-  window opened on the VGA CD for 5 seconds and closed cleanly, playing 5.2 seconds in 5.2.
-  Other platforms are item 21's.
+  but for its name; ScummVM's FM Towns save at the Bishop and an EGA save of Distaff's load to
+  the same screen. The window opened on the VGA CD for 5 seconds and closed cleanly, playing 5.2
+  seconds in 5.2. Other platforms are item 21's.
+
+## Continuous integration
+
+`.github/workflows/build.yml`, on every push to main and every pull request, on Windows, Linux
+and macOS (`windows-latest`, `ubuntu-latest`, `macos-latest`), one not stopping the others:
+
+- builds in Release (warnings are errors), runs the tests, and publishes the player for the
+  platform (`win-x64`, `linux-x64`, `osx-arm64`), which fails on a trimming warning too; on
+  macOS the SDK signs it, as Apple Silicon requires. The published player is kept as the run's
+  artifact for 30 days, one for each platform; an artifact is a zip, which does not keep the
+  file's permission to run, so on Linux and macOS it needs `chmod +x` (and on macOS, downloaded
+  through a browser, `xattr -d com.apple.quarantine`).
+- Without the game data, the tests that need it pass without checking, as they always have: a
+  clone of the repository with no `games` folder near it built and passed all 302 on Windows,
+  in a second. Not yet run on GitHub, the repository having no remote.
+- On Linux, before any of it: the `linux-x64` player published from Windows, run headless under
+  WSL (Ubuntu 24.04, no .NET installed), gave the same screenshot and recording as on Windows
+  for 900 steps of each release, the game's files read from the Windows folders, and loaded
+  ScummVM's FM Towns save at the Bishop to the same screen.
 
 ## The VGA CD's subtitles
 
@@ -1466,5 +1485,5 @@ Larger features:
 Sharing Distaff:
 
 20. (Done: `dotnet publish -c Release -r win-x64` gives one `distaff.exe`; see "A release build".)
-21. A check that it builds and runs on Linux and macOS.
-22. Continuous integration running the tests that need no game data.
+21. A check that it runs on Linux and macOS: the window on each, and anything at all on macOS. (Building and the tests are CI's; the Linux player runs headless as on Windows; see "Continuous integration".)
+22. (Done: builds, tests and publishes on Windows, Linux and macOS; see "Continuous integration".)

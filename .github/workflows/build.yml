@@ -1,0 +1,58 @@
+# Builds, tests and publishes the player on Windows, Linux and macOS on every push to main and every
+# pull request, so a break on any of them shows up in the commit that caused it. Each run keeps the
+# published player as an artifact, one file for each platform.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# a newer push to the same branch or pull request cancels the run it makes obsolete
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      # one platform failing does not hide how the others fare
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: macos-latest
+            rid: osx-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      # warnings are errors (Directory.Build.props), so this also fails on a new warning
+      - name: Build
+        run: dotnet build -c Release
+
+      # the tests that need Loom's game data pass without checking when it is not there
+      - name: Test
+        run: dotnet test -c Release --no-build
+
+      # the single file a release is (trimmed, so a trimming warning fails it too); on macOS the SDK
+      # signs it, as Apple Silicon requires
+      - name: Publish
+        run: dotnet publish src/Distaff.Player -c Release -r ${{ matrix.rid }} -o publish
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distaff-${{ matrix.rid }}
+          path: publish/
+          retention-days: 30
