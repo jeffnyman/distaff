@@ -18,9 +18,18 @@ public sealed partial class GameWorld
     /// </summary>
     private const int CdLeadIn = 22500 + 2 * 75;
 
+    /// <summary>
+    /// How often ScummVM calls the CD timer for Loom: 240 times a second, the Steam release's rate,
+    /// which ScummVM takes for the DOS VGA CD too while its minor bug fixes are on, as they are by
+    /// default (<c>LOOM_STEAM_CDDA_RATE</c>, <c>kEnhMinorBugFixes</c>). The FM Towns' timer runs at
+    /// 240 a second anyway.
+    /// </summary>
+    private const double CdTimerRate = 240.0;
+
     private bool _cdTimerRunning;
     private int _cdMusicTimer;
     private int _cdMusicTimerMod;
+    private double _cdTimerCalls;
 
     /// <summary>The part of the CD playing: the track, and the start and length in CD frames (75 a second); null when stopped.</summary>
     public (int Track, int Start, int Duration)? CdTrack { get; private set; }
@@ -65,8 +74,8 @@ public sealed partial class GameWorld
     /// After a load, plays again the part the save says was playing. Mirrors
     /// <c>SoundCD::restoreCDAudioAfterLoad</c> for a game that starts no CD sound by number: a part
     /// played once goes on from 1.25 CD frames for each count of the music timer the save holds,
-    /// and is as many frames shorter as the timer has counted. The timer is not saved: it goes on
-    /// counting, or not, as before the load.
+    /// and is as many frames shorter as the timer has counted. The timer's count is not saved: it
+    /// goes on from where it is, counting if the loaded music timer is above 0 (see <see cref="Load"/>).
     /// </summary>
     private void RestoreCdAfterLoad(int track, int start, int duration, int numLoops)
     {
@@ -85,8 +94,9 @@ public sealed partial class GameWorld
     }
 
     /// <summary>
-    /// Runs the CD timer for some quarter-frames: it counts one for every four, from when a track
-    /// first starts, at the DOS timer's rate (<c>cdTimerHandler</c>).
+    /// Runs the CD timer for some of the game's quarter-frames: it is called at its own rate
+    /// (<see cref="CdTimerRate"/>), and counts one for every four calls, from when a track first
+    /// starts (<c>cdTimerHandler</c>).
     /// </summary>
     private void AdvanceCdTimer(int quarterFrames)
     {
@@ -95,7 +105,10 @@ public sealed partial class GameWorld
             return;
         }
 
-        for (int i = 0; i < quarterFrames; i++)
+        _cdTimerCalls += quarterFrames * CdTimerRate / (FmTowns ? 240.0 : TimerFrequency);
+        int calls = (int)_cdTimerCalls;
+        _cdTimerCalls -= calls;
+        for (int i = 0; i < calls; i++)
         {
             if ((_cdMusicTimerMod++ & 3) == 0)
             {

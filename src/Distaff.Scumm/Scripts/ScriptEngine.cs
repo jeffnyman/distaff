@@ -42,11 +42,13 @@ public sealed class ScriptEngine
 
     private readonly IScriptHost _host;
     private readonly ScriptDecoder _decoder;
-    private readonly Random _random;
     private readonly List<(int Number, ScriptKind Kind, int Slot)> _nested = [];
     private readonly List<Sentence> _sentences = [];
     private readonly Stack<int> _stack = new();
     private bool _discardResult;
+
+    /// <summary>The game's random numbers, which the scripts and the dissolve share (<c>_rnd</c>).</summary>
+    public ScummRandom Random { get; }
 
     public ScriptEngine(IScriptHost host, int seed = 1, int version = 3, bool fmTowns = false)
     {
@@ -55,7 +57,7 @@ public sealed class ScriptEngine
         ScriptHeaderSize = version == 4 || fmTowns ? 6 : 4;
         FmTowns = fmTowns;
         _decoder = new ScriptDecoder(version, fmTowns);
-        _random = new Random(seed);
+        Random = new ScummRandom((uint)seed);
         for (int i = 0; i < Slots.Length; i++)
         {
             Slots[i] = new ScriptSlot();
@@ -585,7 +587,9 @@ public sealed class ScriptEngine
         slot.FreezeResistant = freezeResistant;
         slot.Recursive = recursive;
         slot.FreezeCount = 0;
-        slot.Delay = 0;
+
+        // runScript leaves the delay: a script stopped while it waited leaves its delay in the slot,
+        // and the saves keep it; it is set again before it is read
         Array.Clear(slot.Locals);
         for (int i = 0; args is not null && i < args.Count && i < ScriptSlot.LocalCount; i++)
         {
@@ -782,7 +786,7 @@ public sealed class ScriptEngine
 
                 break;
             case "o5_getRandomNr":
-                SetResult(_random.Next(Arg(0) + 1));
+                SetResult(Random.Next(Arg(0)));
                 break;
             case "o5_expression":
                 SetResult(Expression(slot, instruction));

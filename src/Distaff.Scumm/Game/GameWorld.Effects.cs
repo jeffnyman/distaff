@@ -36,9 +36,6 @@ public sealed partial class GameWorld
     private Rgb[]? _shownColors;
     private RgbFrame? _shownTownsFrame;
 
-    /// <summary>The order the dissolve draws in. ScummVM takes it from the game's random numbers; Distaff's are not ScummVM's, so it keeps its own and leaves the scripts' alone.</summary>
-    private readonly Random _effectRandom;
-
     /// <summary>Whether the screen is showing an effect, the frame waiting to end until it has.</summary>
     public bool InEffect => _effectFrames.Count > 0;
 
@@ -147,7 +144,7 @@ public sealed partial class GameWorld
 
             for (int i = 1; i < offsets.Length; i++)
             {
-                int j = _effectRandom.Next(i);
+                int j = Engine.Random.Next(i - 1);
                 offsets[i] = offsets[j];
                 offsets[j] = i;
             }
@@ -166,7 +163,7 @@ public sealed partial class GameWorld
             var original = (int[])offsets.Clone();
             for (int i = 1; i < offsets.Length; i++)
             {
-                int j = _effectRandom.Next(i);
+                int j = Engine.Random.Next(i - 1);
                 offsets[i] = offsets[j];
                 offsets[j] = original[i];
             }

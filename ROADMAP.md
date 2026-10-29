@@ -875,8 +875,7 @@ for each release), which the tests write to the folder `DISTAFF_EXPORT_SAVES` na
     used up the sounds the load started. It happened in the window too, starting from a save
     or loading one played longer. `ClockedSource.Resync` now moves the clock to the save's
     time, and `distaff --run --load --wav` records from the load on, not from game time 0.
-- Not compared: how frames run after a load (the scripts redraw the distaff's notes some steps
-  after it in both).
+- How frames run after a load: compared since, and the same (see "Frames after a load").
 
 ## The FM Towns' proficiency level
 
@@ -1019,9 +1018,8 @@ them.
   sound and the CD's timer go on; the frame then ends, so the sounds it asked for start after
   the effect, as in ScummVM (`scummLoop_handleSound` after `scummLoop_handleEffects`). Clicks and
   keys made while a new room dissolves in are dropped (`clearClickedStatus`).
-- The dissolve's order is random. ScummVM takes it from the game's own random numbers; Distaff's
-  are not ScummVM's, so the dissolve keeps a generator of its own, seeded as the world is, and
-  the scripts' numbers are as before.
+- The dissolve's order is random, taken from the game's own random numbers as ScummVM's is
+  (since "Frames after a load", they are ScummVM's own).
 - An effect starts from the screen last shown, or, with no host looking (the tests), from the
   room as drawn before it changes.
 - Saves keep the effects set and the screen's state (`_switchRoomEffect`, `_switchRoomEffect2`,
@@ -1251,6 +1249,52 @@ buffers, by however long that is in real time. Distaff starts both in the same s
 scripts and the load do in ScummVM's own order (`scummLoop_handleSaveLoad`, then
 `runAllScripts`), and the difference is not ScummVM's to copy.
 
+## Frames after a load
+
+Each release's walkthrough saves, loaded in ScummVM from its launcher (`-x1`) with its random
+numbers seeded (`--random-seed=1`), played on by themselves, and ScummVM saved about 6 seconds
+on (its autosave, `autosave_period`): no clicks, no screen captured. Distaff loads the same save
+and plays on to the same total timer, and the two states are compared: every variable, every
+script slot (its script, place, delay and state), every object's state and every actor.
+
+- ScummVM saves partway through a frame: in `scummLoop_handleSaveLoad`, after the frame's
+  timers are counted, its delays counted down and its music timer set, before its scripts run.
+  Distaff's state after the frame before, set forward by that much, is the one to compare. A
+  load from the launcher is put back before the first frame in both (`go()` loads it in place of
+  the boot script), and the frames after it run the same: 53 frames to ScummVM's autosave on
+  the EGA and the VGA CD and 54 on the FM Towns, on the same timers.
+- Distaff's random numbers were .NET's. ScummVM's (`Common::RandomSource`) are a 32-bit
+  xorshift (13, 21, 11), each number the state times 0xDEADBF03 modulo the range, one generator
+  for the engine (`_rnd`) that the scripts (`o5_getRandomNr`) and the dissolve's order both
+  draw from; its seed is the time unless `--random-seed` gives one. `ScummRandom` is that,
+  seeded as the world is (1 by default), the scripts and the dissolve sharing it. Without it,
+  the rooms whose scripts draw random numbers went otherwise: the Elders' sanctuary, the shore,
+  the woods, the Bishop's room and the Void, in their scripts' places and their actors.
+- With it, the EGA's nine saves (the last one, at the end, makes no autosave) are the same in
+  every one of those, and the VGA CD's ten and the FM Towns' nine but for the mouse (where the
+  real cursor was) and, after the next fix, the VGA CD's music timer by a count either way.
+- Fixed: the VGA CD's music timer stood at 0 after a load. ScummVM's `loadState` pauses the
+  sounds before and starts them again after (`pauseSounds`, `pauseCDSounds`): the CD timer
+  stops if the music timer counted before the load, and starts again, from its count, if the
+  loaded one is above 0. Its count is not saved, so after a load from the launcher it counts
+  from 0; Distaff's did not count at all until the scripts started the CD again.
+- Fixed: ScummVM calls Loom's CD timer 240 times a second, the Steam release's rate
+  (`LOOM_STEAM_CDDA_RATE`), on the DOS VGA CD too while its minor bug fixes are on, as they are
+  by default (`kEnhMinorBugFixes`); Distaff had it at the DOS timer's 236.7. It counts one for
+  every four calls, so the scripts' music timer runs 1.4% faster, and the scenes timed by it end
+  a little sooner. The FM Towns' timer ran at 240 already.
+- Kept as ScummVM keeps it: a script started in a slot keeps the delay the slot's last script
+  left (`runScript` does not clear it); only the saves see it, as a delay is set before it is
+  read.
+- `AfterLoadTests` pins two saves in each release against ScummVM's autosaves (kept beside the
+  game data, in `games/scummvm-saves`, with the saves they were made from), and the random
+  numbers against ScummVM's algorithm worked out by hand.
+- Five regression hashes of Distaff's own frames changed with the random numbers and the CD
+  timer's rate (the FM Towns' logo and its distaff, the EGA's distaff, the VGA CD's distaff and
+  its egg opened); the lines said with them are the same.
+- Not compared: a load from inside the game (the save screen, or the VGA CD's menu), which
+  ScummVM does partway through a frame (`requestLoad`); it would need clicks in ScummVM's window.
+
 ## The banners against ScummVM
 
 The banners, compared with ScummVM's window: each release's walkthrough save from the end of the
@@ -1280,7 +1324,7 @@ Not yet checked against ScummVM:
 
 1. (Done: saves made by ScummVM load and play on; see "Saves made by ScummVM".)
 2. (Done but for one: the banners match ScummVM's window; the VGA CD's snap scroll banner is not confirmed. See "The banners against ScummVM".)
-3. How frames run in the first steps after a load.
+3. (Done for a load from the launcher: see "Frames after a load". A load from inside the game is not compared.)
 4. The VGA CD's menu, against ScummVM's window (viewed, its main page pinned).
 
 Known differences, not fixed:

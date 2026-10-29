@@ -60,8 +60,25 @@ public sealed partial class GameWorld
     public SaveInfo Load(byte[] file)
     {
         var (info, state) = SaveFile.Read(file, _owners.Length, _loader.Version, FmTowns);
+        int musicTimer = Engine.Variables[Vars.MusicTimer];
         Restore(state);
         SetPlayTime(info.PlayTime);
+
+        // loadState pauses the sounds before and starts them again after (pauseSounds,
+        // pauseCDSounds): the CD timer stops if the music timer counted before the load, and
+        // starts again, from where it is, if the loaded one does
+        if (_loader.Version == 4 || FmTowns)
+        {
+            if (musicTimer > 0)
+            {
+                _cdTimerRunning = false;
+            }
+
+            if (Engine.Variables[Vars.MusicTimer] > 0)
+            {
+                _cdTimerRunning = true;
+            }
+        }
 
         // the script the save was made in is the current one, for terminateSaveMenuScript (_currentScript)
         int saved = state.CurrentScript < ScriptEngine.SlotCount ? state.CurrentScript : -1;
