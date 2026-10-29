@@ -1496,7 +1496,7 @@ Known differences, not fixed:
 
 Not ported, by choice:
 
-12. Dissolves paced by the display's refresh, as ScummVM's are.
+12. (Dropped, not a difference: ScummVM's dissolves are slower than their quarter-frame stops because each stop shows the screen, which with vsync on (its default) waits for the display's refresh; how much slower depends on the machine's refresh rate and settings, and ScummVM means the quarter-frames Distaff keeps. The VGA CD's 198 ms measured is less than a 60 Hz display waiting at every stop would give, about 450 ms; not looked into further.)
 13. (Done: the picture layer keeps what was drawn in the columns behind the camera, and semi-smooth scrolling is `--semi-smooth-scroll`; the catch-up mode is not a difference. See "The FM Towns' picture layer".)
 14. (Dropped: ScummVM's 640 x 480 mode for the FM Towns, `force_fmtowns_hires_mode`, is off by default, and for English text only doubles its pixels; only the banners would differ.)
 
