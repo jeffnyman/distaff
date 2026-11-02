@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="https://raw.githubusercontent.com/jeffnyman/distaff/main/assets/distaff-title.png" width="366" height="400" alt="Distaff">
+  <img src="https://raw.githubusercontent.com/jeffnyman/distaff/main/assets/distaff-title.png" width="366" alt="Distaff">
 </h1>
 
 <p align="center">
