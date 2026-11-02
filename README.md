@@ -2,8 +2,10 @@
   <img src="https://raw.githubusercontent.com/jeffnyman/distaff/main/assets/distaff-title.png" width="366" height="400" alt="Distaff">
 </h1>
 
-[![Build](https://github.com/jeffnyman/distaff/actions/workflows/build.yml/badge.svg)](https://github.com/jeffnyman/distaff/actions/workflows/build.yml)
-[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/jeffnyman/distaff/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/jeffnyman/distaff/build.yml?branch=main&style=for-the-badge&label=build" alt="Build"></a>
+  <a href="https://www.nuget.org/packages/Distaff"><img src="https://img.shields.io/nuget/vpre/Distaff?style=for-the-badge&label=nuget" alt="NuGet"></a>
+</p>
 
 <p align="center">
   ✨ Long live the classics.
@@ -22,8 +24,8 @@ loads in the other.
 
 | EGA (1990) | FM Towns (1991) | VGA CD (1992) |
 |---|---|---|
-| ![The Loom in the EGA release](assets/loom-ega.png) | ![The Loom in the FM Towns release](assets/loom-fmtowns.png) | ![The Loom in the VGA CD release](assets/loom-vga.png) |
-| ![The woods in the EGA release](assets/woods-ega.png) | ![The woods in the FM Towns release](assets/woods-fmtowns.png) | ![The woods in the VGA CD release](assets/woods-vga.png) |
+| ![The Loom in the EGA release](https://raw.githubusercontent.com/jeffnyman/distaff/main/assets/loom-ega.png) | ![The Loom in the FM Towns release](https://raw.githubusercontent.com/jeffnyman/distaff/main/assets/loom-fmtowns.png) | ![The Loom in the VGA CD release](https://raw.githubusercontent.com/jeffnyman/distaff/main/assets/loom-vga.png) |
+| ![The woods in the EGA release](https://raw.githubusercontent.com/jeffnyman/distaff/main/assets/woods-ega.png) | ![The woods in the FM Towns release](https://raw.githubusercontent.com/jeffnyman/distaff/main/assets/woods-fmtowns.png) | ![The woods in the VGA CD release](https://raw.githubusercontent.com/jeffnyman/distaff/main/assets/woods-vga.png) |
 
 ## Features
 
@@ -40,7 +42,8 @@ loads in the other.
 - **ScummVM-compatible saves**: Distaff's saves load in ScummVM and ScummVM's load here, the
   music playing on from where it was saved.
 - **The FM Towns' smooth scrolling**, and ScummVM's semi-smooth option.
-- **One self-contained file** for Windows, Linux and macOS, with nothing to install.
+- **One self-contained file** for Windows, Linux and macOS, with nothing to install, or a .NET
+  tool from NuGet.
 - **A headless mode** that plays from scripted clicks and keys and writes screenshots, sound and
   video, as the tests use it.
 
@@ -87,13 +90,16 @@ the game (`Track1.flac` and on, or `.ogg`), as ScummVM keeps them.
 
 ### Running
 
-Download the player for your system from the latest
-[build](https://github.com/jeffnyman/distaff/actions/workflows/build.yml), or build it (see
-[Building](#building)), and run:
+With the [.NET 10 runtime](https://dotnet.microsoft.com/download), install the player from NuGet:
 
 ```
+dotnet tool install -g Distaff --prerelease
 distaff <game folder>
 ```
+
+Or download the player for your system, one file with nothing to install, from the latest
+[build](https://github.com/jeffnyman/distaff/actions/workflows/build.yml), or build it (see
+[Building](#building)).
 
 | Option | What it does |
 |---|---|
@@ -149,7 +155,12 @@ dotnet publish src/Distaff.Player -c Release -r win-x64 -o publish
 ```
 
 with `linux-x64` or `osx-arm64` for the other systems. Every push builds, tests and publishes on
-all three (`.github/workflows/build.yml`).
+all three, and packs (`.github/workflows/build.yml`).
+
+`dotnet pack -c Release -o artifacts/packages` packs the NuGet packages: the `Distaff` tool, and
+the libraries `Distaff.Scumm` (the engine) and `Distaff.Audio` (the CD audio decoders and the
+MT-32 emulator). A tag such as `v0.1.0-alpha` publishes them to nuget.org
+(`.github/workflows/publish.yml`), the tag without its "v" their version.
 
 ## How it is checked
 
@@ -183,7 +194,7 @@ what is left.
 | `src/Distaff.Player` | The `distaff` player: the SDL window and the headless tools. |
 | `tests/Distaff.Scumm.Tests` | Unit tests, and the tests that play the real game data. |
 | `tools` | Generators that port tables from ScummVM's source, and the reference tools built from it. |
-| `assets` | Images: the screenshots above. |
+| `assets` | Images: the title, the screenshots above, and the licence's badge. |
 
 The host contract (the engine base class, the graphics, input and audio drivers, and a headless
 host) comes from [Daventry](https://github.com/jeffnyman/daventry), the AGI and SCI interpreter,
@@ -236,7 +247,7 @@ write them upon the table of thine heart."<br>
 **Distaff**, A Player for *Loom*\
 Copyright (C) 2026 [Jeff Nyman][owner]
 
-[![GNU General Public License version 3](https://raw.githubusercontent.com/jeffnyman/maniacal/main/assets/gplv3-127x51.png)][GNU General Public License]
+[![GNU General Public License version 3](https://raw.githubusercontent.com/jeffnyman/distaff/main/assets/gplv3-127x51.png)][GNU General Public License]
 
 > This program is free software: you can redistribute it and/or modify
 > it under the terms of the [GNU General Public License] as published by

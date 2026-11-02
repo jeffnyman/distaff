@@ -3,7 +3,15 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>distaff</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Description>Command line player for Loom: distaff &lt;game folder&gt;.</Description>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <PackageId>Distaff</PackageId>
+    <ToolCommandName>distaff</ToolCommandName>
+    <!-- a tool installed under a newer runtime should still start -->
+    <RollForward>Major</RollForward>
+    <Description>Command line player for Loom (DOS EGA, FM Towns, DOS VGA CD): dotnet tool install -g Distaff, then distaff &lt;game folder&gt;.</Description>
+    <!-- it carries Distaff.Audio, and so Munt's code -->
+    <PackageLicenseExpression>GPL-3.0-or-later AND LGPL-2.1-or-later</PackageLicenseExpression>
     <!-- tools/icon writes it from AppIcon, the drawing the window's icon comes from -->
     <ApplicationIcon>distaff.ico</ApplicationIcon>
   </PropertyGroup>
@@ -25,10 +33,11 @@
   </PropertyGroup>
 
   <!-- SDL3 ships native libraries for every platform; a desktop player does not need the Android
-       and iOS ones, which are most of the package -->
+       and iOS ones, which are most of the package (the path's separator either slash: Windows
+       writes a backslash) -->
   <Target Name="DistaffTrimMobileNatives" AfterTargets="ComputeResolvedFilesToPublishList">
     <ItemGroup>
-      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(ResolvedFileToPublish.RelativePath)', '^runtimes[\/](android|ios)'))" />
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(ResolvedFileToPublish.RelativePath)', '^runtimes[\\/](android|ios)'))" />
       <!-- and a release has no symbols, the other projects' included -->
       <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'$(DebugType)' == 'none' and '%(ResolvedFileToPublish.Extension)' == '.pdb'" />
     </ItemGroup>

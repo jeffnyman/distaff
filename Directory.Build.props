@@ -17,10 +17,21 @@
 
   <PropertyGroup>
     <Product>Distaff</Product>
-    <Authors>Distaff contributors</Authors>
-    <Copyright>Copyright (c) Distaff contributors. Portions derived from ScummVM, copyright the ScummVM Team, and from Daventry, copyright the Daventry contributors.</Copyright>
+    <Authors>Jeff Nyman</Authors>
+    <Copyright>Copyright (c) Jeff Nyman. Portions derived from ScummVM, copyright the ScummVM Team; from Munt, copyright its authors; and from Daventry and Maniacal, copyright Jeff Nyman.</Copyright>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/jeffnyman/distaff</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/jeffnyman/distaff</PackageProjectUrl>
+    <!-- dotnet pack -p:VersionSuffix=alpha.2 for the next prerelease; an empty suffix is a release -->
     <VersionPrefix>0.1.0</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>scumm;loom;lucasfilm;adventure;interpreter;scummvm;retro;games;fm-towns;mt-32</PackageTags>
+    <PackageReleaseNotes>First prerelease. Plays Loom's three English releases, the DOS EGA, the FM Towns and the DOS VGA CD, from the start to the end, with their sound: the EGA on the PC speaker, PCjr/Tandy, Game Blaster, AdLib or, with your own ROMs, an emulated MT-32; the FM Towns' FM and PCM chips and CD audio; the VGA CD's voices and music. Saves in ScummVM's format, loading both ways. Headless runs write screenshots, sound and video.</PackageReleaseNotes>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/" Visible="false" />
+  </ItemGroup>
 </Project>

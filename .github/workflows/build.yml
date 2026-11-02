@@ -1,6 +1,7 @@
 # Builds, tests and publishes the player on Windows, Linux and macOS on every push to main and every
 # pull request, so a break on any of them shows up in the commit that caused it. Each run keeps the
-# published player as an artifact, one file for each platform.
+# published player as an artifact, one file for each platform. Publishing to NuGet is publish.yml,
+# on a tag.
 name: Build
 
 on:
@@ -45,6 +46,12 @@ jobs:
       # the tests that need Loom's game data pass without checking when it is not there
       - name: Test
         run: dotnet test -c Release --no-build
+
+      # catches packaging breaks (package validation, missing files) before a release tag does; the
+      # packages are the same from any platform, so once is enough
+      - name: Pack
+        if: runner.os == 'Windows'
+        run: dotnet pack -c Release --no-build -o artifacts/packages
 
       # the single file a release is (trimmed, so a trimming warning fails it too); on macOS the SDK
       # signs it, as Apple Silicon requires
