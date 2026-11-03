@@ -1746,8 +1746,10 @@ chooses one, as Maniacal's is chosen:
   comments came from Maniacal's, where its code is the same. `PublicAPI.*.txt`
   (`Microsoft.CodeAnalysis.PublicApiAnalyzers`) keeps the surface, 795 symbols and 66: a change
   fails the build until it is written there.
-- Package validation against 0.1.0-alpha is off for 0.2.0, whose narrowing is on purpose; after
-  0.2.0 it compares with 0.2.0, and `PublicAPI.Unshipped.txt` moves to `PublicAPI.Shipped.txt`.
+- Package validation against 0.1.0-alpha was off for 0.2.0, whose narrowing is on purpose. Since
+  0.2.0-alpha was published, both libraries are validated against it, and its API is in
+  `PublicAPI.Shipped.txt`: a public member removed or changed fails the build (RS0017) and the
+  pack, and a new one goes into `PublicAPI.Unshipped.txt` until the next release.
 - Tests that took internal enums as theory parameters take their names instead, as xUnit's
   public test methods cannot have internal parameter types. `PublicApiTests` uses the API as a
   package user would, and a console app outside the repository, restoring the packed packages,
@@ -1833,7 +1835,7 @@ Sharing Distaff:
 
 Toward 1.0:
 
-24. (Done: the libraries' public API chosen, documented and kept in `PublicAPI.*.txt`; see "The libraries' public API".) After 0.2.0 is out: package validation against it, and the API files' Unshipped moved to Shipped.
+24. (Done: the libraries' public API chosen, documented and kept in `PublicAPI.*.txt`; see "The libraries' public API".) 0.2.0-alpha is out; the libraries are validated against it, and its API is in `PublicAPI.Shipped.txt`.
 25. (Done: `distaff --version`, as Maniacal's.)
 26. (Done: print slots 2 and 3 as ScummVM has them, and every whole walkthrough checked to leave nothing unhandled; see "Debug messages and message dialogs".)
 27. (Done: the README's "Known limitations" names items 2, 3, 19 and 21.)
