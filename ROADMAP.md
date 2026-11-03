@@ -1819,6 +1819,22 @@ paths into its `obj` folders):
   needed one before each run. X11 saw the windows normal and mapped all along. SDL's PipeWire
   backend warns that WSL has no `client.conf` and goes on; the sound plays.
 
+## Played on macOS
+
+On a Mac, from the package on nuget.org (`dotnet tool install -g Distaff --prerelease`,
+0.2.0-alpha), with a bundle made for it on Windows (`distaff-mac-check.zip`: the three releases,
+the two ROM dumps the MT-32 run uses, a script, and what Windows wrote):
+
+- The script runs the player headless as on Windows and Linux: each release's screenshot and
+  sound after 1500 steps (PRACTICE chosen), the EGA's MT-32 music on a CM-32L, and the EGA saved
+  at step 1400, loaded and played on 300 steps with its music. All nine match Windows byte for
+  byte. The expected hashes came from the same package on Windows, each command run twice to be
+  sure a run repeats; the bundle was tried first under WSL, unpacked fresh, as it would be on the
+  Mac.
+- The window, played by a person: it shows the game, with the VGA CD's voices and music and the
+  EGA's MT-32 overture, the full screen and back, the F9 dialog, and a save made with F5 and
+  loaded in a new run. All as on Windows.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above
@@ -1863,7 +1879,7 @@ Larger features:
 Sharing Distaff:
 
 20. (Done: `dotnet publish -c Release -r win-x64` gives one `distaff.exe`; see "A release build".)
-21. A check that it runs on macOS: the window, and anything at all. (Done for Linux: see "Played on Linux".)
+21. (Done: played on Linux and on macOS, window and all; see "Played on Linux" and "Played on macOS".)
 22. (Done: builds, tests and publishes on Windows, Linux and macOS; see "Continuous integration".)
 
 Toward 1.0:
@@ -1871,4 +1887,4 @@ Toward 1.0:
 24. (Done: the libraries' public API chosen, documented and kept in `PublicAPI.*.txt`; see "The libraries' public API".) 0.2.0-alpha is out; the libraries are validated against it, and its API is in `PublicAPI.Shipped.txt`.
 25. (Done: `distaff --version`, as Maniacal's.)
 26. (Done: print slots 2 and 3 as ScummVM has them, and every whole walkthrough checked to leave nothing unhandled; see "Debug messages and message dialogs".)
-27. (Done: the README's "Known limitations" names items 2, 3, 19 and 21.)
+27. (Done: the README's "Known limitations" names items 2, 3 and 19; it named 21 until Linux and macOS were played.)
