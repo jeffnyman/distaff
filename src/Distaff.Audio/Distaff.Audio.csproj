@@ -8,9 +8,8 @@
     <PackageLicenseExpression>GPL-3.0-or-later AND LGPL-2.1-or-later</PackageLicenseExpression>
     <!-- the published release this one must not break: package validation compares the packed
          library with it, and a public member removed or changed since fails the pack. After each
-         release, it becomes that release. 0.2.0 narrows 0.1.0-alpha's public API on purpose, so
-         there is none until 0.2.0 is out, which it then becomes. -->
-    <!-- <PackageValidationBaselineVersion>0.2.0-alpha</PackageValidationBaselineVersion> -->
+         release, it becomes that release. -->
+    <PackageValidationBaselineVersion>0.2.0-alpha</PackageValidationBaselineVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- the tests drive Munt's synth as its reference harness does -->
