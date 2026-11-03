@@ -6,7 +6,7 @@ namespace Distaff.Scumm.Scripts;
 /// control, cutscenes, sentences) and hands every other instruction here, with its operands
 /// already evaluated.
 /// </summary>
-public interface IScriptHost
+internal interface IScriptHost
 {
     /// <summary>A global script's code, from its resource header, or null when there is none.</summary>
     ReadOnlyMemory<byte>? GlobalScript(int number);

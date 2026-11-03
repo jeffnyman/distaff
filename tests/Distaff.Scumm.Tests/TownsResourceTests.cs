@@ -35,12 +35,14 @@ public class TownsResourceTests
     /// 99.LFL is the charset.
     /// </summary>
     [Theory]
-    [InlineData(ResourceType.Room, 75, 25)]
-    [InlineData(ResourceType.Costume, 162, 38)]
-    [InlineData(ResourceType.Script, 116, 84)]
-    [InlineData(ResourceType.Sound, 63, 137)]
-    public void Index_entries_load_or_are_in_no_room(ResourceType type, int loaded, int missing)
+    [InlineData(nameof(ResourceType.Room), 75, 25)]
+    [InlineData(nameof(ResourceType.Costume), 162, 38)]
+    [InlineData(nameof(ResourceType.Script), 116, 84)]
+    [InlineData(nameof(ResourceType.Sound), 63, 137)]
+    public void Index_entries_load_or_are_in_no_room(string typeName, int loaded, int missing)
     {
+        var type = Enum.Parse<ResourceType>(typeName);
+
         if (Open() is not { } loader)
         {
             return;

@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Distaff.Scumm.Scripts;
 
-public enum OperandKind
+internal enum OperandKind
 {
     /// <summary>A number in the script.</summary>
     Constant,
@@ -21,7 +21,7 @@ public enum OperandKind
 /// global variable. A variable whose number had bit 0x2000 has an <see cref="Index"/>, a constant
 /// or another variable, added to its number when it is read.
 /// </summary>
-public readonly record struct Operand(OperandKind Kind, int Value, Operand[]? IndexHolder = null, byte[]? Text = null)
+internal readonly record struct Operand(OperandKind Kind, int Value, Operand[]? IndexHolder = null, byte[]? Text = null)
 {
     /// <summary>Mirrors the <c>0x8000</c> test of <c>readVar</c>.</summary>
     public const int BitVariable = 0x8000;
@@ -77,7 +77,7 @@ public readonly record struct Operand(OperandKind Kind, int Value, Operand[]? In
 /// <param name="Name">ScummVM's name for it, such as <c>SO_COSTUME</c>, without the prefix.</param>
 /// <param name="Operands">Its operands in the order the handler fetches them.</param>
 /// <param name="Nested">For <c>expression</c>'s sub-operation 6, the instruction it runs.</param>
-public sealed record SubOperation(int Code, string Name, IReadOnlyList<Operand> Operands, Instruction? Nested = null)
+internal sealed record SubOperation(int Code, string Name, IReadOnlyList<Operand> Operands, Instruction? Nested = null)
 {
     public override string ToString()
         => Nested is { } nested ? $"{Name}({nested.Text})" : Operands.Count == 0 ? Name : $"{Name}({string.Join(", ", Operands)})";
@@ -92,7 +92,7 @@ public sealed record SubOperation(int Code, string Name, IReadOnlyList<Operand> 
 /// <param name="Result">The variable it writes, if any.</param>
 /// <param name="JumpTarget">Where it jumps when its condition fails (or always, for <c>jumpRelative</c>).</param>
 /// <param name="SubOperations">Its sub-operations, in order; empty for an instruction that has none.</param>
-public sealed record Instruction(
+internal sealed record Instruction(
     int Offset,
     byte Opcode,
     string Handler,

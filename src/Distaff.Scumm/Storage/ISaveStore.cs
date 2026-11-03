@@ -3,13 +3,16 @@ namespace Distaff.Scumm.Storage;
 /// <summary>Persistent per-game storage for save games and settings.</summary>
 public interface ISaveStore
 {
+    /// <summary>The names of the entries that start with the prefix, in order.</summary>
     IReadOnlyList<string> List(string prefix);
 
     /// <summary>Returns null if the entry does not exist.</summary>
     Stream? OpenRead(string name);
 
+    /// <summary>Opens an entry to write, replacing what it held; the entry is complete when the stream is disposed.</summary>
     Stream OpenWrite(string name);
 
+    /// <summary>Deletes an entry; false if there was none.</summary>
     bool Delete(string name);
 }
 
@@ -17,7 +20,7 @@ public interface ISaveStore
 /// ScummVM writes its saves through a gzip stream. Readers here want to seek, so a compressed file is
 /// inflated into memory on open; a plain file is handed back as it is.
 /// </summary>
-public static class SaveCompression
+internal static class SaveCompression
 {
     public static Stream Unwrap(Stream stream)
     {
@@ -48,8 +51,10 @@ public static class SaveCompression
 /// <summary>Save store backed by a folder on disk.</summary>
 public sealed class FileSaveStore(string directory) : ISaveStore
 {
+    /// <summary>The folder's full path. It is made on the first write.</summary>
     public string Directory { get; } = Path.GetFullPath(directory);
 
+    /// <inheritdoc />
     public IReadOnlyList<string> List(string prefix)
     {
         if (!System.IO.Directory.Exists(Directory))
@@ -64,6 +69,8 @@ public sealed class FileSaveStore(string directory) : ISaveStore
             .ToList();
     }
 
+    /// <inheritdoc />
+    /// <remarks>A name that is not a plain file name throws <see cref="ArgumentException"/>.</remarks>
     public Stream? OpenRead(string name)
     {
         var path = Resolve(name);
@@ -76,12 +83,16 @@ public sealed class FileSaveStore(string directory) : ISaveStore
         return SaveCompression.Unwrap(file);
     }
 
+    /// <inheritdoc />
+    /// <remarks>A name that is not a plain file name throws <see cref="ArgumentException"/>.</remarks>
     public Stream OpenWrite(string name)
     {
         System.IO.Directory.CreateDirectory(Directory);
         return new FileStream(Resolve(name), FileMode.Create, FileAccess.Write, FileShare.None);
     }
 
+    /// <inheritdoc />
+    /// <remarks>A name that is not a plain file name throws <see cref="ArgumentException"/>.</remarks>
     public bool Delete(string name)
     {
         var path = Resolve(name);
@@ -110,14 +121,19 @@ public sealed class MemorySaveStore : ISaveStore
 {
     private readonly Dictionary<string, byte[]> _entries = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <inheritdoc />
     public IReadOnlyList<string> List(string prefix)
         => _entries.Keys.Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).Order().ToList();
 
+    /// <inheritdoc />
+    /// <remarks>A name that is not a plain file name throws <see cref="ArgumentException"/>.</remarks>
     public Stream? OpenRead(string name)
         => _entries.TryGetValue(name, out var bytes) ? new MemoryStream(bytes, writable: false) : null;
 
+    /// <inheritdoc />
     public Stream OpenWrite(string name) => new CommitOnDisposeStream(bytes => _entries[name] = bytes);
 
+    /// <inheritdoc />
     public bool Delete(string name) => _entries.Remove(name);
 
     private sealed class CommitOnDisposeStream(Action<byte[]> commit) : MemoryStream

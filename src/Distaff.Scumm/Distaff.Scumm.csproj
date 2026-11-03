@@ -4,12 +4,18 @@
     <Description>The SCUMM interpreter for Loom (EGA, VGA CD and FM Towns), ported from ScummVM.</Description>
     <!-- optimized in Debug too: the per-pixel drawing is slow unoptimized -->
     <Optimize>true</Optimize>
+    <!-- every public member is documented: a missing comment fails the build -->
+    <NoWarn>$(NoWarn.Replace('CS1591', ''))</NoWarn>
     <!-- the published release this one must not break: package validation compares the packed
          library with it, and a public member removed or changed since fails the pack. After each
-         release, it becomes that release. -->
-    <PackageValidationBaselineVersion>0.1.0-alpha</PackageValidationBaselineVersion>
+         release, it becomes that release. 0.2.0 narrows 0.1.0-alpha's public API on purpose, so
+         there is none until 0.2.0 is out, which it then becomes. Meanwhile PublicAPI.*.txt keeps
+         the surface: a public member added, changed or removed fails the build until it is
+         written there. -->
+    <!-- <PackageValidationBaselineVersion>0.2.0-alpha</PackageValidationBaselineVersion> -->
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Distaff.Scumm.Tests" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
   </ItemGroup>
 </Project>

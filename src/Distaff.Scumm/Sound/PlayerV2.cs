@@ -13,7 +13,7 @@ namespace Distaff.Scumm.Sound;
 /// A sound resource starts with its 4-byte header, then its priority and whether it may be
 /// resumed, then the start of each channel's program: one set for the speaker, one for the PCjr.
 /// </remarks>
-public class PlayerV2 : SpeakerSynth
+internal class PlayerV2 : SpeakerSynth
 {
     // the 16-bit fields of channel_data, by index
     private const int TimeLeft = 0, NextCommand = 1, BaseFreq = 2, FreqDelta = 3, Freq = 4, Volume = 5,

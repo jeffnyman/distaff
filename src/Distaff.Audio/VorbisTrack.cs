@@ -4,7 +4,7 @@ using NVorbis;
 namespace Distaff.Audio;
 
 /// <summary>A CD track in Ogg Vorbis, decoded by NVorbis (ScummVM's <c>makeVorbisStream</c>, on libvorbis).</summary>
-public sealed class VorbisTrack(Stream stream) : ICdTrack
+internal sealed class VorbisTrack(Stream stream) : ICdTrack
 {
     private readonly VorbisReader _reader = new(stream, closeOnDispose: true);
 

@@ -5,7 +5,7 @@ namespace Distaff.Scumm.Rooms;
 /// in between. Mirrors ScummVM's <c>ScaleSlot</c>, <c>setScaleSlot</c> and <c>getScaleFromSlot</c>.
 /// Version 4 rooms set them from their <c>SA</c> block, with x always 0; scripts may set them too.
 /// </summary>
-public readonly record struct ScaleSlot(int X1, int Y1, int Scale1, int X2, int Y2, int Scale2)
+internal readonly record struct ScaleSlot(int X1, int Y1, int Scale1, int X2, int Y2, int Scale2)
 {
     /// <summary>How many slots there are (<c>_scaleSlots</c>), numbered from 1.</summary>
     public const int Count = 20;

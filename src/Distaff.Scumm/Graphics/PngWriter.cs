@@ -12,14 +12,14 @@ public static class PngWriter
 {
     private static readonly uint[] CrcTable = BuildCrcTable();
 
-    public static byte[] Encode(Surface8 surface, ReadOnlySpan<Rgb> palette, int scaleX = 1, int scaleY = 1)
+    internal static byte[] Encode(Surface8 surface, ReadOnlySpan<Rgb> palette, int scaleX = 1, int scaleY = 1)
     {
         using var stream = new MemoryStream();
         Write(stream, surface, palette, scaleX, scaleY);
         return stream.ToArray();
     }
 
-    public static void Write(Stream stream, Surface8 surface, ReadOnlySpan<Rgb> palette, int scaleX = 1, int scaleY = 1)
+    internal static void Write(Stream stream, Surface8 surface, ReadOnlySpan<Rgb> palette, int scaleX = 1, int scaleY = 1)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(scaleX, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(scaleY, 1);

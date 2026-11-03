@@ -6,7 +6,7 @@ namespace Distaff.Scumm.Detection;
 /// How a release's resource files are laid out, which follows from the engine class ScummVM's
 /// <c>metaengine.cpp</c> creates for it.
 /// </summary>
-public enum ResourceLayout
+internal enum ResourceLayout
 {
     /// <summary>
     /// <c>ScummEngine_v3old</c>: 16 colours, 4-byte resource headers (<c>GF_OLD_BUNDLE</c>), the
@@ -34,7 +34,7 @@ public enum ResourceLayout
 /// <param name="Layout">How the resource files are laid out.</param>
 /// <param name="IsDemo">True for the demo releases.</param>
 /// <param name="Tag">The tag ScummVM names the release's target with, or null (<c>preferredTag</c>).</param>
-public sealed record ScummGame(Md5Entry Entry, int Version, ResourceLayout Layout, bool IsDemo, string? Tag = null)
+internal sealed record ScummGame(Md5Entry Entry, int Version, ResourceLayout Layout, bool IsDemo, string? Tag = null)
 {
     // ScummVM's short names for the platforms Loom came out on (getPlatformAbbrev)
     private static readonly Dictionary<string, string> PlatformAbbreviations = new()
@@ -89,7 +89,7 @@ public sealed record ScummGame(Md5Entry Entry, int Version, ResourceLayout Layou
 /// first megabyte of the room-0 index file, 00.LFL for the version 3 releases and 000.LFL for
 /// the VGA CD. The Steam releases, detected by their executable, are not identified.
 /// </summary>
-public static class ScummDetector
+internal static class ScummDetector
 {
     /// <summary>ScummVM hashes at most this much of a detection file (<c>kMD5FileSizeLimit</c>).</summary>
     private const int Md5FileSizeLimit = 1024 * 1024;

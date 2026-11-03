@@ -6,8 +6,10 @@ namespace Distaff.Scumm.Hosting;
 /// <summary>Where a recording goes: the frames, each shown for some frames of the video, and the sound.</summary>
 public interface IVideoEncoder : IDisposable
 {
+    /// <summary>Writes a frame, shown for <paramref name="count"/> frames of the video.</summary>
     void WriteFrame(RgbFrame frame, int count);
 
+    /// <summary>Writes the sound that plays with the frames written, as stereo samples, left and right in turn.</summary>
     void WriteAudio(ReadOnlySpan<short> interleavedStereo);
 
     /// <summary>Ends the recording and writes it out.</summary>
@@ -24,6 +26,7 @@ public interface IVideoEncoder : IDisposable
 /// </summary>
 public sealed class VideoRecorder : IDisposable
 {
+    /// <summary>The video's frames a second, unless told otherwise.</summary>
     public const int DefaultFrameRate = 60;
 
     private readonly IVideoEncoder _encoder;
@@ -33,6 +36,11 @@ public sealed class VideoRecorder : IDisposable
     private GameWorld? _world;
     private readonly short[] _audio = new short[4096 * 2];
 
+    /// <summary>A recorder writing to an encoder.</summary>
+    /// <param name="encoder">Where the video goes.</param>
+    /// <param name="sampleRate">The game's sound's rate, in stereo frames a second.</param>
+    /// <param name="frameRate">The video's frames a second.</param>
+    /// <param name="cursor">Whether the frames show the mouse's cursor.</param>
     public VideoRecorder(IVideoEncoder encoder, int sampleRate = GameWorld.DefaultSampleRate, int frameRate = DefaultFrameRate, bool cursor = true)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sampleRate, 0);
@@ -46,6 +54,7 @@ public sealed class VideoRecorder : IDisposable
     /// <summary>The time recorded.</summary>
     public TimeSpan Length { get; private set; }
 
+    /// <summary>The frames of the video written.</summary>
     public long FramesWritten { get; private set; }
 
     /// <summary>The stereo frames of sound written.</summary>
@@ -66,6 +75,7 @@ public sealed class VideoRecorder : IDisposable
         _encoder.Finish();
     }
 
+    /// <summary>Stops recording and lets the encoder go, without writing the video out unless <see cref="Finish"/> has.</summary>
     public void Dispose()
     {
         Stop();

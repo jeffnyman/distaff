@@ -72,10 +72,10 @@ public sealed partial class GameWorld
     private (Key Key, char Ascii, KeyModifiers Modifiers)? _guiKey;
 
     /// <summary>Whether ScummVM's <c>confirm_exit</c> is set: Quit asks first. Off, as ScummVM has it by default.</summary>
-    public bool ConfirmExit { get; set; }
+    internal bool ConfirmExit { get; set; }
 
     /// <summary>Whether the menu or a banner is up, and the game waits.</summary>
-    public bool InInterface => _menuActive || _banner is not null || _oldBanner is not null;
+    internal bool InInterface => _menuActive || _banner is not null || _oldBanner is not null;
 
     /// <summary>Whether the menu is open (<c>_mainMenuIsActive</c>).</summary>
     public bool MenuActive => _menuActive;
@@ -84,7 +84,7 @@ public sealed partial class GameWorld
     public string? BannerText => _banner?.Text ?? _oldBanner?.Text;
 
     /// <summary>The save slots the menu lists, as it labels them (<c>_savegameNames</c>).</summary>
-    public IReadOnlyList<string> SavegameLabels => _savegameNames;
+    internal IReadOnlyList<string> SavegameLabels => _savegameNames;
 
     /// <summary>A control of the interface and its look. Mirrors <c>InternalGUIControl</c>.</summary>
     private sealed class GuiControl

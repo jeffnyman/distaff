@@ -7,6 +7,7 @@ namespace Distaff.Scumm.Graphics;
 /// </summary>
 public sealed class RgbFrame
 {
+    /// <summary>A frame of a size, black.</summary>
     public RgbFrame(int width, int height)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(width);
@@ -16,23 +17,27 @@ public sealed class RgbFrame
         Pixels = new Rgb[width * height];
     }
 
+    /// <summary>The frame's width, in pixels.</summary>
     public int Width { get; }
 
+    /// <summary>The frame's height, in pixels.</summary>
     public int Height { get; }
 
     /// <summary>The colours, row by row.</summary>
     public Rgb[] Pixels { get; }
 
+    /// <summary>The colour of a pixel.</summary>
     public Rgb this[int x, int y]
     {
         get => Pixels[y * Width + x];
         set => Pixels[y * Width + x] = value;
     }
 
+    /// <summary>A row's colours, from the left.</summary>
     public Span<Rgb> Row(int y) => Pixels.AsSpan(y * Width, Width);
 
     /// <summary>An 8-bit picture in the colours of its palette.</summary>
-    public static RgbFrame FromIndexed(Surface8 surface, ReadOnlySpan<Rgb> palette)
+    internal static RgbFrame FromIndexed(Surface8 surface, ReadOnlySpan<Rgb> palette)
     {
         var frame = new RgbFrame(surface.Width, surface.Height);
         for (int i = 0; i < surface.Pixels.Length; i++)

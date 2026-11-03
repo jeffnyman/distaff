@@ -47,6 +47,7 @@ public static class CdTrackFiles
         return null;
     }
 
+    /// <summary>A track opened from its file in a folder, decoded as its extension says; null when there is none.</summary>
     public static ICdTrack? Open(string folder, int track)
     {
         if (Find(folder, track) is not { } path)

@@ -8,8 +8,10 @@ namespace Distaff.Scumm.Sound;
 /// </summary>
 public interface IMidiDevice
 {
+    /// <summary>Takes a channel message, packed as ScummVM packs it: status | data1 &lt;&lt; 8 | data2 &lt;&lt; 16.</summary>
     void Send(uint message);
 
+    /// <summary>Takes a system exclusive message, without its F0 and F7.</summary>
     void SysEx(ReadOnlySpan<byte> message);
 
     /// <summary>Renders interleaved stereo.</summary>

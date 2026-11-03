@@ -1,17 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>true</IsPackable>
+    <!-- every public member is documented: a missing comment fails the build -->
+    <NoWarn>$(NoWarn.Replace('CS1591', ''))</NoWarn>
     <Description>Decoders for the CD audio tracks Loom's CD releases play from files: FLAC, and Ogg Vorbis; and the MT-32 emulator, a port of Munt (LGPL 2.1 or later), for the EGA's Roland Upgrade.</Description>
     <!-- Distaff's own code, and Munt's, whose files keep its licence -->
     <PackageLicenseExpression>GPL-3.0-or-later AND LGPL-2.1-or-later</PackageLicenseExpression>
     <!-- the published release this one must not break: package validation compares the packed
          library with it, and a public member removed or changed since fails the pack. After each
-         release, it becomes that release. -->
-    <PackageValidationBaselineVersion>0.1.0-alpha</PackageValidationBaselineVersion>
+         release, it becomes that release. 0.2.0 narrows 0.1.0-alpha's public API on purpose, so
+         there is none until 0.2.0 is out, which it then becomes. -->
+    <!-- <PackageValidationBaselineVersion>0.2.0-alpha</PackageValidationBaselineVersion> -->
   </PropertyGroup>
   <ItemGroup>
     <!-- the tests drive Munt's synth as its reference harness does -->
     <InternalsVisibleTo Include="Distaff.Scumm.Tests" />
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
     <ProjectReference Include="..\Distaff.Scumm\Distaff.Scumm.csproj" />
     <PackageReference Include="NVorbis" />
   </ItemGroup>

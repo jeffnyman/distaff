@@ -9,11 +9,13 @@ namespace Distaff.Scumm.Tests;
 public class DetectionTests
 {
     [Theory]
-    [InlineData(GameFolders.Ega, "EGA", 3, ResourceLayout.V3Old, "dos", "37f56ceb13e401a7ac7d9e6b37fecaf7")]
-    [InlineData(GameFolders.Vga, "VGA", 4, ResourceLayout.V4, "dos", "5d88b9d6a88e6f8e90cded9d01b7f082")]
-    [InlineData(GameFolders.FmTowns, "FM-TOWNS", 3, ResourceLayout.V3Old256, "fmtowns", "c5d10e190d4b4d59114b824f2fdbd00e")]
-    public void Identifies_each_release(string folder, string variant, int version, ResourceLayout layout, string platform, string md5)
+    [InlineData(GameFolders.Ega, "EGA", 3, nameof(ResourceLayout.V3Old), "dos", "37f56ceb13e401a7ac7d9e6b37fecaf7")]
+    [InlineData(GameFolders.Vga, "VGA", 4, nameof(ResourceLayout.V4), "dos", "5d88b9d6a88e6f8e90cded9d01b7f082")]
+    [InlineData(GameFolders.FmTowns, "FM-TOWNS", 3, nameof(ResourceLayout.V3Old256), "fmtowns", "c5d10e190d4b4d59114b824f2fdbd00e")]
+    public void Identifies_each_release(string folder, string variant, int version, string layoutName, string platform, string md5)
     {
+        var layout = Enum.Parse<ResourceLayout>(layoutName);
+
         if (GameFolders.Find(folder) is not { } path)
         {
             return;

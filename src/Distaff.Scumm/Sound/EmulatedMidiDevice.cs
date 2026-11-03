@@ -41,10 +41,13 @@ public abstract class EmulatedMidiDevice : IMidiDevice
         SetTimer(DefaultTimerFrequency, null);
     }
 
+    /// <summary>The rate the device is played at, in stereo frames a second.</summary>
     public int OutputRate { get; }
 
+    /// <inheritdoc />
     public abstract void Send(uint message);
 
+    /// <inheritdoc />
     public abstract void SysEx(ReadOnlySpan<byte> message);
 
     /// <summary>Renders <paramref name="frames"/> frames of interleaved stereo at the device's own rate (<c>generateSamples</c>).</summary>

@@ -1,7 +1,7 @@
 namespace Distaff.Scumm.Graphics;
 
 /// <summary>The colours the releases draw in.</summary>
-public static class Palettes
+internal static class Palettes
 {
     /// <summary>The 16 EGA colours. Mirrors ScummVM's <c>tableEGAPalette</c> in <c>palette.cpp</c>.</summary>
     public static readonly Rgb[] Ega =

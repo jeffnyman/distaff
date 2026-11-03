@@ -11,7 +11,7 @@ namespace Distaff.Scumm.Game;
 /// its initial, or with the arrow keys and Return; Escape closes the dialog as ScummVM's does,
 /// leaving the level at 0, Practice.
 /// </summary>
-public sealed class DifficultyChooser
+internal sealed class DifficultyChooser
 {
     private const int ButtonWidth = 96, ButtonHeight = 16, ButtonGap = 6;
     private const byte Background = 0, Text = 1, Border = 2, Lit = 3, Outline = 4;

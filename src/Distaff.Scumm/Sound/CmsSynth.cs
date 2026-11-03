@@ -7,7 +7,7 @@ namespace Distaff.Scumm.Sound;
 /// first and second chip, 0x221 and 0x223 choosing its register. Mirrors ScummVM's
 /// <c>DOSBoxCMS</c> (<c>audio/softsynth/cms.cpp</c>), taken from DOSBox and MAME.
 /// </summary>
-public sealed class CmsSynth
+internal sealed class CmsSynth
 {
     private const int Left = 0, Right = 1;
 

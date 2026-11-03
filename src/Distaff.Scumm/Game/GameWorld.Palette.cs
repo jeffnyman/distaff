@@ -10,7 +10,7 @@ namespace Distaff.Scumm.Game;
 public sealed partial class GameWorld
 {
     /// <summary>How many colour cycles a room has (<c>_colorCycle</c>).</summary>
-    public const int ColorCycleCount = 16;
+    internal const int ColorCycleCount = 16;
 
     /// <summary>A cycle's delay meaning "do not run", as Loom's rooms mark their unused cycles.</summary>
     private const int UnusedCycle = 0x0AAA;

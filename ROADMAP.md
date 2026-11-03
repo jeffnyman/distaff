@@ -1716,6 +1716,43 @@ A run, or a walkthrough, recorded as a video, as a window shows and plays it.
   rates, from world to world and through the pause banner. ffmpeg itself is checked when it is to
   be had (`Ffmpeg_writes_the_video`); a run with none says it needs it.
 
+## The libraries' public API
+
+0.1.0-alpha published the libraries with nearly all of the engine public (141 types in
+`Distaff.Scumm`, 13 in `Distaff.Audio`): the port never chose an API, and `GameWorld` handed out
+its script engine, actors, verbs, screens and sound. A 1.0 would have frozen all of it. 0.2.0
+chooses one, as Maniacal's is chosen:
+
+- `Loom` is the front door: `Loom.Open(folder)` names the release (`Description`, `Variant`,
+  `Version`, `IndexMd5`, `Target`), and gives a headless game (`Play`), an inspector (`Inspect`),
+  or the engine for a host (`CreateEngine`).
+- `GameWorld` keeps what a headless driver needs: boot, step, click, keys, the frame, saves,
+  the settings, the messages, and its sound as `Audio`, `MusicVolume` and `SfxVolume`. In place
+  of the engine's own objects it gives snapshots: `GetActor` and `ActorsHere` (`ActorInfo`),
+  `RunningScripts` (`RunningScript`), `ShownVerbs` (`VerbInfo`), `CameraX` and `Variables`.
+  What the script engine and the actors ask of it (`IScriptHost`, `IActorWorld`) is implemented
+  explicitly, so it stays internal.
+- `Inspection.GameInspector` draws a room (`RoomPicture`: the picture, its mask and objects) and
+  disassembles scripts (`ScriptListing`), and lists the rooms and scripts. The player's `--room`,
+  `--script` and `--room-scripts` are built on it, and the whole player on the public API alone:
+  it does not see the libraries' internals, which is the check that the API is enough.
+- Public too: the host contract (`Engine`, `IHost` and its drivers, the headless host, input,
+  logs, `TickResult`, `AudioVolume`), `Rgb`, `RgbFrame` and `PngWriter`, the game's files and
+  saves, the sound devices and `IMidiDevice`/`ICdTrack`, `WavWriter`, and the video recorder.
+  Internal: rooms, costumes, scripts, the sound players and iMuse, screens, resources and
+  detection. 55 public types are left in `Distaff.Scumm`; in `Distaff.Audio`, 8: `CdTrackFiles`,
+  `Mt32Emulator` and the ROMs' types, the FLAC and Vorbis decoders and Munt's settings internal.
+- Every public member is documented (CS1591 is an error in both libraries); the host contract's
+  comments came from Maniacal's, where its code is the same. `PublicAPI.*.txt`
+  (`Microsoft.CodeAnalysis.PublicApiAnalyzers`) keeps the surface, 795 symbols and 66: a change
+  fails the build until it is written there.
+- Package validation against 0.1.0-alpha is off for 0.2.0, whose narrowing is on purpose; after
+  0.2.0 it compares with 0.2.0, and `PublicAPI.Unshipped.txt` moves to `PublicAPI.Shipped.txt`.
+- Tests that took internal enums as theory parameters take their names instead, as xUnit's
+  public test methods cannot have internal parameter types. `PublicApiTests` uses the API as a
+  package user would, and a console app outside the repository, restoring the packed packages,
+  ran the README's example.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above
@@ -1762,3 +1799,10 @@ Sharing Distaff:
 20. (Done: `dotnet publish -c Release -r win-x64` gives one `distaff.exe`; see "A release build".)
 21. A check that it runs on Linux and macOS: the window on each, and anything at all on macOS. (Building and the tests are CI's; the Linux player runs headless as on Windows; see "Continuous integration".)
 22. (Done: builds, tests and publishes on Windows, Linux and macOS; see "Continuous integration".)
+
+Toward 1.0:
+
+24. (Done: the libraries' public API chosen, documented and kept in `PublicAPI.*.txt`; see "The libraries' public API".) After 0.2.0 is out: package validation against it, and the API files' Unshipped moved to Shipped.
+25. `--version` for the player, as Maniacal's has.
+26. Print slots 2 and 3 handled as ScummVM does (`debugMessage`, `showMessageDialog`), so a whole walkthrough leaves nothing unhandled; the VGA CD's `printString(2, "assigning-drafts")` is the only one now, and ScummVM does nothing with it outside its debug mode. Then a test that each walkthrough ends with nothing unhandled.
+27. The README to name items 2 and 3 above as known limitations.

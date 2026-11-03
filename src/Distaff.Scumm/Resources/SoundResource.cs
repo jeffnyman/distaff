@@ -15,7 +15,7 @@ namespace Distaff.Scumm.Resources;
 /// variable says Roland (<c>isRolandLoom</c>), so the scripts must start these in place of the
 /// others then. They are not read as two blocks.
 /// </remarks>
-public sealed class SoundResource
+internal sealed class SoundResource
 {
     private SoundResource(int number, ReadOnlyMemory<byte> speaker, ReadOnlyMemory<byte> adlib)
     {

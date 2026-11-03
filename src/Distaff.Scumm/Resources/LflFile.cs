@@ -7,7 +7,7 @@ namespace Distaff.Scumm.Resources;
 /// with <see cref="EncodingKey"/>. Mirrors ScummVM's <c>ScummFile</c> opened with the encoding byte
 /// that <c>getEncByte</c> gives version 3 games with <c>GF_USE_KEY</c>.
 /// </summary>
-public static class LflFile
+internal static class LflFile
 {
     public const byte EncodingKey = 0xFF;
 

@@ -1,0 +1,796 @@
+#nullable enable
+Distaff.Scumm.Game.ActorInfo
+Distaff.Scumm.Game.ActorInfo.<Clone>$() -> Distaff.Scumm.Game.ActorInfo!
+Distaff.Scumm.Game.ActorInfo.ActorInfo() -> void
+Distaff.Scumm.Game.ActorInfo.Costume.get -> int
+Distaff.Scumm.Game.ActorInfo.Costume.init -> void
+Distaff.Scumm.Game.ActorInfo.Elevation.get -> int
+Distaff.Scumm.Game.ActorInfo.Elevation.init -> void
+Distaff.Scumm.Game.ActorInfo.Equals(Distaff.Scumm.Game.ActorInfo? other) -> bool
+Distaff.Scumm.Game.ActorInfo.Facing.get -> int
+Distaff.Scumm.Game.ActorInfo.Facing.init -> void
+Distaff.Scumm.Game.ActorInfo.Frame.get -> int
+Distaff.Scumm.Game.ActorInfo.Frame.init -> void
+Distaff.Scumm.Game.ActorInfo.Moving.get -> int
+Distaff.Scumm.Game.ActorInfo.Moving.init -> void
+Distaff.Scumm.Game.ActorInfo.Name.get -> string!
+Distaff.Scumm.Game.ActorInfo.Name.init -> void
+Distaff.Scumm.Game.ActorInfo.Number.get -> int
+Distaff.Scumm.Game.ActorInfo.Number.init -> void
+Distaff.Scumm.Game.ActorInfo.Room.get -> int
+Distaff.Scumm.Game.ActorInfo.Room.init -> void
+Distaff.Scumm.Game.ActorInfo.Visible.get -> bool
+Distaff.Scumm.Game.ActorInfo.Visible.init -> void
+Distaff.Scumm.Game.ActorInfo.WalkBox.get -> int
+Distaff.Scumm.Game.ActorInfo.WalkBox.init -> void
+Distaff.Scumm.Game.ActorInfo.X.get -> int
+Distaff.Scumm.Game.ActorInfo.X.init -> void
+Distaff.Scumm.Game.ActorInfo.Y.get -> int
+Distaff.Scumm.Game.ActorInfo.Y.init -> void
+Distaff.Scumm.Game.GameWorld
+Distaff.Scumm.Game.GameWorld.ActorsHere() -> System.Collections.Generic.IReadOnlyList<Distaff.Scumm.Game.ActorInfo!>!
+Distaff.Scumm.Game.GameWorld.Audio.get -> Distaff.Scumm.Hosting.IAudioSource!
+Distaff.Scumm.Game.GameWorld.BannerText.get -> string?
+Distaff.Scumm.Game.GameWorld.Boot(int bootParam = 0) -> void
+Distaff.Scumm.Game.GameWorld.CameraX.get -> int
+Distaff.Scumm.Game.GameWorld.Click(int x, int y, bool right = false) -> void
+Distaff.Scumm.Game.GameWorld.CopyProtection.get -> bool
+Distaff.Scumm.Game.GameWorld.CopyProtection.set -> void
+Distaff.Scumm.Game.GameWorld.CurrentRoomNumber.get -> int
+Distaff.Scumm.Game.GameWorld.Frame(bool cursor = true) -> Distaff.Scumm.Graphics.RgbFrame!
+Distaff.Scumm.Game.GameWorld.GetActor(int number) -> Distaff.Scumm.Game.ActorInfo!
+Distaff.Scumm.Game.GameWorld.KeyDown(Distaff.Scumm.Input.Key key, Distaff.Scumm.Input.KeyModifiers modifiers, char ascii) -> void
+Distaff.Scumm.Game.GameWorld.Load(byte[]! file) -> Distaff.Scumm.Saves.SaveInfo!
+Distaff.Scumm.Game.GameWorld.MenuActive.get -> bool
+Distaff.Scumm.Game.GameWorld.MessageLog.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Distaff.Scumm.Game.GameWorld.MessageText.get -> string!
+Distaff.Scumm.Game.GameWorld.MoveMouse(int x, int y) -> void
+Distaff.Scumm.Game.GameWorld.MusicVolume.get -> int
+Distaff.Scumm.Game.GameWorld.MusicVolume.set -> void
+Distaff.Scumm.Game.GameWorld.QuitRequested.get -> bool
+Distaff.Scumm.Game.GameWorld.RestartRequested.get -> bool
+Distaff.Scumm.Game.GameWorld.RunningScripts() -> System.Collections.Generic.IReadOnlyList<Distaff.Scumm.Game.RunningScript>!
+Distaff.Scumm.Game.GameWorld.Save(string! name, System.DateTime saved, int version = 108) -> byte[]!
+Distaff.Scumm.Game.GameWorld.SaveStore.get -> Distaff.Scumm.Storage.ISaveStore?
+Distaff.Scumm.Game.GameWorld.SaveStore.set -> void
+Distaff.Scumm.Game.GameWorld.SaveTarget.get -> string!
+Distaff.Scumm.Game.GameWorld.SaveTarget.set -> void
+Distaff.Scumm.Game.GameWorld.SaveVersion.get -> int
+Distaff.Scumm.Game.GameWorld.SaveVersion.set -> void
+Distaff.Scumm.Game.GameWorld.SemiSmoothScrolling.get -> bool
+Distaff.Scumm.Game.GameWorld.SemiSmoothScrolling.set -> void
+Distaff.Scumm.Game.GameWorld.SfxVolume.get -> int
+Distaff.Scumm.Game.GameWorld.SfxVolume.set -> void
+Distaff.Scumm.Game.GameWorld.ShownVerbs() -> System.Collections.Generic.IReadOnlyList<Distaff.Scumm.Game.VerbInfo>!
+Distaff.Scumm.Game.GameWorld.SmoothScrolling.get -> bool
+Distaff.Scumm.Game.GameWorld.SmoothScrolling.set -> void
+Distaff.Scumm.Game.GameWorld.SoundsStarted.get -> System.Collections.Generic.IReadOnlyList<int>!
+Distaff.Scumm.Game.GameWorld.Step() -> void
+Distaff.Scumm.Game.GameWorld.StepLength.get -> System.TimeSpan
+Distaff.Scumm.Game.GameWorld.Stepped -> System.Action<Distaff.Scumm.Game.GameWorld!>?
+Distaff.Scumm.Game.GameWorld.Steps.get -> int
+Distaff.Scumm.Game.GameWorld.Subtitles.get -> bool
+Distaff.Scumm.Game.GameWorld.Subtitles.set -> void
+Distaff.Scumm.Game.GameWorld.TextSpeed.get -> int
+Distaff.Scumm.Game.GameWorld.TextSpeed.set -> void
+Distaff.Scumm.Game.GameWorld.Time.get -> System.TimeSpan
+Distaff.Scumm.Game.GameWorld.Unhandled.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Distaff.Scumm.Game.GameWorld.Variables.get -> System.Collections.Generic.IReadOnlyList<int>!
+Distaff.Scumm.Game.GameWorld.Version.get -> int
+Distaff.Scumm.Game.GameWorld.Wheel(bool up) -> void
+Distaff.Scumm.Game.RunningScript
+Distaff.Scumm.Game.RunningScript.Deconstruct(out int Number, out Distaff.Scumm.Scripts.ScriptKind Kind, out bool Waiting, out int Delay, out bool Frozen) -> void
+Distaff.Scumm.Game.RunningScript.Delay.get -> int
+Distaff.Scumm.Game.RunningScript.Delay.init -> void
+Distaff.Scumm.Game.RunningScript.Equals(Distaff.Scumm.Game.RunningScript other) -> bool
+Distaff.Scumm.Game.RunningScript.Frozen.get -> bool
+Distaff.Scumm.Game.RunningScript.Frozen.init -> void
+Distaff.Scumm.Game.RunningScript.Kind.get -> Distaff.Scumm.Scripts.ScriptKind
+Distaff.Scumm.Game.RunningScript.Kind.init -> void
+Distaff.Scumm.Game.RunningScript.Number.get -> int
+Distaff.Scumm.Game.RunningScript.Number.init -> void
+Distaff.Scumm.Game.RunningScript.RunningScript() -> void
+Distaff.Scumm.Game.RunningScript.RunningScript(int Number, Distaff.Scumm.Scripts.ScriptKind Kind, bool Waiting, int Delay, bool Frozen) -> void
+Distaff.Scumm.Game.RunningScript.Waiting.get -> bool
+Distaff.Scumm.Game.RunningScript.Waiting.init -> void
+Distaff.Scumm.Game.VerbInfo
+Distaff.Scumm.Game.VerbInfo.Bottom.get -> int
+Distaff.Scumm.Game.VerbInfo.Bottom.init -> void
+Distaff.Scumm.Game.VerbInfo.Deconstruct(out int Number, out int Left, out int Top, out int Right, out int Bottom) -> void
+Distaff.Scumm.Game.VerbInfo.Equals(Distaff.Scumm.Game.VerbInfo other) -> bool
+Distaff.Scumm.Game.VerbInfo.Left.get -> int
+Distaff.Scumm.Game.VerbInfo.Left.init -> void
+Distaff.Scumm.Game.VerbInfo.Middle.get -> (int X, int Y)
+Distaff.Scumm.Game.VerbInfo.Number.get -> int
+Distaff.Scumm.Game.VerbInfo.Number.init -> void
+Distaff.Scumm.Game.VerbInfo.Right.get -> int
+Distaff.Scumm.Game.VerbInfo.Right.init -> void
+Distaff.Scumm.Game.VerbInfo.Top.get -> int
+Distaff.Scumm.Game.VerbInfo.Top.init -> void
+Distaff.Scumm.Game.VerbInfo.VerbInfo() -> void
+Distaff.Scumm.Game.VerbInfo.VerbInfo(int Number, int Left, int Top, int Right, int Bottom) -> void
+Distaff.Scumm.Graphics.IGraphicsDriver
+Distaff.Scumm.Graphics.IGraphicsDriver.Present(Distaff.Scumm.Graphics.RgbFrame! frame) -> void
+Distaff.Scumm.Graphics.IGraphicsDriver.SetMode(int width, int height) -> void
+Distaff.Scumm.Graphics.IGraphicsDriver.SetTitle(string! title) -> void
+Distaff.Scumm.Graphics.PngWriter
+Distaff.Scumm.Graphics.Rgb
+Distaff.Scumm.Graphics.Rgb.B.get -> byte
+Distaff.Scumm.Graphics.Rgb.B.init -> void
+Distaff.Scumm.Graphics.Rgb.Deconstruct(out byte R, out byte G, out byte B) -> void
+Distaff.Scumm.Graphics.Rgb.Equals(Distaff.Scumm.Graphics.Rgb other) -> bool
+Distaff.Scumm.Graphics.Rgb.G.get -> byte
+Distaff.Scumm.Graphics.Rgb.G.init -> void
+Distaff.Scumm.Graphics.Rgb.R.get -> byte
+Distaff.Scumm.Graphics.Rgb.R.init -> void
+Distaff.Scumm.Graphics.Rgb.Rgb() -> void
+Distaff.Scumm.Graphics.Rgb.Rgb(byte R, byte G, byte B) -> void
+Distaff.Scumm.Graphics.RgbFrame
+Distaff.Scumm.Graphics.RgbFrame.Clone() -> Distaff.Scumm.Graphics.RgbFrame!
+Distaff.Scumm.Graphics.RgbFrame.Height.get -> int
+Distaff.Scumm.Graphics.RgbFrame.Pixels.get -> Distaff.Scumm.Graphics.Rgb[]!
+Distaff.Scumm.Graphics.RgbFrame.RgbFrame(int width, int height) -> void
+Distaff.Scumm.Graphics.RgbFrame.Row(int y) -> System.Span<Distaff.Scumm.Graphics.Rgb>
+Distaff.Scumm.Graphics.RgbFrame.Width.get -> int
+Distaff.Scumm.Graphics.RgbFrame.this[int x, int y].get -> Distaff.Scumm.Graphics.Rgb
+Distaff.Scumm.Graphics.RgbFrame.this[int x, int y].set -> void
+Distaff.Scumm.Hosting.AudioVolume
+Distaff.Scumm.Hosting.DetectedGame
+Distaff.Scumm.Hosting.DetectedGame.Deconstruct(out string! EngineId, out string! GameId, out string! Title, out string? Extra, out string? Language, out string? PlatformName) -> void
+Distaff.Scumm.Hosting.DetectedGame.DetectedGame(Distaff.Scumm.Hosting.DetectedGame! original) -> void
+Distaff.Scumm.Hosting.DetectedGame.DetectedGame(string! EngineId, string! GameId, string! Title, string? Extra = null, string? Language = null, string? PlatformName = null) -> void
+Distaff.Scumm.Hosting.DetectedGame.EngineId.get -> string!
+Distaff.Scumm.Hosting.DetectedGame.EngineId.init -> void
+Distaff.Scumm.Hosting.DetectedGame.Extra.get -> string?
+Distaff.Scumm.Hosting.DetectedGame.Extra.init -> void
+Distaff.Scumm.Hosting.DetectedGame.GameId.get -> string!
+Distaff.Scumm.Hosting.DetectedGame.GameId.init -> void
+Distaff.Scumm.Hosting.DetectedGame.Language.get -> string?
+Distaff.Scumm.Hosting.DetectedGame.Language.init -> void
+Distaff.Scumm.Hosting.DetectedGame.PlatformName.get -> string?
+Distaff.Scumm.Hosting.DetectedGame.PlatformName.init -> void
+Distaff.Scumm.Hosting.DetectedGame.Title.get -> string!
+Distaff.Scumm.Hosting.DetectedGame.Title.init -> void
+Distaff.Scumm.Hosting.DetectedGame.Variant.get -> string!
+Distaff.Scumm.Hosting.Engine
+Distaff.Scumm.Hosting.Engine.Detected.get -> Distaff.Scumm.Hosting.DetectedGame!
+Distaff.Scumm.Hosting.Engine.Engine(Distaff.Scumm.Hosting.IHost! host, Distaff.Scumm.Storage.IGameContainer! game, Distaff.Scumm.Hosting.DetectedGame! detected) -> void
+Distaff.Scumm.Hosting.Engine.Game.get -> Distaff.Scumm.Storage.IGameContainer!
+Distaff.Scumm.Hosting.Engine.Host.get -> Distaff.Scumm.Hosting.IHost!
+Distaff.Scumm.Hosting.FfmpegEncoder
+Distaff.Scumm.Hosting.FfmpegEncoder.Dispose() -> void
+Distaff.Scumm.Hosting.FfmpegEncoder.FfmpegEncoder(string! output, int scale = 4, int frameRate = 60, int sampleRate = 44100, string! ffmpeg = "ffmpeg") -> void
+Distaff.Scumm.Hosting.FfmpegEncoder.Finish() -> void
+Distaff.Scumm.Hosting.FfmpegEncoder.WriteAudio(System.ReadOnlySpan<short> interleavedStereo) -> void
+Distaff.Scumm.Hosting.FfmpegEncoder.WriteFrame(Distaff.Scumm.Graphics.RgbFrame! frame, int count) -> void
+Distaff.Scumm.Hosting.FfmpegException
+Distaff.Scumm.Hosting.FfmpegException.FfmpegException(string! message, System.Exception? inner = null) -> void
+Distaff.Scumm.Hosting.HeadlessAudio
+Distaff.Scumm.Hosting.HeadlessAudio.HeadlessAudio() -> void
+Distaff.Scumm.Hosting.HeadlessAudio.Pull(int frames) -> short[]!
+Distaff.Scumm.Hosting.HeadlessAudio.SampleRate.get -> int
+Distaff.Scumm.Hosting.HeadlessAudio.Source.get -> Distaff.Scumm.Hosting.IAudioSource?
+Distaff.Scumm.Hosting.HeadlessAudio.Start(Distaff.Scumm.Hosting.IAudioSource! source) -> void
+Distaff.Scumm.Hosting.HeadlessAudio.Stop() -> void
+Distaff.Scumm.Hosting.HeadlessAudio.Volume.get -> int
+Distaff.Scumm.Hosting.HeadlessAudio.Volume.set -> void
+Distaff.Scumm.Hosting.HeadlessGraphics
+Distaff.Scumm.Hosting.HeadlessGraphics.EncodePng(int scaleX = 1, int scaleY = 1) -> byte[]!
+Distaff.Scumm.Hosting.HeadlessGraphics.HeadlessGraphics() -> void
+Distaff.Scumm.Hosting.HeadlessGraphics.Height.get -> int
+Distaff.Scumm.Hosting.HeadlessGraphics.LastFrame.get -> Distaff.Scumm.Graphics.RgbFrame?
+Distaff.Scumm.Hosting.HeadlessGraphics.Present(Distaff.Scumm.Graphics.RgbFrame! frame) -> void
+Distaff.Scumm.Hosting.HeadlessGraphics.PresentCount.get -> int
+Distaff.Scumm.Hosting.HeadlessGraphics.SetMode(int width, int height) -> void
+Distaff.Scumm.Hosting.HeadlessGraphics.SetTitle(string! title) -> void
+Distaff.Scumm.Hosting.HeadlessGraphics.Title.get -> string!
+Distaff.Scumm.Hosting.HeadlessGraphics.Width.get -> int
+Distaff.Scumm.Hosting.HeadlessHost
+Distaff.Scumm.Hosting.HeadlessHost.Audio.get -> Distaff.Scumm.Hosting.HeadlessAudio!
+Distaff.Scumm.Hosting.HeadlessHost.Continue(Distaff.Scumm.Hosting.Engine! engine, int maxTicks) -> int
+Distaff.Scumm.Hosting.HeadlessHost.DeterministicTime.get -> bool
+Distaff.Scumm.Hosting.HeadlessHost.DeterministicTime.set -> void
+Distaff.Scumm.Hosting.HeadlessHost.Graphics.get -> Distaff.Scumm.Hosting.HeadlessGraphics!
+Distaff.Scumm.Hosting.HeadlessHost.HeadlessHost(Distaff.Scumm.Hosting.ILog? log = null, Distaff.Scumm.Storage.ISaveStore? saves = null) -> void
+Distaff.Scumm.Hosting.HeadlessHost.Input.get -> Distaff.Scumm.Hosting.HeadlessInput!
+Distaff.Scumm.Hosting.HeadlessHost.Log.get -> Distaff.Scumm.Hosting.ILog!
+Distaff.Scumm.Hosting.HeadlessHost.RandomSeed.get -> int?
+Distaff.Scumm.Hosting.HeadlessHost.RandomSeed.set -> void
+Distaff.Scumm.Hosting.HeadlessHost.Run(Distaff.Scumm.Hosting.Engine! engine, int maxTicks) -> int
+Distaff.Scumm.Hosting.HeadlessHost.Saves.get -> Distaff.Scumm.Storage.ISaveStore!
+Distaff.Scumm.Hosting.HeadlessHost.TickInterval.get -> System.TimeSpan
+Distaff.Scumm.Hosting.HeadlessHost.TickInterval.set -> void
+Distaff.Scumm.Hosting.HeadlessInput
+Distaff.Scumm.Hosting.HeadlessInput.GetMouseState() -> Distaff.Scumm.Input.MouseState
+Distaff.Scumm.Hosting.HeadlessInput.HeadlessInput() -> void
+Distaff.Scumm.Hosting.HeadlessInput.Mouse.get -> Distaff.Scumm.Input.MouseState
+Distaff.Scumm.Hosting.HeadlessInput.Mouse.set -> void
+Distaff.Scumm.Hosting.HeadlessInput.Push(Distaff.Scumm.Input.InputEvent inputEvent) -> void
+Distaff.Scumm.Hosting.HeadlessInput.PushKey(Distaff.Scumm.Input.Key key, Distaff.Scumm.Input.KeyModifiers modifiers = Distaff.Scumm.Input.KeyModifiers.None, char ascii = '\0') -> void
+Distaff.Scumm.Hosting.HeadlessInput.TryRead(out Distaff.Scumm.Input.InputEvent inputEvent) -> bool
+Distaff.Scumm.Hosting.IAudioDriver
+Distaff.Scumm.Hosting.IAudioDriver.SampleRate.get -> int
+Distaff.Scumm.Hosting.IAudioDriver.Start(Distaff.Scumm.Hosting.IAudioSource! source) -> void
+Distaff.Scumm.Hosting.IAudioDriver.Stop() -> void
+Distaff.Scumm.Hosting.IAudioDriver.Volume.get -> int
+Distaff.Scumm.Hosting.IAudioDriver.Volume.set -> void
+Distaff.Scumm.Hosting.IAudioSource
+Distaff.Scumm.Hosting.IAudioSource.Read(System.Span<short> interleavedStereo) -> void
+Distaff.Scumm.Hosting.IHost
+Distaff.Scumm.Hosting.IHost.Audio.get -> Distaff.Scumm.Hosting.IAudioDriver!
+Distaff.Scumm.Hosting.IHost.DeterministicTime.get -> bool
+Distaff.Scumm.Hosting.IHost.Graphics.get -> Distaff.Scumm.Graphics.IGraphicsDriver!
+Distaff.Scumm.Hosting.IHost.Input.get -> Distaff.Scumm.Input.IInputDriver!
+Distaff.Scumm.Hosting.IHost.Log.get -> Distaff.Scumm.Hosting.ILog!
+Distaff.Scumm.Hosting.IHost.RandomSeed.get -> int?
+Distaff.Scumm.Hosting.IHost.Saves.get -> Distaff.Scumm.Storage.ISaveStore!
+Distaff.Scumm.Hosting.ILog
+Distaff.Scumm.Hosting.ILog.Write(Distaff.Scumm.Hosting.LogLevel level, string! category, string! message) -> void
+Distaff.Scumm.Hosting.IVideoEncoder
+Distaff.Scumm.Hosting.IVideoEncoder.Finish() -> void
+Distaff.Scumm.Hosting.IVideoEncoder.WriteAudio(System.ReadOnlySpan<short> interleavedStereo) -> void
+Distaff.Scumm.Hosting.IVideoEncoder.WriteFrame(Distaff.Scumm.Graphics.RgbFrame! frame, int count) -> void
+Distaff.Scumm.Hosting.LogExtensions
+Distaff.Scumm.Hosting.LogLevel
+Distaff.Scumm.Hosting.LogLevel.Debug = 0 -> Distaff.Scumm.Hosting.LogLevel
+Distaff.Scumm.Hosting.LogLevel.Error = 3 -> Distaff.Scumm.Hosting.LogLevel
+Distaff.Scumm.Hosting.LogLevel.Info = 1 -> Distaff.Scumm.Hosting.LogLevel
+Distaff.Scumm.Hosting.LogLevel.Warning = 2 -> Distaff.Scumm.Hosting.LogLevel
+Distaff.Scumm.Hosting.NullLog
+Distaff.Scumm.Hosting.NullLog.NullLog() -> void
+Distaff.Scumm.Hosting.NullLog.Write(Distaff.Scumm.Hosting.LogLevel level, string! category, string! message) -> void
+Distaff.Scumm.Hosting.TextWriterLog
+Distaff.Scumm.Hosting.TextWriterLog.TextWriterLog(System.IO.TextWriter! writer, Distaff.Scumm.Hosting.LogLevel minimum = Distaff.Scumm.Hosting.LogLevel.Info) -> void
+Distaff.Scumm.Hosting.TextWriterLog.Write(Distaff.Scumm.Hosting.LogLevel level, string! category, string! message) -> void
+Distaff.Scumm.Hosting.TickResult
+Distaff.Scumm.Hosting.TickResult.Continue.get -> bool
+Distaff.Scumm.Hosting.TickResult.Continue.init -> void
+Distaff.Scumm.Hosting.TickResult.Deconstruct(out bool Continue, out System.TimeSpan Delay) -> void
+Distaff.Scumm.Hosting.TickResult.Delay.get -> System.TimeSpan
+Distaff.Scumm.Hosting.TickResult.Delay.init -> void
+Distaff.Scumm.Hosting.TickResult.Equals(Distaff.Scumm.Hosting.TickResult other) -> bool
+Distaff.Scumm.Hosting.TickResult.TickResult() -> void
+Distaff.Scumm.Hosting.TickResult.TickResult(bool Continue, System.TimeSpan Delay) -> void
+Distaff.Scumm.Hosting.TickSchedule
+Distaff.Scumm.Hosting.TickSchedule.Due.get -> System.TimeSpan
+Distaff.Scumm.Hosting.TickSchedule.MaxSleep.get -> System.TimeSpan
+Distaff.Scumm.Hosting.TickSchedule.MaxSleep.set -> void
+Distaff.Scumm.Hosting.TickSchedule.Next(System.TimeSpan delay) -> void
+Distaff.Scumm.Hosting.TickSchedule.SleepMilliseconds() -> int
+Distaff.Scumm.Hosting.TickSchedule.TickSchedule(System.Func<System.TimeSpan>! clock) -> void
+Distaff.Scumm.Hosting.VideoRecorder
+Distaff.Scumm.Hosting.VideoRecorder.AudioFramesWritten.get -> long
+Distaff.Scumm.Hosting.VideoRecorder.Dispose() -> void
+Distaff.Scumm.Hosting.VideoRecorder.Finish() -> void
+Distaff.Scumm.Hosting.VideoRecorder.FramesWritten.get -> long
+Distaff.Scumm.Hosting.VideoRecorder.Length.get -> System.TimeSpan
+Distaff.Scumm.Hosting.VideoRecorder.Record(Distaff.Scumm.Game.GameWorld! world) -> void
+Distaff.Scumm.Hosting.VideoRecorder.VideoRecorder(Distaff.Scumm.Hosting.IVideoEncoder! encoder, int sampleRate = 44100, int frameRate = 60, bool cursor = true) -> void
+Distaff.Scumm.Input.IInputDriver
+Distaff.Scumm.Input.IInputDriver.GetMouseState() -> Distaff.Scumm.Input.MouseState
+Distaff.Scumm.Input.IInputDriver.TryRead(out Distaff.Scumm.Input.InputEvent inputEvent) -> bool
+Distaff.Scumm.Input.InputEvent
+Distaff.Scumm.Input.InputEvent.Ascii.get -> char
+Distaff.Scumm.Input.InputEvent.Ascii.init -> void
+Distaff.Scumm.Input.InputEvent.Button.get -> Distaff.Scumm.Input.MouseButton
+Distaff.Scumm.Input.InputEvent.Button.init -> void
+Distaff.Scumm.Input.InputEvent.Deconstruct(out Distaff.Scumm.Input.InputEventType Type) -> void
+Distaff.Scumm.Input.InputEvent.Equals(Distaff.Scumm.Input.InputEvent other) -> bool
+Distaff.Scumm.Input.InputEvent.InputEvent() -> void
+Distaff.Scumm.Input.InputEvent.InputEvent(Distaff.Scumm.Input.InputEventType Type) -> void
+Distaff.Scumm.Input.InputEvent.Key.get -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.InputEvent.Key.init -> void
+Distaff.Scumm.Input.InputEvent.Modifiers.get -> Distaff.Scumm.Input.KeyModifiers
+Distaff.Scumm.Input.InputEvent.Modifiers.init -> void
+Distaff.Scumm.Input.InputEvent.Repeat.get -> bool
+Distaff.Scumm.Input.InputEvent.Repeat.init -> void
+Distaff.Scumm.Input.InputEvent.Type.get -> Distaff.Scumm.Input.InputEventType
+Distaff.Scumm.Input.InputEvent.Type.init -> void
+Distaff.Scumm.Input.InputEvent.Wheel.get -> int
+Distaff.Scumm.Input.InputEvent.Wheel.init -> void
+Distaff.Scumm.Input.InputEvent.X.get -> int
+Distaff.Scumm.Input.InputEvent.X.init -> void
+Distaff.Scumm.Input.InputEvent.Y.get -> int
+Distaff.Scumm.Input.InputEvent.Y.init -> void
+Distaff.Scumm.Input.InputEventType
+Distaff.Scumm.Input.InputEventType.KeyDown = 1 -> Distaff.Scumm.Input.InputEventType
+Distaff.Scumm.Input.InputEventType.KeyUp = 2 -> Distaff.Scumm.Input.InputEventType
+Distaff.Scumm.Input.InputEventType.MouseDown = 4 -> Distaff.Scumm.Input.InputEventType
+Distaff.Scumm.Input.InputEventType.MouseMove = 3 -> Distaff.Scumm.Input.InputEventType
+Distaff.Scumm.Input.InputEventType.MouseUp = 5 -> Distaff.Scumm.Input.InputEventType
+Distaff.Scumm.Input.InputEventType.MouseWheel = 6 -> Distaff.Scumm.Input.InputEventType
+Distaff.Scumm.Input.InputEventType.None = 0 -> Distaff.Scumm.Input.InputEventType
+Distaff.Scumm.Input.InputEventType.Quit = 7 -> Distaff.Scumm.Input.InputEventType
+Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.A = 97 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Ampersand = 38 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Asterisk = 42 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.At = 64 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.B = 98 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Backquote = 96 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Backslash = 92 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Backspace = 8 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.C = 99 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.CapsLock = 301 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Caret = 94 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Clear = 12 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Colon = 58 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Comma = 44 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D = 100 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D0 = 48 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D1 = 49 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D2 = 50 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D3 = 51 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D4 = 52 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D5 = 53 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D6 = 54 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D7 = 55 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D8 = 56 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.D9 = 57 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Delete = 127 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Dollar = 36 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Down = 274 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.E = 101 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.End = 279 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Equals = 61 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Escape = 27 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Exclaim = 33 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F = 102 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F1 = 282 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F10 = 291 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F11 = 292 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F12 = 293 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F13 = 294 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F14 = 295 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F15 = 296 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F2 = 283 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F3 = 284 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F4 = 285 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F5 = 286 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F6 = 287 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F7 = 288 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F8 = 289 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.F9 = 290 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.G = 103 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Greater = 62 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.H = 104 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Hash = 35 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Home = 278 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.I = 105 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Insert = 277 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.J = 106 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.K = 107 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Keypad0 = 256 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Keypad1 = 257 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Keypad2 = 258 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Keypad3 = 259 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Keypad4 = 260 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Keypad5 = 261 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Keypad6 = 262 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Keypad7 = 263 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Keypad8 = 264 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Keypad9 = 265 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.KeypadDivide = 267 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.KeypadEnter = 271 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.KeypadEquals = 272 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.KeypadMinus = 269 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.KeypadMultiply = 268 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.KeypadPeriod = 266 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.KeypadPlus = 270 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.L = 108 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Left = 276 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.LeftAlt = 308 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.LeftBracket = 91 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.LeftCtrl = 306 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.LeftMeta = 310 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.LeftParen = 40 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.LeftShift = 304 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Less = 60 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.M = 109 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Minus = 45 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.N = 110 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.None = 0 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.NumLock = 300 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.O = 111 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.P = 112 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.PageDown = 281 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.PageUp = 280 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Pause = 19 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Percent = 37 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Period = 46 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Plus = 43 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Q = 113 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Question = 63 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Quote = 39 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.QuoteDbl = 34 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.R = 114 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Return = 13 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Right = 275 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.RightAlt = 307 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.RightBracket = 93 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.RightCtrl = 305 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.RightMeta = 309 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.RightParen = 41 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.RightShift = 303 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.S = 115 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.ScrollLock = 302 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Semicolon = 59 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Slash = 47 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Space = 32 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.T = 116 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Tab = 9 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.U = 117 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Underscore = 95 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Up = 273 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.V = 118 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.W = 119 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.X = 120 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Y = 121 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.Key.Z = 122 -> Distaff.Scumm.Input.Key
+Distaff.Scumm.Input.KeyModifiers
+Distaff.Scumm.Input.KeyModifiers.Alt = 2 -> Distaff.Scumm.Input.KeyModifiers
+Distaff.Scumm.Input.KeyModifiers.CapsLock = 32 -> Distaff.Scumm.Input.KeyModifiers
+Distaff.Scumm.Input.KeyModifiers.Ctrl = 1 -> Distaff.Scumm.Input.KeyModifiers
+Distaff.Scumm.Input.KeyModifiers.Meta = 8 -> Distaff.Scumm.Input.KeyModifiers
+Distaff.Scumm.Input.KeyModifiers.None = 0 -> Distaff.Scumm.Input.KeyModifiers
+Distaff.Scumm.Input.KeyModifiers.NumLock = 16 -> Distaff.Scumm.Input.KeyModifiers
+Distaff.Scumm.Input.KeyModifiers.ScrollLock = 64 -> Distaff.Scumm.Input.KeyModifiers
+Distaff.Scumm.Input.KeyModifiers.Shift = 4 -> Distaff.Scumm.Input.KeyModifiers
+Distaff.Scumm.Input.MouseButton
+Distaff.Scumm.Input.MouseButton.Left = 1 -> Distaff.Scumm.Input.MouseButton
+Distaff.Scumm.Input.MouseButton.Middle = 3 -> Distaff.Scumm.Input.MouseButton
+Distaff.Scumm.Input.MouseButton.None = 0 -> Distaff.Scumm.Input.MouseButton
+Distaff.Scumm.Input.MouseButton.Right = 2 -> Distaff.Scumm.Input.MouseButton
+Distaff.Scumm.Input.MouseState
+Distaff.Scumm.Input.MouseState.Deconstruct(out int X, out int Y, out bool LeftDown, out bool RightDown, out bool MiddleDown) -> void
+Distaff.Scumm.Input.MouseState.Equals(Distaff.Scumm.Input.MouseState other) -> bool
+Distaff.Scumm.Input.MouseState.LeftDown.get -> bool
+Distaff.Scumm.Input.MouseState.LeftDown.init -> void
+Distaff.Scumm.Input.MouseState.MiddleDown.get -> bool
+Distaff.Scumm.Input.MouseState.MiddleDown.init -> void
+Distaff.Scumm.Input.MouseState.MouseState() -> void
+Distaff.Scumm.Input.MouseState.MouseState(int X, int Y, bool LeftDown, bool RightDown, bool MiddleDown) -> void
+Distaff.Scumm.Input.MouseState.RightDown.get -> bool
+Distaff.Scumm.Input.MouseState.RightDown.init -> void
+Distaff.Scumm.Input.MouseState.X.get -> int
+Distaff.Scumm.Input.MouseState.X.init -> void
+Distaff.Scumm.Input.MouseState.Y.get -> int
+Distaff.Scumm.Input.MouseState.Y.init -> void
+Distaff.Scumm.Inspection.GameInspector
+Distaff.Scumm.Inspection.GameInspector.Room(int number, Distaff.Scumm.Inspection.RoomObjects objects = Distaff.Scumm.Inspection.RoomObjects.Initial) -> Distaff.Scumm.Inspection.RoomPicture?
+Distaff.Scumm.Inspection.GameInspector.RoomScripts(int number) -> System.Collections.Generic.IReadOnlyList<Distaff.Scumm.Inspection.ScriptListing!>?
+Distaff.Scumm.Inspection.GameInspector.Rooms.get -> System.Collections.Generic.IReadOnlyList<int>!
+Distaff.Scumm.Inspection.GameInspector.Script(int number) -> Distaff.Scumm.Inspection.ScriptListing?
+Distaff.Scumm.Inspection.GameInspector.Scripts.get -> System.Collections.Generic.IReadOnlyList<int>!
+Distaff.Scumm.Inspection.GameInspector.Version.get -> int
+Distaff.Scumm.Inspection.ObjectInfo
+Distaff.Scumm.Inspection.ObjectInfo.<Clone>$() -> Distaff.Scumm.Inspection.ObjectInfo!
+Distaff.Scumm.Inspection.ObjectInfo.Equals(Distaff.Scumm.Inspection.ObjectInfo? other) -> bool
+Distaff.Scumm.Inspection.ObjectInfo.Height.get -> int
+Distaff.Scumm.Inspection.ObjectInfo.Height.init -> void
+Distaff.Scumm.Inspection.ObjectInfo.Name.get -> string!
+Distaff.Scumm.Inspection.ObjectInfo.Name.init -> void
+Distaff.Scumm.Inspection.ObjectInfo.Number.get -> int
+Distaff.Scumm.Inspection.ObjectInfo.Number.init -> void
+Distaff.Scumm.Inspection.ObjectInfo.ObjectInfo() -> void
+Distaff.Scumm.Inspection.ObjectInfo.Parent.get -> int
+Distaff.Scumm.Inspection.ObjectInfo.Parent.init -> void
+Distaff.Scumm.Inspection.ObjectInfo.State.get -> int
+Distaff.Scumm.Inspection.ObjectInfo.State.init -> void
+Distaff.Scumm.Inspection.ObjectInfo.Verbs.get -> System.Collections.Generic.IReadOnlyList<Distaff.Scumm.Inspection.ObjectVerb>!
+Distaff.Scumm.Inspection.ObjectInfo.Verbs.init -> void
+Distaff.Scumm.Inspection.ObjectInfo.WalkX.get -> int
+Distaff.Scumm.Inspection.ObjectInfo.WalkX.init -> void
+Distaff.Scumm.Inspection.ObjectInfo.WalkY.get -> int
+Distaff.Scumm.Inspection.ObjectInfo.WalkY.init -> void
+Distaff.Scumm.Inspection.ObjectInfo.Width.get -> int
+Distaff.Scumm.Inspection.ObjectInfo.Width.init -> void
+Distaff.Scumm.Inspection.ObjectInfo.X.get -> int
+Distaff.Scumm.Inspection.ObjectInfo.X.init -> void
+Distaff.Scumm.Inspection.ObjectInfo.Y.get -> int
+Distaff.Scumm.Inspection.ObjectInfo.Y.init -> void
+Distaff.Scumm.Inspection.ObjectVerb
+Distaff.Scumm.Inspection.ObjectVerb.Deconstruct(out int Verb, out int Offset) -> void
+Distaff.Scumm.Inspection.ObjectVerb.Equals(Distaff.Scumm.Inspection.ObjectVerb other) -> bool
+Distaff.Scumm.Inspection.ObjectVerb.IsFallback.get -> bool
+Distaff.Scumm.Inspection.ObjectVerb.ObjectVerb() -> void
+Distaff.Scumm.Inspection.ObjectVerb.ObjectVerb(int Verb, int Offset) -> void
+Distaff.Scumm.Inspection.ObjectVerb.Offset.get -> int
+Distaff.Scumm.Inspection.ObjectVerb.Offset.init -> void
+Distaff.Scumm.Inspection.ObjectVerb.Verb.get -> int
+Distaff.Scumm.Inspection.ObjectVerb.Verb.init -> void
+Distaff.Scumm.Inspection.RoomObjects
+Distaff.Scumm.Inspection.RoomObjects.All = 2 -> Distaff.Scumm.Inspection.RoomObjects
+Distaff.Scumm.Inspection.RoomObjects.Initial = 1 -> Distaff.Scumm.Inspection.RoomObjects
+Distaff.Scumm.Inspection.RoomObjects.None = 0 -> Distaff.Scumm.Inspection.RoomObjects
+Distaff.Scumm.Inspection.RoomPicture
+Distaff.Scumm.Inspection.RoomPicture.<Clone>$() -> Distaff.Scumm.Inspection.RoomPicture!
+Distaff.Scumm.Inspection.RoomPicture.EntryScript.get -> int
+Distaff.Scumm.Inspection.RoomPicture.EntryScript.init -> void
+Distaff.Scumm.Inspection.RoomPicture.Equals(Distaff.Scumm.Inspection.RoomPicture? other) -> bool
+Distaff.Scumm.Inspection.RoomPicture.ExitScript.get -> int
+Distaff.Scumm.Inspection.RoomPicture.ExitScript.init -> void
+Distaff.Scumm.Inspection.RoomPicture.Height.get -> int
+Distaff.Scumm.Inspection.RoomPicture.Height.init -> void
+Distaff.Scumm.Inspection.RoomPicture.LocalScripts.get -> System.Collections.Generic.IReadOnlyDictionary<int, int>!
+Distaff.Scumm.Inspection.RoomPicture.LocalScripts.init -> void
+Distaff.Scumm.Inspection.RoomPicture.Mask.get -> Distaff.Scumm.Graphics.RgbFrame!
+Distaff.Scumm.Inspection.RoomPicture.Mask.init -> void
+Distaff.Scumm.Inspection.RoomPicture.Number.get -> int
+Distaff.Scumm.Inspection.RoomPicture.Number.init -> void
+Distaff.Scumm.Inspection.RoomPicture.Objects.get -> System.Collections.Generic.IReadOnlyList<Distaff.Scumm.Inspection.ObjectInfo!>!
+Distaff.Scumm.Inspection.RoomPicture.Objects.init -> void
+Distaff.Scumm.Inspection.RoomPicture.Picture.get -> Distaff.Scumm.Graphics.RgbFrame!
+Distaff.Scumm.Inspection.RoomPicture.Picture.init -> void
+Distaff.Scumm.Inspection.RoomPicture.RoomPicture() -> void
+Distaff.Scumm.Inspection.RoomPicture.Scripts.get -> System.Collections.Generic.IReadOnlyList<int>!
+Distaff.Scumm.Inspection.RoomPicture.Scripts.init -> void
+Distaff.Scumm.Inspection.RoomPicture.Size.get -> int
+Distaff.Scumm.Inspection.RoomPicture.Size.init -> void
+Distaff.Scumm.Inspection.RoomPicture.Sounds.get -> System.Collections.Generic.IReadOnlyList<int>!
+Distaff.Scumm.Inspection.RoomPicture.Sounds.init -> void
+Distaff.Scumm.Inspection.RoomPicture.WalkBoxes.get -> int
+Distaff.Scumm.Inspection.RoomPicture.WalkBoxes.init -> void
+Distaff.Scumm.Inspection.RoomPicture.Width.get -> int
+Distaff.Scumm.Inspection.RoomPicture.Width.init -> void
+Distaff.Scumm.Inspection.ScriptLine
+Distaff.Scumm.Inspection.ScriptLine.Deconstruct(out int Offset, out int Length, out string! Text) -> void
+Distaff.Scumm.Inspection.ScriptLine.Equals(Distaff.Scumm.Inspection.ScriptLine other) -> bool
+Distaff.Scumm.Inspection.ScriptLine.Length.get -> int
+Distaff.Scumm.Inspection.ScriptLine.Length.init -> void
+Distaff.Scumm.Inspection.ScriptLine.Offset.get -> int
+Distaff.Scumm.Inspection.ScriptLine.Offset.init -> void
+Distaff.Scumm.Inspection.ScriptLine.ScriptLine() -> void
+Distaff.Scumm.Inspection.ScriptLine.ScriptLine(int Offset, int Length, string! Text) -> void
+Distaff.Scumm.Inspection.ScriptLine.Text.get -> string!
+Distaff.Scumm.Inspection.ScriptLine.Text.init -> void
+Distaff.Scumm.Inspection.ScriptListing
+Distaff.Scumm.Inspection.ScriptListing.<Clone>$() -> Distaff.Scumm.Inspection.ScriptListing!
+Distaff.Scumm.Inspection.ScriptListing.Equals(Distaff.Scumm.Inspection.ScriptListing? other) -> bool
+Distaff.Scumm.Inspection.ScriptListing.Lines.get -> System.Collections.Generic.IReadOnlyList<Distaff.Scumm.Inspection.ScriptLine>!
+Distaff.Scumm.Inspection.ScriptListing.Lines.init -> void
+Distaff.Scumm.Inspection.ScriptListing.Room.get -> int?
+Distaff.Scumm.Inspection.ScriptListing.Room.init -> void
+Distaff.Scumm.Inspection.ScriptListing.ScriptListing() -> void
+Distaff.Scumm.Inspection.ScriptListing.Size.get -> int?
+Distaff.Scumm.Inspection.ScriptListing.Size.init -> void
+Distaff.Scumm.Inspection.ScriptListing.Title.get -> string!
+Distaff.Scumm.Inspection.ScriptListing.Title.init -> void
+Distaff.Scumm.Inspection.ScriptListing.Unreached.get -> int
+Distaff.Scumm.Inspection.ScriptListing.Unreached.init -> void
+Distaff.Scumm.Inspection.ScriptListing.Verbs.get -> System.Collections.Generic.IReadOnlyList<Distaff.Scumm.Inspection.ObjectVerb>!
+Distaff.Scumm.Inspection.ScriptListing.Verbs.init -> void
+Distaff.Scumm.Loom
+Distaff.Scumm.Loom.CreateEngine(Distaff.Scumm.Hosting.IHost! host) -> Distaff.Scumm.ScummEngine!
+Distaff.Scumm.Loom.Description.get -> string!
+Distaff.Scumm.Loom.Detected.get -> Distaff.Scumm.Hosting.DetectedGame!
+Distaff.Scumm.Loom.Files.get -> Distaff.Scumm.Storage.IGameContainer!
+Distaff.Scumm.Loom.IndexMd5.get -> string!
+Distaff.Scumm.Loom.Inspect() -> Distaff.Scumm.Inspection.GameInspector!
+Distaff.Scumm.Loom.Language.get -> string?
+Distaff.Scumm.Loom.Platform.get -> string?
+Distaff.Scumm.Loom.Play(int seed = 1, Distaff.Scumm.Sound.SoundDevice sound = Distaff.Scumm.Sound.SoundDevice.AdLib, int sampleRate = 44100, System.Func<int, Distaff.Scumm.Sound.ICdTrack?>? cdTracks = null, System.Func<int, Distaff.Scumm.Sound.IMidiDevice!>? mt32 = null) -> Distaff.Scumm.Game.GameWorld!
+Distaff.Scumm.Loom.Target.get -> string!
+Distaff.Scumm.Loom.Variant.get -> string!
+Distaff.Scumm.Loom.Version.get -> int
+Distaff.Scumm.Saves.SaveInfo
+Distaff.Scumm.Saves.SaveInfo.<Clone>$() -> Distaff.Scumm.Saves.SaveInfo!
+Distaff.Scumm.Saves.SaveInfo.Deconstruct(out string! Name, out int Version, out System.TimeSpan PlayTime, out System.DateTime? Saved) -> void
+Distaff.Scumm.Saves.SaveInfo.Equals(Distaff.Scumm.Saves.SaveInfo? other) -> bool
+Distaff.Scumm.Saves.SaveInfo.Name.get -> string!
+Distaff.Scumm.Saves.SaveInfo.Name.init -> void
+Distaff.Scumm.Saves.SaveInfo.PlayTime.get -> System.TimeSpan
+Distaff.Scumm.Saves.SaveInfo.PlayTime.init -> void
+Distaff.Scumm.Saves.SaveInfo.SaveInfo(string! Name, int Version, System.TimeSpan PlayTime, System.DateTime? Saved) -> void
+Distaff.Scumm.Saves.SaveInfo.Saved.get -> System.DateTime?
+Distaff.Scumm.Saves.SaveInfo.Saved.init -> void
+Distaff.Scumm.Saves.SaveInfo.Version.get -> int
+Distaff.Scumm.Saves.SaveInfo.Version.init -> void
+Distaff.Scumm.Scripts.ScriptKind
+Distaff.Scumm.Scripts.ScriptKind.Global = 0 -> Distaff.Scumm.Scripts.ScriptKind
+Distaff.Scumm.Scripts.ScriptKind.Inventory = 3 -> Distaff.Scumm.Scripts.ScriptKind
+Distaff.Scumm.Scripts.ScriptKind.Local = 1 -> Distaff.Scumm.Scripts.ScriptKind
+Distaff.Scumm.Scripts.ScriptKind.Room = 2 -> Distaff.Scumm.Scripts.ScriptKind
+Distaff.Scumm.ScummEngine
+Distaff.Scumm.ScummEngine.BootParam.get -> int?
+Distaff.Scumm.ScummEngine.BootParam.set -> void
+Distaff.Scumm.ScummEngine.CdTracks.get -> System.Func<int, Distaff.Scumm.Sound.ICdTrack?>?
+Distaff.Scumm.ScummEngine.CdTracks.set -> void
+Distaff.Scumm.ScummEngine.CopyProtection.get -> bool
+Distaff.Scumm.ScummEngine.CopyProtection.set -> void
+Distaff.Scumm.ScummEngine.Mt32.get -> System.Func<int, Distaff.Scumm.Sound.IMidiDevice!>?
+Distaff.Scumm.ScummEngine.Mt32.set -> void
+Distaff.Scumm.ScummEngine.MusicVolume.get -> int
+Distaff.Scumm.ScummEngine.MusicVolume.set -> void
+Distaff.Scumm.ScummEngine.RandomSeed.get -> int?
+Distaff.Scumm.ScummEngine.RandomSeed.set -> void
+Distaff.Scumm.ScummEngine.SaveTarget.get -> string?
+Distaff.Scumm.ScummEngine.SaveTarget.set -> void
+Distaff.Scumm.ScummEngine.ScummEngine(Distaff.Scumm.Hosting.IHost! host, Distaff.Scumm.Storage.IGameContainer! game, Distaff.Scumm.Hosting.DetectedGame! detected) -> void
+Distaff.Scumm.ScummEngine.SemiSmoothScrolling.get -> bool
+Distaff.Scumm.ScummEngine.SemiSmoothScrolling.set -> void
+Distaff.Scumm.ScummEngine.SfxVolume.get -> int
+Distaff.Scumm.ScummEngine.SfxVolume.set -> void
+Distaff.Scumm.ScummEngine.SmoothScrolling.get -> bool
+Distaff.Scumm.ScummEngine.SmoothScrolling.set -> void
+Distaff.Scumm.ScummEngine.SoundDevice.get -> Distaff.Scumm.Sound.SoundDevice
+Distaff.Scumm.ScummEngine.SoundDevice.set -> void
+Distaff.Scumm.ScummEngine.StartingSave.get -> byte[]?
+Distaff.Scumm.ScummEngine.StartingSave.set -> void
+Distaff.Scumm.ScummEngine.Subtitles.get -> bool
+Distaff.Scumm.ScummEngine.Subtitles.set -> void
+Distaff.Scumm.ScummEngine.TextSpeed.get -> int
+Distaff.Scumm.ScummEngine.TextSpeed.set -> void
+Distaff.Scumm.ScummEngine.World.get -> Distaff.Scumm.Game.GameWorld!
+Distaff.Scumm.Sound.EmulatedMidiDevice
+Distaff.Scumm.Sound.EmulatedMidiDevice.EmulatedMidiDevice(int nativeRate, int outputRate) -> void
+Distaff.Scumm.Sound.EmulatedMidiDevice.OutputRate.get -> int
+Distaff.Scumm.Sound.EmulatedMidiDevice.Render(System.Span<short> interleavedStereo) -> void
+Distaff.Scumm.Sound.EmulatedMidiDevice.SetTimer(int ticksPerSecond, System.Action? tick) -> void
+Distaff.Scumm.Sound.ICdTrack
+Distaff.Scumm.Sound.ICdTrack.Channels.get -> int
+Distaff.Scumm.Sound.ICdTrack.Frames.get -> long
+Distaff.Scumm.Sound.ICdTrack.Read(System.Span<float> interleaved) -> int
+Distaff.Scumm.Sound.ICdTrack.SampleRate.get -> int
+Distaff.Scumm.Sound.ICdTrack.Seek(long frame) -> void
+Distaff.Scumm.Sound.IMidiDevice
+Distaff.Scumm.Sound.IMidiDevice.Render(System.Span<short> interleavedStereo) -> void
+Distaff.Scumm.Sound.IMidiDevice.Send(uint message) -> void
+Distaff.Scumm.Sound.IMidiDevice.SetTimer(int ticksPerSecond, System.Action? tick) -> void
+Distaff.Scumm.Sound.IMidiDevice.SysEx(System.ReadOnlySpan<byte> message) -> void
+Distaff.Scumm.Sound.SoundDevice
+Distaff.Scumm.Sound.SoundDevice.AdLib = 2 -> Distaff.Scumm.Sound.SoundDevice
+Distaff.Scumm.Sound.SoundDevice.Cms = 3 -> Distaff.Scumm.Sound.SoundDevice
+Distaff.Scumm.Sound.SoundDevice.Mt32 = 4 -> Distaff.Scumm.Sound.SoundDevice
+Distaff.Scumm.Sound.SoundDevice.Pcjr = 1 -> Distaff.Scumm.Sound.SoundDevice
+Distaff.Scumm.Sound.SoundDevice.Speaker = 0 -> Distaff.Scumm.Sound.SoundDevice
+Distaff.Scumm.Sound.WavWriter
+Distaff.Scumm.Storage.DirectoryGameContainer
+Distaff.Scumm.Storage.DirectoryGameContainer.DirectoryGameContainer(string! path) -> void
+Distaff.Scumm.Storage.DirectoryGameContainer.EnumerateFiles() -> System.Collections.Generic.IEnumerable<string!>!
+Distaff.Scumm.Storage.DirectoryGameContainer.Exists(string! name) -> bool
+Distaff.Scumm.Storage.DirectoryGameContainer.GetLength(string! name) -> long
+Distaff.Scumm.Storage.DirectoryGameContainer.Name.get -> string!
+Distaff.Scumm.Storage.DirectoryGameContainer.Open(string! name) -> System.IO.Stream!
+Distaff.Scumm.Storage.DirectoryGameContainer.Path.get -> string!
+Distaff.Scumm.Storage.FileSaveStore
+Distaff.Scumm.Storage.FileSaveStore.Delete(string! name) -> bool
+Distaff.Scumm.Storage.FileSaveStore.Directory.get -> string!
+Distaff.Scumm.Storage.FileSaveStore.FileSaveStore(string! directory) -> void
+Distaff.Scumm.Storage.FileSaveStore.List(string! prefix) -> System.Collections.Generic.IReadOnlyList<string!>!
+Distaff.Scumm.Storage.FileSaveStore.OpenRead(string! name) -> System.IO.Stream?
+Distaff.Scumm.Storage.FileSaveStore.OpenWrite(string! name) -> System.IO.Stream!
+Distaff.Scumm.Storage.IGameContainer
+Distaff.Scumm.Storage.IGameContainer.EnumerateFiles() -> System.Collections.Generic.IEnumerable<string!>!
+Distaff.Scumm.Storage.IGameContainer.Exists(string! name) -> bool
+Distaff.Scumm.Storage.IGameContainer.GetLength(string! name) -> long
+Distaff.Scumm.Storage.IGameContainer.Name.get -> string!
+Distaff.Scumm.Storage.IGameContainer.Open(string! name) -> System.IO.Stream!
+Distaff.Scumm.Storage.ISaveStore
+Distaff.Scumm.Storage.ISaveStore.Delete(string! name) -> bool
+Distaff.Scumm.Storage.ISaveStore.List(string! prefix) -> System.Collections.Generic.IReadOnlyList<string!>!
+Distaff.Scumm.Storage.ISaveStore.OpenRead(string! name) -> System.IO.Stream?
+Distaff.Scumm.Storage.ISaveStore.OpenWrite(string! name) -> System.IO.Stream!
+Distaff.Scumm.Storage.MemorySaveStore
+Distaff.Scumm.Storage.MemorySaveStore.Delete(string! name) -> bool
+Distaff.Scumm.Storage.MemorySaveStore.List(string! prefix) -> System.Collections.Generic.IReadOnlyList<string!>!
+Distaff.Scumm.Storage.MemorySaveStore.MemorySaveStore() -> void
+Distaff.Scumm.Storage.MemorySaveStore.OpenRead(string! name) -> System.IO.Stream?
+Distaff.Scumm.Storage.MemorySaveStore.OpenWrite(string! name) -> System.IO.Stream!
+abstract Distaff.Scumm.Hosting.Engine.Initialize() -> void
+abstract Distaff.Scumm.Hosting.Engine.Tick(System.TimeSpan elapsed) -> Distaff.Scumm.Hosting.TickResult
+abstract Distaff.Scumm.Sound.EmulatedMidiDevice.GenerateSamples(System.Span<short> interleavedStereo, int frames) -> void
+abstract Distaff.Scumm.Sound.EmulatedMidiDevice.Send(uint message) -> void
+abstract Distaff.Scumm.Sound.EmulatedMidiDevice.SysEx(System.ReadOnlySpan<byte> message) -> void
+const Distaff.Scumm.Game.GameWorld.DefaultSampleRate = 44100 -> int
+const Distaff.Scumm.Game.GameWorld.DefaultTextSpeed = 6 -> int
+const Distaff.Scumm.Hosting.AudioVolume.Default = 192 -> int
+const Distaff.Scumm.Hosting.AudioVolume.Unity = 256 -> int
+const Distaff.Scumm.Hosting.VideoRecorder.DefaultFrameRate = 60 -> int
+const Distaff.Scumm.Inspection.ObjectVerb.Fallback = 255 -> int
+const Distaff.Scumm.Storage.DirectoryGameContainer.MaxScanDepth = 2 -> int
+override Distaff.Scumm.Game.ActorInfo.Equals(object? obj) -> bool
+override Distaff.Scumm.Game.ActorInfo.GetHashCode() -> int
+override Distaff.Scumm.Game.ActorInfo.ToString() -> string!
+~override Distaff.Scumm.Game.RunningScript.Equals(object obj) -> bool
+override Distaff.Scumm.Game.RunningScript.GetHashCode() -> int
+~override Distaff.Scumm.Game.RunningScript.ToString() -> string
+~override Distaff.Scumm.Game.VerbInfo.Equals(object obj) -> bool
+override Distaff.Scumm.Game.VerbInfo.GetHashCode() -> int
+~override Distaff.Scumm.Game.VerbInfo.ToString() -> string
+~override Distaff.Scumm.Graphics.Rgb.Equals(object obj) -> bool
+override Distaff.Scumm.Graphics.Rgb.GetHashCode() -> int
+~override Distaff.Scumm.Graphics.Rgb.ToString() -> string
+override Distaff.Scumm.Hosting.DetectedGame.Equals(object? obj) -> bool
+override Distaff.Scumm.Hosting.DetectedGame.GetHashCode() -> int
+~override Distaff.Scumm.Hosting.TickResult.Equals(object obj) -> bool
+override Distaff.Scumm.Hosting.TickResult.GetHashCode() -> int
+~override Distaff.Scumm.Hosting.TickResult.ToString() -> string
+~override Distaff.Scumm.Input.InputEvent.Equals(object obj) -> bool
+override Distaff.Scumm.Input.InputEvent.GetHashCode() -> int
+~override Distaff.Scumm.Input.InputEvent.ToString() -> string
+~override Distaff.Scumm.Input.MouseState.Equals(object obj) -> bool
+override Distaff.Scumm.Input.MouseState.GetHashCode() -> int
+~override Distaff.Scumm.Input.MouseState.ToString() -> string
+override Distaff.Scumm.Inspection.ObjectInfo.Equals(object? obj) -> bool
+override Distaff.Scumm.Inspection.ObjectInfo.GetHashCode() -> int
+override Distaff.Scumm.Inspection.ObjectInfo.ToString() -> string!
+~override Distaff.Scumm.Inspection.ObjectVerb.Equals(object obj) -> bool
+override Distaff.Scumm.Inspection.ObjectVerb.GetHashCode() -> int
+~override Distaff.Scumm.Inspection.ObjectVerb.ToString() -> string
+override Distaff.Scumm.Inspection.RoomPicture.Equals(object? obj) -> bool
+override Distaff.Scumm.Inspection.RoomPicture.GetHashCode() -> int
+override Distaff.Scumm.Inspection.RoomPicture.ToString() -> string!
+~override Distaff.Scumm.Inspection.ScriptLine.Equals(object obj) -> bool
+override Distaff.Scumm.Inspection.ScriptLine.GetHashCode() -> int
+override Distaff.Scumm.Inspection.ScriptLine.ToString() -> string!
+override Distaff.Scumm.Inspection.ScriptListing.Equals(object? obj) -> bool
+override Distaff.Scumm.Inspection.ScriptListing.GetHashCode() -> int
+override Distaff.Scumm.Inspection.ScriptListing.ToString() -> string!
+override Distaff.Scumm.Loom.ToString() -> string!
+override Distaff.Scumm.Saves.SaveInfo.Equals(object? obj) -> bool
+override Distaff.Scumm.Saves.SaveInfo.GetHashCode() -> int
+override Distaff.Scumm.Saves.SaveInfo.ToString() -> string!
+override Distaff.Scumm.ScummEngine.Dispose() -> void
+override Distaff.Scumm.ScummEngine.Initialize() -> void
+override Distaff.Scumm.ScummEngine.Tick(System.TimeSpan elapsed) -> Distaff.Scumm.Hosting.TickResult
+override sealed Distaff.Scumm.Hosting.DetectedGame.ToString() -> string!
+static Distaff.Scumm.Game.ActorInfo.operator !=(Distaff.Scumm.Game.ActorInfo? left, Distaff.Scumm.Game.ActorInfo? right) -> bool
+static Distaff.Scumm.Game.ActorInfo.operator ==(Distaff.Scumm.Game.ActorInfo? left, Distaff.Scumm.Game.ActorInfo? right) -> bool
+static Distaff.Scumm.Game.RunningScript.operator !=(Distaff.Scumm.Game.RunningScript left, Distaff.Scumm.Game.RunningScript right) -> bool
+static Distaff.Scumm.Game.RunningScript.operator ==(Distaff.Scumm.Game.RunningScript left, Distaff.Scumm.Game.RunningScript right) -> bool
+static Distaff.Scumm.Game.VerbInfo.operator !=(Distaff.Scumm.Game.VerbInfo left, Distaff.Scumm.Game.VerbInfo right) -> bool
+static Distaff.Scumm.Game.VerbInfo.operator ==(Distaff.Scumm.Game.VerbInfo left, Distaff.Scumm.Game.VerbInfo right) -> bool
+static Distaff.Scumm.Graphics.PngWriter.Encode(Distaff.Scumm.Graphics.RgbFrame! frame, int scaleX = 1, int scaleY = 1) -> byte[]!
+static Distaff.Scumm.Graphics.Rgb.operator !=(Distaff.Scumm.Graphics.Rgb left, Distaff.Scumm.Graphics.Rgb right) -> bool
+static Distaff.Scumm.Graphics.Rgb.operator ==(Distaff.Scumm.Graphics.Rgb left, Distaff.Scumm.Graphics.Rgb right) -> bool
+static Distaff.Scumm.Hosting.AudioVolume.Apply(System.Span<short> samples, int volume) -> void
+static Distaff.Scumm.Hosting.AudioVolume.Clamp(int volume) -> int
+static Distaff.Scumm.Hosting.AudioVolume.FromPercent(int percent) -> int
+static Distaff.Scumm.Hosting.AudioVolume.ToPercent(int volume) -> int
+static Distaff.Scumm.Hosting.DetectedGame.operator !=(Distaff.Scumm.Hosting.DetectedGame? left, Distaff.Scumm.Hosting.DetectedGame? right) -> bool
+static Distaff.Scumm.Hosting.DetectedGame.operator ==(Distaff.Scumm.Hosting.DetectedGame? left, Distaff.Scumm.Hosting.DetectedGame? right) -> bool
+static Distaff.Scumm.Hosting.LogExtensions.Debug(this Distaff.Scumm.Hosting.ILog! log, string! category, string! message) -> void
+static Distaff.Scumm.Hosting.LogExtensions.Error(this Distaff.Scumm.Hosting.ILog! log, string! category, string! message) -> void
+static Distaff.Scumm.Hosting.LogExtensions.Info(this Distaff.Scumm.Hosting.ILog! log, string! category, string! message) -> void
+static Distaff.Scumm.Hosting.LogExtensions.Warning(this Distaff.Scumm.Hosting.ILog! log, string! category, string! message) -> void
+static Distaff.Scumm.Hosting.TickResult.After(System.TimeSpan delay) -> Distaff.Scumm.Hosting.TickResult
+static Distaff.Scumm.Hosting.TickResult.Immediately.get -> Distaff.Scumm.Hosting.TickResult
+static Distaff.Scumm.Hosting.TickResult.Quit.get -> Distaff.Scumm.Hosting.TickResult
+static Distaff.Scumm.Hosting.TickResult.operator !=(Distaff.Scumm.Hosting.TickResult left, Distaff.Scumm.Hosting.TickResult right) -> bool
+static Distaff.Scumm.Hosting.TickResult.operator ==(Distaff.Scumm.Hosting.TickResult left, Distaff.Scumm.Hosting.TickResult right) -> bool
+static Distaff.Scumm.Input.InputEvent.KeyDown(Distaff.Scumm.Input.Key key, Distaff.Scumm.Input.KeyModifiers modifiers = Distaff.Scumm.Input.KeyModifiers.None, char ascii = '\0', bool repeat = false) -> Distaff.Scumm.Input.InputEvent
+static Distaff.Scumm.Input.InputEvent.KeyUp(Distaff.Scumm.Input.Key key, Distaff.Scumm.Input.KeyModifiers modifiers = Distaff.Scumm.Input.KeyModifiers.None, char ascii = '\0') -> Distaff.Scumm.Input.InputEvent
+static Distaff.Scumm.Input.InputEvent.MouseDown(Distaff.Scumm.Input.MouseButton button, int x, int y) -> Distaff.Scumm.Input.InputEvent
+static Distaff.Scumm.Input.InputEvent.MouseMove(int x, int y) -> Distaff.Scumm.Input.InputEvent
+static Distaff.Scumm.Input.InputEvent.MouseUp(Distaff.Scumm.Input.MouseButton button, int x, int y) -> Distaff.Scumm.Input.InputEvent
+static Distaff.Scumm.Input.InputEvent.MouseWheel(int wheel, int x, int y) -> Distaff.Scumm.Input.InputEvent
+static Distaff.Scumm.Input.InputEvent.Quit.get -> Distaff.Scumm.Input.InputEvent
+static Distaff.Scumm.Input.InputEvent.operator !=(Distaff.Scumm.Input.InputEvent left, Distaff.Scumm.Input.InputEvent right) -> bool
+static Distaff.Scumm.Input.InputEvent.operator ==(Distaff.Scumm.Input.InputEvent left, Distaff.Scumm.Input.InputEvent right) -> bool
+static Distaff.Scumm.Input.MouseState.operator !=(Distaff.Scumm.Input.MouseState left, Distaff.Scumm.Input.MouseState right) -> bool
+static Distaff.Scumm.Input.MouseState.operator ==(Distaff.Scumm.Input.MouseState left, Distaff.Scumm.Input.MouseState right) -> bool
+static Distaff.Scumm.Inspection.ObjectInfo.operator !=(Distaff.Scumm.Inspection.ObjectInfo? left, Distaff.Scumm.Inspection.ObjectInfo? right) -> bool
+static Distaff.Scumm.Inspection.ObjectInfo.operator ==(Distaff.Scumm.Inspection.ObjectInfo? left, Distaff.Scumm.Inspection.ObjectInfo? right) -> bool
+static Distaff.Scumm.Inspection.ObjectVerb.operator !=(Distaff.Scumm.Inspection.ObjectVerb left, Distaff.Scumm.Inspection.ObjectVerb right) -> bool
+static Distaff.Scumm.Inspection.ObjectVerb.operator ==(Distaff.Scumm.Inspection.ObjectVerb left, Distaff.Scumm.Inspection.ObjectVerb right) -> bool
+static Distaff.Scumm.Inspection.RoomPicture.operator !=(Distaff.Scumm.Inspection.RoomPicture? left, Distaff.Scumm.Inspection.RoomPicture? right) -> bool
+static Distaff.Scumm.Inspection.RoomPicture.operator ==(Distaff.Scumm.Inspection.RoomPicture? left, Distaff.Scumm.Inspection.RoomPicture? right) -> bool
+static Distaff.Scumm.Inspection.ScriptLine.operator !=(Distaff.Scumm.Inspection.ScriptLine left, Distaff.Scumm.Inspection.ScriptLine right) -> bool
+static Distaff.Scumm.Inspection.ScriptLine.operator ==(Distaff.Scumm.Inspection.ScriptLine left, Distaff.Scumm.Inspection.ScriptLine right) -> bool
+static Distaff.Scumm.Inspection.ScriptListing.operator !=(Distaff.Scumm.Inspection.ScriptListing? left, Distaff.Scumm.Inspection.ScriptListing? right) -> bool
+static Distaff.Scumm.Inspection.ScriptListing.operator ==(Distaff.Scumm.Inspection.ScriptListing? left, Distaff.Scumm.Inspection.ScriptListing? right) -> bool
+static Distaff.Scumm.Loom.Open(Distaff.Scumm.Storage.IGameContainer! files) -> Distaff.Scumm.Loom!
+static Distaff.Scumm.Loom.Open(string! folder) -> Distaff.Scumm.Loom!
+static Distaff.Scumm.Saves.SaveInfo.operator !=(Distaff.Scumm.Saves.SaveInfo? left, Distaff.Scumm.Saves.SaveInfo? right) -> bool
+static Distaff.Scumm.Saves.SaveInfo.operator ==(Distaff.Scumm.Saves.SaveInfo? left, Distaff.Scumm.Saves.SaveInfo? right) -> bool
+static Distaff.Scumm.Sound.WavWriter.Encode(System.ReadOnlySpan<short> samples, int sampleRate, int channels) -> byte[]!
+static readonly Distaff.Scumm.Graphics.Rgb.Black -> Distaff.Scumm.Graphics.Rgb
+static readonly Distaff.Scumm.Graphics.Rgb.White -> Distaff.Scumm.Graphics.Rgb
+static readonly Distaff.Scumm.Hosting.NullLog.Instance -> Distaff.Scumm.Hosting.NullLog!
+static readonly Distaff.Scumm.Hosting.TickSchedule.CatchUpLimit -> System.TimeSpan
+virtual Distaff.Scumm.Hosting.DetectedGame.<Clone>$() -> Distaff.Scumm.Hosting.DetectedGame!
+virtual Distaff.Scumm.Hosting.DetectedGame.EqualityContract.get -> System.Type!
+virtual Distaff.Scumm.Hosting.DetectedGame.Equals(Distaff.Scumm.Hosting.DetectedGame? other) -> bool
+virtual Distaff.Scumm.Hosting.DetectedGame.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual Distaff.Scumm.Hosting.Engine.Dispose() -> void

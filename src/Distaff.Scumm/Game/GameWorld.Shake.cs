@@ -20,10 +20,10 @@ public sealed partial class GameWorld
     private bool _shakePaused;
 
     /// <summary>Whether the screen shakes (<c>_shakeEnabled</c>).</summary>
-    public bool ShakeEnabled => _shakeEnabled;
+    internal bool ShakeEnabled => _shakeEnabled;
 
     /// <summary>Where the shake is in its 8 steps (<c>_shakeFrame</c>); 0 when it is off.</summary>
-    public int ShakeFrame
+    internal int ShakeFrame
     {
         get
         {
@@ -41,7 +41,7 @@ public sealed partial class GameWorld
     }
 
     /// <summary>How many rows the picture is raised now.</summary>
-    public int ShakeOffset => ShakePositions[ShakeFrame];
+    internal int ShakeOffset => ShakePositions[ShakeFrame];
 
     /// <summary>Turns the shake on or off, from its first step (<c>setShake</c>).</summary>
     private void SetShake(bool on) => (_shakeEnabled, _shakeBase, _shakeStart) = (on, 0, Time);

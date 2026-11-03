@@ -6,46 +6,46 @@ using Distaff.Scumm.View;
 namespace Distaff.Scumm.Game;
 
 /// <summary>A verb on screen, as the scripts set it up. Mirrors ScummVM's <c>VerbSlot</c>.</summary>
-public sealed class VerbSlot
+internal sealed class VerbSlot
 {
-    public int VerbId { get; set; }
+    internal int VerbId { get; set; }
 
     /// <summary>Where the scripts put the verb; its right and bottom come from drawing it (<c>curRect</c>).</summary>
-    public Rect CurRect { get; set; }
+    internal Rect CurRect { get; set; }
 
     /// <summary>What was drawn last, to erase, or null (<c>oldRect</c>, whose left is -1 when there is none).</summary>
-    public Rect? OldRect { get; set; }
+    internal Rect? OldRect { get; set; }
 
-    public int X => CurRect.Left;
+    internal int X => CurRect.Left;
 
-    public int Y => CurRect.Top;
+    internal int Y => CurRect.Top;
 
-    public int Color { get; set; } = 2;
+    internal int Color { get; set; } = 2;
 
-    public int HiColor { get; set; }
+    internal int HiColor { get; set; }
 
-    public int DimColor { get; set; }
+    internal int DimColor { get; set; }
 
-    public int BackColor { get; set; }
+    internal int BackColor { get; set; }
 
     /// <summary>0 for off, 1 for on, 2 for dimmed (<c>curmode</c>).</summary>
-    public int Mode { get; set; }
+    internal int Mode { get; set; }
 
     /// <summary>0 for text, 1 for an image (<c>type</c>).</summary>
-    public int Type { get; set; }
+    internal int Type { get; set; }
 
-    public int Key { get; set; }
+    internal int Key { get; set; }
 
     /// <summary>The charset a text verb is drawn in, text slot 0's default when the verb was made, 1 before (<c>charset_nr</c>).</summary>
-    public int Charset { get; set; } = 1;
+    internal int Charset { get; set; } = 1;
 
-    public bool Center { get; set; }
+    internal bool Center { get; set; }
 
     /// <summary>Non-zero while saved by <c>saveRestoreVerbs</c> (<c>saveid</c>).</summary>
-    public int SaveId { get; set; }
+    internal int SaveId { get; set; }
 
     /// <summary>The object whose image the verb shows (<c>imgindex</c>).</summary>
-    public int ImageObject { get; set; }
+    internal int ImageObject { get; set; }
 
     /// <summary>
     /// The image copied from the object, kept when the room changes, as the <c>rtVerb</c> resource
@@ -53,9 +53,9 @@ public sealed class VerbSlot
     /// five bits), then the picture up to where its mask starts. For the VGA CD: the object's whole
     /// <c>OI</c> block, then its whole <c>OC</c> block.
     /// </summary>
-    public byte[]? Image { get; set; }
+    internal byte[]? Image { get; set; }
 
-    public byte[]? Name { get; set; }
+    internal byte[]? Name { get; set; }
 }
 
 /// <summary>
@@ -431,7 +431,7 @@ public sealed partial class GameWorld
     /// only verbs that are on and not saved; a centred verb reaches as far left of its place as
     /// its right edge is right of it.
     /// </summary>
-    public int FindVerbAtPos(int x, int y)
+    internal int FindVerbAtPos(int x, int y)
     {
         for (int i = VerbCount - 1; i > 0; i--)
         {

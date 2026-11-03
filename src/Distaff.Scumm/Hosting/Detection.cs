@@ -33,12 +33,13 @@ public record DetectedGame(
         }
     }
 
+    /// <summary>The title and the variant: <c>Loom (EGA)</c>.</summary>
     public sealed override string ToString()
         => Variant.Length == 0 ? $"{Title} [{EngineId}:{GameId}]" : $"{Title} ({Variant}) [{EngineId}:{GameId}]";
 }
 
 /// <summary>Detects and instantiates one engine family.</summary>
-public interface IEngineProvider
+internal interface IEngineProvider
 {
     string Id { get; }
 
@@ -48,7 +49,7 @@ public interface IEngineProvider
 }
 
 /// <summary>The set of engines a host knows about, each asked in turn what a folder holds.</summary>
-public sealed class EngineRegistry
+internal sealed class EngineRegistry
 {
     private readonly List<IEngineProvider> _providers = [];
 

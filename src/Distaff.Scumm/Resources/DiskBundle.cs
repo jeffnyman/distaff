@@ -10,7 +10,7 @@ namespace Distaff.Scumm.Resources;
 /// costumes and sounds stored with it. Mirrors ScummVM's <c>generateFilename</c> and
 /// <c>getEncByte</c> for version 4, and <c>readRoomsOffsets</c>.
 /// </summary>
-public sealed class DiskBundle
+internal sealed class DiskBundle
 {
     public const byte EncodingKey = 0x69;
 

@@ -1,7 +1,7 @@
 namespace Distaff.Scumm.Graphics;
 
 /// <summary>An 8-bit indexed-colour surface with one byte per pixel and no row padding.</summary>
-public sealed class Surface8
+internal sealed class Surface8
 {
     public Surface8(int width, int height)
     {

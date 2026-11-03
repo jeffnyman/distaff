@@ -15,7 +15,7 @@ namespace Distaff.Scumm.Resources;
 /// (<c>GF_OLD256</c>, which leaves out <c>GF_USE_KEY</c>), each room at its file's start. Mirrors
 /// ScummVM's <c>ScummEngine::loadResource</c> and <c>openRoom</c>. Decoded files are cached.
 /// </summary>
-public sealed class ResourceLoader
+internal sealed class ResourceLoader
 {
     /// <summary>The size of a resource's header in the EGA release (<c>_resourceHeaderSize</c> of <c>ScummEngine_v3old</c>).</summary>
     public const int OldHeaderSize = 4;

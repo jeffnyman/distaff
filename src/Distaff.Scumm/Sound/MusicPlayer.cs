@@ -5,7 +5,7 @@ namespace Distaff.Scumm.Sound;
 /// A version's music and sound player, as the sound system drives it: sounds start, stop and are
 /// asked after, and the scripts may read a music timer. Mirrors ScummVM's <c>MusicEngine</c>.
 /// </summary>
-public abstract class MusicPlayer(int sampleRate) : MonoAudioSource(sampleRate)
+internal abstract class MusicPlayer(int sampleRate) : MonoAudioSource(sampleRate)
 {
     /// <summary>The music timer the scripts read. Mirrors <c>getMusicTimer</c>.</summary>
     public abstract int MusicTimer { get; }

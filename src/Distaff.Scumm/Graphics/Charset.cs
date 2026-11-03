@@ -1,7 +1,7 @@
 namespace Distaff.Scumm.Graphics;
 
 /// <summary>How a character's shadow is drawn (ScummVM's <c>ShadowType</c>).</summary>
-public enum ShadowType
+internal enum ShadowType
 {
     None,
     Normal,
@@ -17,7 +17,7 @@ public enum ShadowType
 /// <c>CharsetRendererV3</c>: <c>setCurID</c> reads the count at 4 and the height at 5, the widths
 /// follow at 6, and then 8 bytes a character (<c>_fontPtr + chr * 8</c>).
 /// </summary>
-public sealed class Charset
+internal sealed class Charset
 {
     /// <summary>Where a version 4 font starts in its charset resource (<c>_fontPtr += 17</c> in <c>setCurID</c>).</summary>
     private const int ClassicFont = 17;

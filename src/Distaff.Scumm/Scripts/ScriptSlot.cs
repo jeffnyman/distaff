@@ -1,7 +1,7 @@
 namespace Distaff.Scumm.Scripts;
 
 /// <summary>Mirrors ScummVM's <c>ssDead</c>, <c>ssPaused</c> and <c>ssRunning</c>; <see cref="Frozen"/> is the 0x80 bit <c>freezeScripts</c> adds.</summary>
-public static class SlotStatus
+internal static class SlotStatus
 {
     public const byte Dead = 0;
     public const byte Paused = 1;
@@ -26,7 +26,7 @@ public enum ScriptKind
 }
 
 /// <summary>One of the cooperative threads scripts run in. Mirrors ScummVM's <c>ScriptSlot</c> and the slot's row of <c>vm.localvar</c>.</summary>
-public sealed class ScriptSlot
+internal sealed class ScriptSlot
 {
     /// <summary>Mirrors <c>NUM_SCRIPT_LOCAL</c>.</summary>
     public const int LocalCount = 25;

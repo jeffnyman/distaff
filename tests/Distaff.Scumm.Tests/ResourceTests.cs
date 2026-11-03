@@ -65,11 +65,13 @@ public class ResourceTests
     /// on the disks, and resources left over from them, whose offsets run past their files.
     /// </summary>
     [Theory]
-    [InlineData(ResourceType.Room, 76, 11, 0)]
-    [InlineData(ResourceType.Costume, 163, 2, 11)]
-    [InlineData(ResourceType.Script, 115, 0, 2)]
-    public void Index_entries_load_or_are_accounted_for(ResourceType type, int loaded, int missingFile, int broken)
+    [InlineData(nameof(ResourceType.Room), 76, 11, 0)]
+    [InlineData(nameof(ResourceType.Costume), 163, 2, 11)]
+    [InlineData(nameof(ResourceType.Script), 115, 0, 2)]
+    public void Index_entries_load_or_are_accounted_for(string typeName, int loaded, int missingFile, int broken)
     {
+        var type = Enum.Parse<ResourceType>(typeName);
+
         if (Open() is not { } loader)
         {
             return;

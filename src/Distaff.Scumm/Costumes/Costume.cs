@@ -7,7 +7,7 @@ namespace Distaff.Scumm.Costumes;
 /// <param name="Start">Index of the first command, or null when the animation hides the limb.</param>
 /// <param name="Length">How many commands follow the first one.</param>
 /// <param name="Loop">Whether the run starts again after its last command.</param>
-public readonly record struct LimbAnimation(int Limb, int? Start, int Length, bool Loop);
+internal readonly record struct LimbAnimation(int Limb, int? Start, int Length, bool Loop);
 
 /// <summary>A picture of one limb, and how it is placed. Offsets are in pixels.</summary>
 /// <param name="Width">Width in pixels.</param>
@@ -17,7 +17,7 @@ public readonly record struct LimbAnimation(int Limb, int? Start, int Length, bo
 /// <param name="MoveX">How far the running position moves right for the next limb.</param>
 /// <param name="MoveY">How far the running position moves up for the next limb.</param>
 /// <param name="DataOffset">Where the cel's pixel data starts in the costume.</param>
-public readonly record struct CostumeCel(int Width, int Height, int RelX, int RelY, int MoveX, int MoveY, int DataOffset);
+internal readonly record struct CostumeCel(int Width, int Height, int RelX, int RelY, int MoveX, int MoveY, int DataOffset);
 
 /// <summary>
 /// A costume: a character's animations. Mirrors ScummVM's <c>ClassicCostumeLoader::loadCostume</c>
@@ -41,7 +41,7 @@ public readonly record struct CostumeCel(int Width, int Height, int RelX, int Re
 /// its pixels: columns top to bottom, a byte being a colour in its high 4 bits and a run length in
 /// its low 4 (0: the length is the next byte), or with 32 colours in its high 5 and low 3.</para>
 /// </remarks>
-public sealed class Costume
+internal sealed class Costume
 {
     public const int LimbCount = 16;
 

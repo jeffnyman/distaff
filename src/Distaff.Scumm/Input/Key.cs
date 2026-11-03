@@ -6,6 +6,7 @@ namespace Distaff.Scumm.Input;
 /// </summary>
 public enum Key
 {
+#pragma warning disable CS1591 // each key is named for itself
     None = 0,
     Backspace = 8,
     Tab = 9,
@@ -135,12 +136,14 @@ public enum Key
     LeftAlt = 308,
     RightMeta = 309,
     LeftMeta = 310,
+#pragma warning restore CS1591
 }
 
 /// <summary>Modifier flags. Values mirror ScummVM's KBD_* constants.</summary>
 [Flags]
 public enum KeyModifiers
 {
+#pragma warning disable CS1591 // each modifier is named for itself
     None = 0,
     Ctrl = 1 << 0,
     Alt = 1 << 1,
@@ -149,12 +152,16 @@ public enum KeyModifiers
     NumLock = 1 << 4,
     CapsLock = 1 << 5,
     ScrollLock = 1 << 6,
+#pragma warning restore CS1591
 }
 
+/// <summary>A mouse button, or none.</summary>
 public enum MouseButton
 {
+#pragma warning disable CS1591 // each button is named for itself
     None = 0,
     Left = 1,
     Right = 2,
     Middle = 3,
+#pragma warning restore CS1591
 }

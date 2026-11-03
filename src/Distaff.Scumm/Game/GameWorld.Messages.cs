@@ -10,47 +10,47 @@ namespace Distaff.Scumm.Game;
 /// Where and how a text slot prints: one of ScummVM's <c>_string[]</c>, with the defaults
 /// <c>print</c> starts from and saves back.
 /// </summary>
-public sealed class TextSlot
+internal sealed class TextSlot
 {
-    public int X { get; set; }
+    internal int X { get; set; }
 
-    public int Y { get; set; }
+    internal int Y { get; set; }
 
-    public int Right { get; set; } = GameWorld.ScreenWidth - 1;
+    internal int Right { get; set; } = GameWorld.ScreenWidth - 1;
 
-    public int Height { get; set; }
+    internal int Height { get; set; }
 
-    public int Color { get; set; } = 0x0F;
+    internal int Color { get; set; } = 0x0F;
 
-    public bool Center { get; set; }
+    internal bool Center { get; set; }
 
-    public bool Overhead { get; set; }
+    internal bool Overhead { get; set; }
 
-    public int Charset { get; set; }
+    internal int Charset { get; set; }
 
     private (int X, int Y, int Right, int Height, int Color, bool Center, bool Overhead, int Charset) _default = (0, 0, GameWorld.ScreenWidth - 1, 0, 0x0F, false, false, 0);
 
     /// <summary>The charset the slot starts from (<c>_default.charset</c>), which <c>initCharset</c> sets for slots 0 and 1.</summary>
-    public int DefaultCharset
+    internal int DefaultCharset
     {
         get => _default.Charset;
         set => _default = _default with { Charset = value };
     }
 
     /// <summary>Mirrors <c>StringTab::loadDefault</c>.</summary>
-    public void LoadDefault() => (X, Y, Right, Height, Color, Center, Overhead, Charset) = _default;
+    internal void LoadDefault() => (X, Y, Right, Height, Color, Center, Overhead, Charset) = _default;
 
     /// <summary>Mirrors <c>StringTab::saveDefault</c>.</summary>
-    public void SaveDefault() => _default = (X, Y, Right, Height, Color, Center, Overhead, Charset);
+    internal void SaveDefault() => _default = (X, Y, Right, Height, Color, Center, Overhead, Charset);
 
     /// <summary>
     /// Keeps the position, line height and colour as the defaults, but not the rest: versions 1 to 3
     /// have no defaults, so the text's place carries on to the next (the end of <c>decodeParseStringTextString</c>).
     /// </summary>
-    public void KeepPlace() => _default = _default with { X = X, Y = Y, Height = Height, Color = Color };
+    internal void KeepPlace() => _default = _default with { X = X, Y = Y, Height = Height, Color = Color };
 
     /// <summary>The slot as a save holds it, each field with its default; the line height is not saved (<c>syncWithSerializer(StringTab)</c>).</summary>
-    public void SaveTo(Saves.ScummState.StringState s)
+    internal void SaveTo(Saves.ScummState.StringState s)
     {
         (s.X, s.Y, s.Right, s.Color, s.Charset, s.Center, s.Overhead) = (X, Y, Right, (sbyte)Color, Charset, Center ? 1 : 0, Overhead ? 1 : 0);
         (s.DefaultX, s.DefaultY, s.DefaultRight, s.DefaultColor, s.DefaultCharset) = (_default.X, _default.Y, _default.Right, (sbyte)_default.Color, _default.Charset);
@@ -58,7 +58,7 @@ public sealed class TextSlot
     }
 
     /// <summary>The slot from a save; the line heights stay as they are.</summary>
-    public void LoadFrom(Saves.ScummState.StringState s)
+    internal void LoadFrom(Saves.ScummState.StringState s)
     {
         (X, Y, Right, Color, Charset, Center, Overhead) = (s.X, s.Y, s.Right, s.Color & 0xFF, s.Charset, s.Center != 0, s.Overhead != 0);
         _default = (s.DefaultX, s.DefaultY, s.DefaultRight, _default.Height, s.DefaultColor & 0xFF, s.DefaultCenter != 0, s.DefaultOverhead != 0, s.DefaultCharset);
@@ -111,22 +111,24 @@ public sealed partial class GameWorld
     private VirtScreenNumber _textScreen;
 
     /// <summary>The text slots: actors' speech, the three system slots, and the one text verbs draw in (<c>_string</c>).</summary>
-    public TextSlot[] TextSlots { get; } = [new(), new(), new(), new(), new(), new()];
+    internal TextSlot[] TextSlots { get; } = [new(), new(), new(), new(), new(), new()];
 
     /// <summary>Who <c>print</c> prints for: an actor, or 0xFC to 0xFF for the system slots (<c>_actorToPrintStrFor</c>).</summary>
-    public int ActorToPrintFor { get; private set; }
+    internal int ActorToPrintFor { get; private set; }
 
     /// <summary>Whether a message is up: 0 none, 0xFF being shown, 1 shown in full (<c>_haveMsg</c>).</summary>
-    public int HaveMessage => _haveMsg;
+    internal int HaveMessage => _haveMsg;
 
     /// <summary>The text of the message up now, as far as it has been shown.</summary>
     public string MessageText => _shown.ToString();
 
     /// <summary>Every message shown so far, in order, as it was finished: for tests and the console.</summary>
-    public List<string> MessageLog { get; } = [];
+    public IReadOnlyList<string> MessageLog => _messageLog;
+
+    private readonly List<string> _messageLog = [];
 
     /// <summary>The actor talking, or 0xFF for none (<c>VAR_TALK_ACTOR</c>).</summary>
-    public int TalkingActor
+    internal int TalkingActor
     {
         get => Engine.Variables[Vars.TalkActor];
         private set => Engine.Variables[Vars.TalkActor] = value;
@@ -144,7 +146,7 @@ public sealed partial class GameWorld
                 ActorTalk(message);
                 break;
             case 1:
-                MessageLog.Add(Plain(ConvertMessage(message)));
+                _messageLog.Add(Plain(ConvertMessage(message)));
                 DrawString(1, message);
                 break;
             default:
@@ -220,7 +222,7 @@ public sealed partial class GameWorld
         _keepText = false;
         if (_shown.Length > 0)
         {
-            MessageLog.Add(_shown.ToString());
+            _messageLog.Add(_shown.ToString());
             _shown.Clear();
         }
 
@@ -275,7 +277,7 @@ public sealed partial class GameWorld
         {
             if (_shown.Length > 0)
             {
-                MessageLog.Add(_shown.ToString());
+                _messageLog.Add(_shown.ToString());
             }
 
             _shown.Clear();
@@ -624,7 +626,7 @@ public sealed partial class GameWorld
     private readonly byte[][] _charsetData = [.. Enumerable.Range(0, 9).Select(_ => new byte[16])];
 
     /// <summary>The colour each pixel value of a version 4 character is drawn in (<c>_charsetColorMap</c>); 1 is the text's colour.</summary>
-    public byte[] CharsetColorMap { get; } = new byte[16];
+    internal byte[] CharsetColorMap { get; } = new byte[16];
 
     /// <summary>
     /// Takes the speech off the screen. Mirrors <c>restoreCharsetBg</c>: the next message starts at

@@ -26,7 +26,7 @@ namespace Distaff.Scumm.Scripts;
 /// <para>The FM Towns release has one layout of its own: <c>startMusic</c> asks about the CD,
 /// with a result first.</para>
 /// </remarks>
-public sealed class ScriptDecoder(int version = 3, bool fmTowns = false)
+internal sealed class ScriptDecoder(int version = 3, bool fmTowns = false)
 {
     private const byte Param1 = 0x80, Param2 = 0x40, Param3 = 0x20;
 

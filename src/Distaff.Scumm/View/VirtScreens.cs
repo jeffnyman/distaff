@@ -3,7 +3,7 @@ using Distaff.Scumm.Graphics;
 namespace Distaff.Scumm.View;
 
 /// <summary>The parts of the screen (ScummVM's <c>VirtScreenNumber</c>).</summary>
-public enum VirtScreenNumber
+internal enum VirtScreenNumber
 {
     Main = 0,
     Text = 1,
@@ -16,7 +16,7 @@ public enum VirtScreenNumber
 /// room (text and boxes), <see cref="VirtScreens.Transparent"/> elsewhere, because Distaff draws
 /// the room afresh each frame. The text and verb bands keep everything drawn into them.
 /// </summary>
-public sealed class VirtScreen(VirtScreenNumber number, int top, int height, bool hasTwoBuffers, Surface8? front)
+internal sealed class VirtScreen(VirtScreenNumber number, int top, int height, bool hasTwoBuffers, Surface8? front)
 {
     public VirtScreenNumber Number { get; } = number;
 
@@ -38,7 +38,7 @@ public sealed class VirtScreen(VirtScreenNumber number, int top, int height, boo
 /// and the composition of <c>drawStripToScreen</c>, or for the FM Towns of
 /// <c>towns_drawStripToScreen</c> and <c>TownsScreen</c>.
 /// </summary>
-public sealed class VirtScreens
+internal sealed class VirtScreens
 {
     /// <summary>A pixel nothing is drawn in (<c>CHARSET_MASK_TRANSPARENCY</c>).</summary>
     public const byte Transparent = 0xFD;

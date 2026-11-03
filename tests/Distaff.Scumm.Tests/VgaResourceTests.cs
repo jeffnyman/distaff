@@ -69,12 +69,14 @@ public class VgaResourceTests
 
     /// <summary>The entries the disk holds load; the rest are in room 0, which has no room file.</summary>
     [Theory]
-    [InlineData(ResourceType.Room, 78, 21)]
-    [InlineData(ResourceType.Costume, 165, 34)]
-    [InlineData(ResourceType.Script, 122, 77)]
-    [InlineData(ResourceType.Sound, 32, 167)]
-    public void Index_entries_load_or_are_in_no_room(ResourceType type, int loaded, int missing)
+    [InlineData(nameof(ResourceType.Room), 78, 21)]
+    [InlineData(nameof(ResourceType.Costume), 165, 34)]
+    [InlineData(nameof(ResourceType.Script), 122, 77)]
+    [InlineData(nameof(ResourceType.Sound), 32, 167)]
+    public void Index_entries_load_or_are_in_no_room(string typeName, int loaded, int missing)
     {
+        var type = Enum.Parse<ResourceType>(typeName);
+
         if (Open() is not { } loader)
         {
             return;

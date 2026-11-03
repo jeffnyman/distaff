@@ -12,7 +12,7 @@ namespace Distaff.Scumm.Sound;
 /// The game thread starts and stops sounds while the host's audio thread renders samples, so
 /// both go through <see cref="Sync"/>, as ScummVM's players lock their mutex.
 /// </remarks>
-public abstract class SpeakerSynth : MusicPlayer
+internal abstract class SpeakerSynth : MusicPlayer
 {
     protected const int FixpShift = 16;
 

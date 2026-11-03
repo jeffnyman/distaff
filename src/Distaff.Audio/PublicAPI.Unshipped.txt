@@ -1,0 +1,67 @@
+#nullable enable
+Distaff.Audio.CdTrackFiles
+Distaff.Audio.Mt32.Mt32Emulator
+Distaff.Audio.Mt32.Mt32Emulator.Description.get -> string!
+Distaff.Audio.Mt32.Mt32Emulator.DisplayText.get -> string!
+Distaff.Audio.Mt32.Mt32Emulator.IsActive.get -> bool
+Distaff.Audio.Mt32.Mt32Emulator.Mt32Emulator(Distaff.Audio.Mt32.Mt32RomSet! roms, int outputRate, Distaff.Scumm.Hosting.ILog? log = null) -> void
+Distaff.Audio.Mt32.Mt32Emulator.Random.get -> System.Random!
+Distaff.Audio.Mt32.Mt32Emulator.Random.set -> void
+Distaff.Audio.Mt32.Mt32Emulator.SetPitchBendRange(int channel, int range) -> void
+Distaff.Audio.Mt32.Mt32Model
+Distaff.Audio.Mt32.Mt32Model.Auto = 0 -> Distaff.Audio.Mt32.Mt32Model
+Distaff.Audio.Mt32.Mt32Model.Cm32l = 1 -> Distaff.Audio.Mt32.Mt32Model
+Distaff.Audio.Mt32.Mt32Model.Mt32 = 2 -> Distaff.Audio.Mt32.Mt32Model
+Distaff.Audio.Mt32.Mt32RomImage
+Distaff.Audio.Mt32.Mt32RomImage.Data.get -> byte[]!
+Distaff.Audio.Mt32.Mt32RomImage.Info.get -> Distaff.Audio.Mt32.Mt32RomInfo!
+Distaff.Audio.Mt32.Mt32RomInfo
+Distaff.Audio.Mt32.Mt32RomInfo.<Clone>$() -> Distaff.Audio.Mt32.Mt32RomInfo!
+Distaff.Audio.Mt32.Mt32RomInfo.Deconstruct(out int FileSize, out string! Sha1, out Distaff.Audio.Mt32.Mt32RomType Type, out string! ShortName, out string! Description, out Distaff.Audio.Mt32.Mt32RomPairType PairType, out string? PairShortName) -> void
+Distaff.Audio.Mt32.Mt32RomInfo.Description.get -> string!
+Distaff.Audio.Mt32.Mt32RomInfo.Description.init -> void
+Distaff.Audio.Mt32.Mt32RomInfo.Equals(Distaff.Audio.Mt32.Mt32RomInfo? other) -> bool
+Distaff.Audio.Mt32.Mt32RomInfo.FileSize.get -> int
+Distaff.Audio.Mt32.Mt32RomInfo.FileSize.init -> void
+Distaff.Audio.Mt32.Mt32RomInfo.Mt32RomInfo(int FileSize, string! Sha1, Distaff.Audio.Mt32.Mt32RomType Type, string! ShortName, string! Description, Distaff.Audio.Mt32.Mt32RomPairType PairType, string? PairShortName = null) -> void
+Distaff.Audio.Mt32.Mt32RomInfo.PairShortName.get -> string?
+Distaff.Audio.Mt32.Mt32RomInfo.PairShortName.init -> void
+Distaff.Audio.Mt32.Mt32RomInfo.PairType.get -> Distaff.Audio.Mt32.Mt32RomPairType
+Distaff.Audio.Mt32.Mt32RomInfo.PairType.init -> void
+Distaff.Audio.Mt32.Mt32RomInfo.Sha1.get -> string!
+Distaff.Audio.Mt32.Mt32RomInfo.Sha1.init -> void
+Distaff.Audio.Mt32.Mt32RomInfo.ShortName.get -> string!
+Distaff.Audio.Mt32.Mt32RomInfo.ShortName.init -> void
+Distaff.Audio.Mt32.Mt32RomInfo.Type.get -> Distaff.Audio.Mt32.Mt32RomType
+Distaff.Audio.Mt32.Mt32RomInfo.Type.init -> void
+Distaff.Audio.Mt32.Mt32RomPairType
+Distaff.Audio.Mt32.Mt32RomPairType.FirstHalf = 1 -> Distaff.Audio.Mt32.Mt32RomPairType
+Distaff.Audio.Mt32.Mt32RomPairType.Full = 0 -> Distaff.Audio.Mt32.Mt32RomPairType
+Distaff.Audio.Mt32.Mt32RomPairType.Mux0 = 3 -> Distaff.Audio.Mt32.Mt32RomPairType
+Distaff.Audio.Mt32.Mt32RomPairType.Mux1 = 4 -> Distaff.Audio.Mt32.Mt32RomPairType
+Distaff.Audio.Mt32.Mt32RomPairType.SecondHalf = 2 -> Distaff.Audio.Mt32.Mt32RomPairType
+Distaff.Audio.Mt32.Mt32RomSet
+Distaff.Audio.Mt32.Mt32RomSet.Control.get -> Distaff.Audio.Mt32.Mt32RomImage!
+Distaff.Audio.Mt32.Mt32RomSet.Description.get -> string!
+Distaff.Audio.Mt32.Mt32RomSet.Pcm.get -> Distaff.Audio.Mt32.Mt32RomImage!
+Distaff.Audio.Mt32.Mt32RomType
+Distaff.Audio.Mt32.Mt32RomType.Control = 1 -> Distaff.Audio.Mt32.Mt32RomType
+Distaff.Audio.Mt32.Mt32RomType.Pcm = 0 -> Distaff.Audio.Mt32.Mt32RomType
+override Distaff.Audio.Mt32.Mt32Emulator.Send(uint message) -> void
+override Distaff.Audio.Mt32.Mt32Emulator.SysEx(System.ReadOnlySpan<byte> message) -> void
+override Distaff.Audio.Mt32.Mt32RomInfo.Equals(object? obj) -> bool
+override Distaff.Audio.Mt32.Mt32RomInfo.GetHashCode() -> int
+override Distaff.Audio.Mt32.Mt32RomInfo.ToString() -> string!
+static Distaff.Audio.CdTrackFiles.Find(string! folder, int track) -> string?
+static Distaff.Audio.CdTrackFiles.In(string! folder) -> System.Func<int, Distaff.Scumm.Sound.ICdTrack?>!
+static Distaff.Audio.CdTrackFiles.Open(string! folder, int track) -> Distaff.Scumm.Sound.ICdTrack?
+static Distaff.Audio.Mt32.Mt32RomImage.Create(byte[]! data) -> Distaff.Audio.Mt32.Mt32RomImage?
+static Distaff.Audio.Mt32.Mt32RomImage.CreatePartial(byte[]! data) -> Distaff.Audio.Mt32.Mt32RomImage?
+static Distaff.Audio.Mt32.Mt32RomImage.Merge(Distaff.Audio.Mt32.Mt32RomImage! image1, Distaff.Audio.Mt32.Mt32RomImage! image2) -> Distaff.Audio.Mt32.Mt32RomImage?
+static Distaff.Audio.Mt32.Mt32RomInfo.Full.get -> System.Collections.Generic.IReadOnlyList<Distaff.Audio.Mt32.Mt32RomInfo!>!
+static Distaff.Audio.Mt32.Mt32RomInfo.Identify(System.ReadOnlySpan<byte> data, bool partialOnly = false) -> Distaff.Audio.Mt32.Mt32RomInfo?
+static Distaff.Audio.Mt32.Mt32RomInfo.Partial.get -> System.Collections.Generic.IReadOnlyList<Distaff.Audio.Mt32.Mt32RomInfo!>!
+static Distaff.Audio.Mt32.Mt32RomInfo.operator !=(Distaff.Audio.Mt32.Mt32RomInfo? left, Distaff.Audio.Mt32.Mt32RomInfo? right) -> bool
+static Distaff.Audio.Mt32.Mt32RomInfo.operator ==(Distaff.Audio.Mt32.Mt32RomInfo? left, Distaff.Audio.Mt32.Mt32RomInfo? right) -> bool
+static Distaff.Audio.Mt32.Mt32RomSet.FromDirectory(string! path, Distaff.Audio.Mt32.Mt32Model model = Distaff.Audio.Mt32.Mt32Model.Auto) -> Distaff.Audio.Mt32.Mt32RomSet?
+static Distaff.Audio.Mt32.Mt32RomSet.Select(System.Collections.Generic.IEnumerable<byte[]!>! files, Distaff.Audio.Mt32.Mt32Model model = Distaff.Audio.Mt32.Mt32Model.Auto) -> Distaff.Audio.Mt32.Mt32RomSet?

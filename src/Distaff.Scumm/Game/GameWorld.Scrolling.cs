@@ -72,7 +72,7 @@ public sealed partial class GameWorld
     private bool Scrolling => _scrollRemainder != 0 || _scrollRequest != 0;
 
     /// <summary>The room's column at the screen's left: the camera's, or as far behind it as the picture has still to scroll.</summary>
-    public int ShownLeft
+    internal int ShownLeft
     {
         get
         {

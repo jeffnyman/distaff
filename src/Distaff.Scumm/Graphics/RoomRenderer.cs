@@ -7,7 +7,7 @@ namespace Distaff.Scumm.Graphics;
 /// Draws rooms and their objects: the EGA's in the 16 colour numbers of <see cref="Palettes.Ega"/>,
 /// the VGA CD's and FM Towns' in the 256 of their own palette (<see cref="PaletteOf"/>).
 /// </summary>
-public static class RoomRenderer
+internal static class RoomRenderer
 {
     /// <summary>
     /// Where an object's image starts in its VGA CD image block: after the block's header and the

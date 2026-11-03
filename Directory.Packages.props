@@ -4,6 +4,8 @@
     <PackageVersion Include="ppy.SDL3-CS" Version="2026.1002.1" />
     <!-- Ogg Vorbis, for the VGA CD's audio track (MIT) -->
     <PackageVersion Include="NVorbis" Version="0.10.5" />
+    <!-- keeps the libraries' public surface in src/*/PublicAPI.*.txt, reviewed in diffs -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />

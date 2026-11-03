@@ -5,7 +5,7 @@ using Distaff.Scumm.Saves;
 namespace Distaff.Scumm.Game;
 
 /// <summary>What an actor needs from the world: the room on screen, its boxes and their flags, costumes, classes.</summary>
-public interface IActorWorld
+internal interface IActorWorld
 {
     int CurrentRoomNumber { get; }
 
@@ -42,7 +42,7 @@ public interface IActorWorld
 /// <c>actorWalkStep</c>, <c>findPathTowardsOld</c> for version 3, <c>findPathTowards</c> for
 /// version 4, and <c>setBox</c> with <c>setupActorScale</c>.
 /// </summary>
-public sealed class Actor(int number, IActorWorld world)
+internal sealed class Actor(int number, IActorWorld world)
 {
     /// <summary>Mirrors <c>MF_NEW_LEG</c>, <c>MF_IN_LEG</c>, <c>MF_TURN</c> and <c>MF_LAST_LEG</c>.</summary>
     public const int NewLeg = 1, InLeg = 2, Turn = 4, LastLeg = 8;

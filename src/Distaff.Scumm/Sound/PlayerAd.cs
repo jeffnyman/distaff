@@ -15,7 +15,7 @@ namespace Distaff.Scumm.Sound;
 /// (<c>setupVolume</c>); here both are the full 255, and the host's master volume applies to the
 /// output instead. The saved state of the player (<c>saveLoadWithSerializer</c>) is not kept.
 /// </remarks>
-public sealed class PlayerAd : MusicPlayer
+internal sealed class PlayerAd : MusicPlayer
 {
     private const int CallbackFrequency = 472, FixpShift = 16, MaxVolume = 255;
 

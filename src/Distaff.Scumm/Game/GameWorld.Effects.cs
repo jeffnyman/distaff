@@ -37,7 +37,7 @@ public sealed partial class GameWorld
     private RgbFrame? _shownTownsFrame;
 
     /// <summary>Whether the screen is showing an effect, the frame waiting to end until it has.</summary>
-    public bool InEffect => _effectFrames.Count > 0;
+    internal bool InEffect => _effectFrames.Count > 0;
 
     /// <summary>
     /// Sets the effects of the next room change, or, given 0, shows the room now with the effect

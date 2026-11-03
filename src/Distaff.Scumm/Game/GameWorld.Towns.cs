@@ -8,13 +8,13 @@ namespace Distaff.Scumm.Game;
 public sealed partial class GameWorld
 {
     /// <summary>The FM Towns' screen's height: 240 rows, which Loom uses all of.</summary>
-    public const int TownsScreenHeight = 240;
+    internal const int TownsScreenHeight = 240;
 
     /// <summary>
     /// The 16 colours of the FM Towns' text layer for Loom, which ScummVM sets as the game starts
     /// (<c>tableTownsLoomPalette</c>, <c>towns_setTextPaletteFromPtr</c>).
     /// </summary>
-    public static readonly Rgb[] TownsTextPalette =
+    internal static readonly Rgb[] TownsTextPalette =
     [
         new(0x00, 0x00, 0x00), new(0x00, 0x00, 0xAB), new(0x00, 0xAB, 0x00), new(0x00, 0xAB, 0xAB),
         new(0xAB, 0x00, 0x00), new(0x69, 0x29, 0x45), new(0x8C, 0x4D, 0x14), new(0xAB, 0xAB, 0xAB),
@@ -26,7 +26,7 @@ public sealed partial class GameWorld
     private const byte TownsShadowColor = 0x88;
 
     /// <summary>The screen's height: 200, or the FM Towns' 240.</summary>
-    public int ScreenHeight => Screens.ScreenHeight;
+    internal int ScreenHeight => Screens.ScreenHeight;
 
     /// <summary>Whether the release is the FM Towns', with its own screen.</summary>
     private bool FmTowns => _loader.FmTowns;
@@ -81,7 +81,7 @@ public sealed partial class GameWorld
     /// A colour as ScummVM's 16-bit screen shows it: 5 bits for each of red, green and blue
     /// (<c>get16BitColor</c> to RGB555), widened again (<c>PixelFormat::colorToRGB</c>).
     /// </summary>
-    public static Rgb To15Bit(Rgb color)
+    internal static Rgb To15Bit(Rgb color)
     {
         static byte Widen(byte value) => (byte)((value >> 3 << 3) | (value >> 5));
         return new Rgb(Widen(color.R), Widen(color.G), Widen(color.B));

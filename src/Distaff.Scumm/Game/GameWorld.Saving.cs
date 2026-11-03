@@ -23,10 +23,10 @@ namespace Distaff.Scumm.Game;
 public sealed partial class GameWorld
 {
     /// <summary>The room Loom's save screen is in (<c>saveRoom</c>).</summary>
-    public const int SaveRoom = 70;
+    internal const int SaveRoom = 70;
 
     /// <summary>The string holding the first save's name; the others follow (<c>STRINGID_SAVENAME1_LOOM</c>).</summary>
-    public const int SaveNameString = 9;
+    internal const int SaveNameString = 9;
 
     // where a script's code is (WIO_INVENTORY, WIO_ROOM, WIO_GLOBAL, WIO_LOCAL)
     private const int WhereInventory = 0, WhereRoom = 1, WhereGlobal = 2, WhereLocal = 3;
@@ -47,7 +47,7 @@ public sealed partial class GameWorld
     public int SaveVersion { get; set; } = SaveFile.CompatibleVersion;
 
     /// <summary>A save's file name for a slot. Mirrors <c>makeSavegameName</c>.</summary>
-    public string SaveFileName(int slot) => SaveFile.FileName(SaveTarget, slot);
+    internal string SaveFileName(int slot) => SaveFile.FileName(SaveTarget, slot);
 
     /// <summary>Saves the game as a ScummVM save file, as ScummVM's own menu does between steps.</summary>
     public byte[] Save(string name, DateTime saved, int version = SaveFile.CompatibleVersion)
@@ -402,7 +402,7 @@ public sealed partial class GameWorld
 
     /// <summary>The world as a ScummVM save state. Mirrors the state <c>saveLoadWithSerializer</c> writes for Loom version 3.</summary>
     /// <param name="version">The save version it is for, which iMuse's state depends on.</param>
-    public ScummState Capture(int version = SaveFile.CompatibleVersion)
+    internal ScummState Capture(int version = SaveFile.CompatibleVersion)
     {
         var s = new ScummState(_owners.Length, _loader.Version, FmTowns);
         var room = CurrentRoom;
@@ -577,7 +577,7 @@ public sealed partial class GameWorld
     /// the save, and the screen's bands are cleared to be drawn again. The mouse stays where it is,
     /// as with ScummVM's original interface.
     /// </summary>
-    public void Restore(ScummState s)
+    internal void Restore(ScummState s)
     {
         // loadState sets iMuse's music volume to 0 before the sounds stop
         (Sound.Player as PlayerImuse)?.BeginLoad();

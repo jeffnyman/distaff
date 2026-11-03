@@ -1,7 +1,7 @@
 namespace Distaff.Scumm.Storage;
 
 /// <summary>In-memory game container, used by tests and by hosts that receive files as uploads.</summary>
-public sealed class MemoryGameContainer(string name) : IGameContainer
+internal sealed class MemoryGameContainer(string name) : IGameContainer
 {
     private readonly Dictionary<string, byte[]> _files = new(StringComparer.OrdinalIgnoreCase);
 

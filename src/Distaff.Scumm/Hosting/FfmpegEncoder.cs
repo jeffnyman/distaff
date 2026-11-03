@@ -51,6 +51,7 @@ public sealed class FfmpegEncoder : IVideoEncoder
         _audio.Write(new byte[44]);
     }
 
+    /// <inheritdoc />
     public void WriteFrame(RgbFrame frame, int count)
     {
         _video ??= StartVideo(frame.Width, frame.Height);
@@ -69,6 +70,7 @@ public sealed class FfmpegEncoder : IVideoEncoder
         }
     }
 
+    /// <inheritdoc />
     public void WriteAudio(ReadOnlySpan<short> interleavedStereo)
     {
         if (!BitConverter.IsLittleEndian)
@@ -89,6 +91,7 @@ public sealed class FfmpegEncoder : IVideoEncoder
         _audioBytes += interleavedStereo.Length * 2;
     }
 
+    /// <inheritdoc />
     public void Finish()
     {
         if (_finished)
@@ -116,6 +119,7 @@ public sealed class FfmpegEncoder : IVideoEncoder
         Delete();
     }
 
+    /// <summary>Stops ffmpeg if it is still running, and removes the files beside the output.</summary>
     public void Dispose()
     {
         _audio.Dispose();

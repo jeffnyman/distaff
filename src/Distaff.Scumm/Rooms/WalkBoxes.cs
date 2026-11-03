@@ -7,7 +7,7 @@ namespace Distaff.Scumm.Rooms;
 /// of ScummVM's <c>Box</c>: version 3 boxes end with their flags (<c>SIZEOF_BOX_V3</c>); version 4
 /// boxes have a scale after them (<c>SIZEOF_BOX</c>), which is 0 for version 3.
 /// </summary>
-public readonly record struct WalkBox(
+internal readonly record struct WalkBox(
     int UpperLeftX, int UpperLeftY,
     int UpperRightX, int UpperRightY,
     int LowerRightX, int LowerRightY,
@@ -21,7 +21,7 @@ public readonly record struct WalkBox(
 /// the room's picture, or for version 4 to the end of the box block.
 /// </summary>
 /// <remarks>The matrix is kept as it is stored; walking reads it.</remarks>
-public sealed class WalkBoxes
+internal sealed class WalkBoxes
 {
     /// <summary>Mirrors ScummVM's <c>SIZEOF_BOX_V3</c>.</summary>
     public const int BoxSize = 18;

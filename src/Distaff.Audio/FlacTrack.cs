@@ -9,7 +9,7 @@ namespace Distaff.Audio;
 /// are not checked, but for frame headers when seeking. The file is read whole, and decoded a
 /// frame at a time.
 /// </summary>
-public sealed class FlacTrack : ICdTrack
+internal sealed class FlacTrack : ICdTrack
 {
     private readonly byte[] _data;
     private readonly int _bitsPerSample;

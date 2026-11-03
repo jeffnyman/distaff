@@ -29,10 +29,10 @@ public sealed partial class GameWorld
     private byte _cursorColor = CursorColors[0];
 
     /// <summary>The cursor's hotspot, which the mouse position points at.</summary>
-    public (int X, int Y) CursorHotspot => _cursorHotspots[_currentCursor];
+    internal (int X, int Y) CursorHotspot => _cursorHotspots[_currentCursor];
 
     /// <summary>The colour the cursor is drawn in now.</summary>
-    public byte CursorColor => _cursorColor;
+    internal byte CursorColor => _cursorColor;
 
     /// <summary>Mirrors <c>o5_cursorCommand</c> for version 3: the cursor and the player's control, counted on and off, and Loom's cursor picture.</summary>
     private void CursorCommand(int op, int[] a)
@@ -154,7 +154,7 @@ public sealed partial class GameWorld
     }
 
     /// <summary>Draws the cursor over a frame at the mouse, when it shows (<c>_cursor.state</c> above 0).</summary>
-    public void DrawCursor(Surface8 frame)
+    internal void DrawCursor(Surface8 frame)
     {
         foreach (var (x, y) in CursorPixels(frame.Width, frame.Height))
         {

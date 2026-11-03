@@ -11,7 +11,7 @@ namespace Distaff.Scumm.Scripts;
 /// for version 3, and the <c>o5_</c> handlers that touch only script state. The rest goes to an
 /// <see cref="IScriptHost"/>.
 /// </summary>
-public sealed class ScriptEngine
+internal sealed class ScriptEngine
 {
     /// <summary>Mirrors <c>NUM_SCRIPT_SLOT</c>.</summary>
     public const int SlotCount = 80;
@@ -1096,7 +1096,7 @@ public sealed class ScriptEngine
 }
 
 /// <summary>A queued sentence: a verb and up to two objects. Mirrors ScummVM's <c>SentenceTab</c>.</summary>
-public sealed class Sentence(int verb, int objectA, int objectB)
+internal sealed class Sentence(int verb, int objectA, int objectB)
 {
     public int Verb { get; } = verb;
 

@@ -2,14 +2,11 @@ using Distaff.Audio;
 using Distaff.Audio.Mt32;
 using Distaff.Player.Sdl;
 using Distaff.Scumm;
-using Distaff.Scumm.Detection;
 using Distaff.Scumm.Game;
 using Distaff.Scumm.Graphics;
 using Distaff.Scumm.Hosting;
 using Distaff.Scumm.Input;
-using Distaff.Scumm.Resources;
-using Distaff.Scumm.Rooms;
-using Distaff.Scumm.Scripts;
+using Distaff.Scumm.Inspection;
 using Distaff.Scumm.Sound;
 using Distaff.Scumm.Storage;
 
@@ -206,16 +203,20 @@ internal static class Program
             return 1;
         }
 
-        var game = new DirectoryGameContainer(gamePath);
-        if (ScummDetector.Identify(game) is not { } release)
+        Loom game;
+        try
         {
-            Console.Error.WriteLine($"distaff: no Loom release found in {gamePath}");
+            game = Loom.Open(gamePath);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or NotSupportedException or InvalidDataException)
+        {
+            Console.Error.WriteLine($"distaff: {ex.Message}");
             return 1;
         }
 
-        Console.WriteLine($"Loom ({release.Variant}), SCUMM version {release.Version}, {release.Layout} layout");
-        Console.WriteLine($"language {release.Language ?? "unknown"}, platform {release.Platform ?? "unknown"}, index MD5 {release.Entry.Md5}");
-        target ??= release.PreferredTarget;
+        Console.WriteLine($"{game.Description}, SCUMM version {game.Version}");
+        Console.WriteLine($"language {game.Language ?? "unknown"}, platform {game.Platform ?? "unknown"}, index MD5 {game.IndexMd5}");
+        target ??= game.Target;
 
         // the MT-32 of the Roland Upgrade, from the ROMs in a folder, which on their own ask for it
         if (mt32Roms is not null && !soundGiven)
@@ -241,25 +242,25 @@ internal static class Program
             if (run is { } runSteps)
             {
                 var store = new FileSaveStore(savesDirectory);
-                return Run(ResourceLoader.Open(game), runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, mt32, wav, video, ffmpeg, CdTrackFiles.In(gamePath), smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed ?? 1);
+                return Run(game, runSteps, copyProtection, bootParam, clicks, keys, screenshot, zoom, traceActor, load, saves, store, target, sound, mt32, wav, video, ffmpeg, CdTrackFiles.In(gamePath), smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed ?? 1);
             }
 
             if (script is { } scriptNo)
             {
-                return ListScript(ResourceLoader.Open(game), scriptNo);
+                return ListScript(game.Inspect(), scriptNo);
             }
 
             if (roomScripts is { } roomScriptsNo)
             {
-                return ListRoomScripts(ResourceLoader.Open(game), roomScriptsNo);
+                return ListRoomScripts(game.Inspect(), roomScriptsNo);
             }
 
             if (roomNumber is { } roomNo)
             {
-                return WriteRoom(ResourceLoader.Open(game), roomNo, objects, mask, zoom ?? 1, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
+                return WriteRoom(game.Inspect(), roomNo, objects, mask, zoom ?? 1, output ?? $"room-{roomNo:D2}{(mask ? "-mask" : "")}.png");
             }
 
-            return Play(game, release, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, mt32, CdTrackFiles.In(gamePath), playFor, smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed);
+            return Play(game, copyProtection, bootParam, scale, fullscreen, load is null ? null : File.ReadAllBytes(load), savesDirectory, target, sound, mt32, CdTrackFiles.In(gamePath), playFor, smoothScroll, semiSmoothScroll, textSpeed, subtitles, volumes, randomSeed);
         }
         catch (Exception ex) when (ex is NotSupportedException or InvalidDataException or FfmpegException)
         {
@@ -291,12 +292,25 @@ internal static class Program
     /// file in the game's folder. The random numbers are seeded from the clock, as ScummVM's are,
     /// unless a seed is given (<c>--random-seed</c>).
     /// </summary>
-    private static int Play(DirectoryGameContainer game, ScummGame release, bool copyProtection, int? bootParam, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound, Func<int, IMidiDevice>? mt32,
+    private static int Play(Loom game, bool copyProtection, int? bootParam, int scale, bool fullscreen, byte[]? load, string savesDirectory, string target, SoundDevice sound, Func<int, IMidiDevice>? mt32,
         Func<int, ICdTrack?> cdTracks, TimeSpan? playFor, bool smoothScroll, bool semiSmoothScroll, int textSpeed, bool subtitles, (int Music, int Sfx) volumes, int? randomSeed)
     {
         using var host = new SdlHost(new SdlHostOptions { Title = "Distaff", Scale = scale, Fullscreen = fullscreen, Saves = new FileSaveStore(savesDirectory) });
-        var detected = new DetectedGame("scumm", "loom", "Loom", release.Variant, release.Language, release.Platform);
-        using var engine = new ScummEngine(host, game, detected) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, SemiSmoothScrolling = semiSmoothScroll, TextSpeed = textSpeed, Subtitles = subtitles, MusicVolume = volumes.Music, SfxVolume = volumes.Sfx, BootParam = bootParam, StartingSave = load, SaveTarget = target, SoundDevice = sound, Mt32 = mt32, CdTracks = cdTracks, RandomSeed = randomSeed };
+        using var engine = game.CreateEngine(host);
+        engine.CopyProtection = copyProtection;
+        engine.SmoothScrolling = smoothScroll;
+        engine.SemiSmoothScrolling = semiSmoothScroll;
+        engine.TextSpeed = textSpeed;
+        engine.Subtitles = subtitles;
+        engine.MusicVolume = volumes.Music;
+        engine.SfxVolume = volumes.Sfx;
+        engine.BootParam = bootParam;
+        engine.StartingSave = load;
+        engine.SaveTarget = target;
+        engine.SoundDevice = sound;
+        engine.Mt32 = mt32;
+        engine.CdTracks = cdTracks;
+        engine.RandomSeed = randomSeed;
         SDL.SDL3.SDL_HideCursor();
         var clock = System.Diagnostics.Stopwatch.StartNew();
         host.Run(engine, duration: playFor);
@@ -342,7 +356,7 @@ internal static class Program
     /// so a run is the same each time. With a video file, ffmpeg records it as a window shows and
     /// plays it, the screen 4 times its size unless zoomed otherwise.
     /// </summary>
-    private static int Run(ResourceLoader loader, int steps, bool copyProtection, int? bootParam, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int? zoom, int? traceActor,
+    private static int Run(Loom game, int steps, bool copyProtection, int? bootParam, List<(int Step, int X, int Y)> clicks, List<(int Step, Key Key, char Ascii)> keys, string? screenshot, int? zoom, int? traceActor,
         string? load, List<(int Step, string Path)> saves, ISaveStore store, string target, SoundDevice sound, Func<int, IMidiDevice>? mt32, string? wav, string? video, string ffmpeg, Func<int, ICdTrack?> cdTracks, bool smoothScroll, bool semiSmoothScroll, int textSpeed, bool subtitles, (int Music, int Sfx) volumes, int randomSeed)
     {
         if (wav is not null && video is not null)
@@ -351,9 +365,16 @@ internal static class Program
             return 2;
         }
 
-        var world = new GameWorld(loader, randomSeed, sound, cdTracks: wav is null && video is null ? null : cdTracks, mt32: mt32) { CopyProtection = copyProtection, SmoothScrolling = smoothScroll, SemiSmoothScrolling = semiSmoothScroll, TextSpeed = textSpeed, Subtitles = subtitles, SaveStore = store, SaveTarget = target };
-        world.Sound.MusicVolume = volumes.Music;
-        world.Sound.SfxVolume = volumes.Sfx;
+        var world = game.Play(randomSeed, sound, cdTracks: wav is null && video is null ? null : cdTracks, mt32: mt32);
+        world.CopyProtection = copyProtection;
+        world.SmoothScrolling = smoothScroll;
+        world.SemiSmoothScrolling = semiSmoothScroll;
+        world.TextSpeed = textSpeed;
+        world.Subtitles = subtitles;
+        world.SaveStore = store;
+        world.SaveTarget = target;
+        world.MusicVolume = volumes.Music;
+        world.SfxVolume = volumes.Sfx;
         var audio = new List<short>();
         long framesRead = 0;
         void ReadAudio()
@@ -365,7 +386,7 @@ internal static class Program
             }
 
             var buffer = new short[(due - framesRead) * 2];
-            world.Sound.Output.Read(buffer);
+            world.Audio.Read(buffer);
             audio.AddRange(buffer);
 
             framesRead = due;
@@ -410,8 +431,8 @@ internal static class Program
             ReadAudio();
             if (traceActor is { } t)
             {
-                var a = world.Actors[t];
-                Console.WriteLine($"step {world.Steps,5}: actor {t} room {a.Room} at ({a.X},{a.Y}) box {a.WalkBox} moving {a.Moving} facing {a.Facing} frame {a.Frame} visible {a.Visible} camera {world.Camera.X}");
+                var a = world.GetActor(t);
+                Console.WriteLine($"step {world.Steps,5}: actor {t} room {a.Room} at ({a.X},{a.Y}) box {a.WalkBox} moving {a.Moving} facing {a.Facing} frame {a.Frame} visible {a.Visible} camera {world.CameraX}");
             }
 
             if (world.CurrentRoomNumber != room)
@@ -422,11 +443,11 @@ internal static class Program
         }
 
         Console.WriteLine();
-        Console.WriteLine($"after {world.Steps} steps ({world.Time.TotalSeconds:F1}s): room {world.CurrentRoomNumber}, camera at {world.Camera.X}");
+        Console.WriteLine($"after {world.Steps} steps ({world.Time.TotalSeconds:F1}s): room {world.CurrentRoomNumber}, camera at {world.CameraX}");
         Console.WriteLine($"messages: {string.Join(" | ", world.MessageLog.Append(world.MessageText).Where(m => m.Length > 0))}");
         Console.WriteLine($"sounds started: {string.Join(' ', world.SoundsStarted)}");
-        Console.WriteLine($"verbs on: {string.Join(' ', world.Verbs.Where(v => v.VerbId != 0 && v.Mode == 1 && v.SaveId == 0).Select(v => $"{v.VerbId}@({v.CurRect.Left},{v.CurRect.Top})-({v.CurRect.Right},{v.CurRect.Bottom})"))}");
-        Console.WriteLine($"running scripts: {string.Join(' ', world.Engine.Slots.Where(s => !s.IsDead).Select(s => $"{s.Number}({s.Kind}{(s.Status == 1 ? $" wait {s.Delay}" : "")})"))}");
+        Console.WriteLine($"verbs on: {string.Join(' ', world.ShownVerbs().Select(v => $"{v.Number}@({v.Left},{v.Top})-({v.Right},{v.Bottom})"))}");
+        Console.WriteLine($"running scripts: {string.Join(' ', world.RunningScripts().Select(s => $"{s.Number}({s.Kind}{(s.Waiting ? $" wait {s.Delay}" : "")})"))}");
         foreach (var group in world.Unhandled.GroupBy(u => u[(u.IndexOf(']') + 2)..].Split('(')[0]))
         {
             Console.WriteLine($"unhandled {group.Key}: {group.Count()}, first {group.First()}");
@@ -454,130 +475,82 @@ internal static class Program
     }
 
     /// <summary>Disassembles a global script, from its start along every path execution can take.</summary>
-    private static int ListScript(ResourceLoader loader, int number)
+    private static int ListScript(GameInspector inspector, int number)
     {
-        if (loader.LoadScript(number) is not { } code)
+        if (inspector.Script(number) is not { } script)
         {
             Console.Error.WriteLine($"distaff: there is no script {number}");
             return 1;
         }
 
         Console.WriteLine();
-        Console.WriteLine($"Script {number}: {code.Length} bytes, in room {loader.Index.Locate(ResourceType.Script, number).Room}");
-        Print(new ScriptDecoder(loader.Version, loader.FmTowns).DecodeReachable(code, [0]).Values, code.Length);
+        Console.WriteLine($"{script.Title}: {script.Size} bytes, in room {script.Room}");
+        Print(script);
         return 0;
     }
 
     /// <summary>Disassembles a room's entry, exit and local scripts and its objects' verb scripts.</summary>
-    private static int ListRoomScripts(ResourceLoader loader, int number)
+    private static int ListRoomScripts(GameInspector inspector, int number)
     {
-        if (loader.LoadRoom(number) is not { } room)
+        if (inspector.RoomScripts(number) is not { } scripts)
         {
             Console.Error.WriteLine($"distaff: there is no room {number}");
             return 1;
         }
 
-        var decoder = new ScriptDecoder(loader.Version, loader.FmTowns);
-        void Room(string title, int offset)
-        {
-            if (offset == 0)
-            {
-                return;
-            }
-
-            Console.WriteLine();
-            Console.WriteLine($"{title}, at {offset} in room {number}:");
-            Print(decoder.DecodeReachable(room.Data, [offset]).Values, null);
-        }
-
-        Room("Exit script", room.ExitScriptOffset);
-        Room("Entry script", room.EntryScriptOffset);
-        foreach (var (script, offset) in room.LocalScriptOffsets)
-        {
-            Room($"Local script {script}", offset);
-        }
-
-        foreach (var obj in room.Objects.Where(o => o.Verbs.Count > 0))
+        foreach (var script in scripts)
         {
             Console.WriteLine();
-            string verbs = string.Join(", ", obj.Verbs.Select(v => $"{(v.Verb == RoomObject.FallbackVerb ? "*" : v.Verb.ToString())} at {v.Offset:X4}"));
-            Console.WriteLine($"Object {obj.Number} {(obj.Name.Length > 0 ? $"\"{obj.Name}\"" : "")}, verbs {verbs}:");
-            Print(decoder.DecodeReachable(obj.Code, obj.Verbs.Select(v => v.Offset)).Values, null);
+            Console.WriteLine(script.Verbs.Count > 0 ? $"{script.Title}, verbs {string.Join(", ", script.Verbs.Select(v => $"{VerbName(v)} at {v.Offset:X4}"))}:" : $"{script.Title}:");
+            Print(script);
         }
 
         return 0;
     }
 
-    private static void Print(IEnumerable<Instruction> instructions, int? length)
+    private static string VerbName(ObjectVerb verb) => verb.IsFallback ? "*" : verb.Verb.ToString();
+
+    private static void Print(ScriptListing script)
     {
-        int count = 0, covered = 0;
-        foreach (var instruction in instructions)
+        foreach (var line in script.Lines)
         {
-            Console.WriteLine($"  {instruction}");
-            count++;
-            covered += instruction.Length;
+            Console.WriteLine($"  {line}");
         }
 
-        if (length is { } total && covered < total)
+        if (script.Unreached > 0)
         {
-            Console.WriteLine($"  ({total - covered} of {total} bytes not reached)");
+            Console.WriteLine($"  ({script.Unreached} of {script.Size} bytes not reached)");
         }
     }
 
-    /// <summary>Writes a room as a PNG, with its objects as the game starts, none, or all, and lists it.</summary>
-    private static int WriteRoom(ResourceLoader loader, int number, string objects, bool mask, int zoom, string output)
+    /// <summary>Writes a room as a PNG, with its objects as the game starts, none, or all, or its mask, and lists it.</summary>
+    private static int WriteRoom(GameInspector inspector, int number, string objects, bool mask, int zoom, string output)
     {
-        if (loader.LoadRoom(number) is not { } room)
+        var shown = objects switch { "none" => RoomObjects.None, "all" => RoomObjects.All, _ => RoomObjects.Initial };
+        if (inspector.Room(number, shown) is not { } room)
         {
             Console.Error.WriteLine($"distaff: there is no room {number}");
             return 1;
         }
-
-        var states = loader.Index.ObjectStates;
-        int StateOf(int obj) => obj < states.Count ? states[obj] : 0;
-
-        var image = objects switch
-        {
-            "none" => RoomRenderer.DrawBackground(room),
-            "all" => RoomRenderer.RenderAll(room),
-            _ => RoomRenderer.Render(room, StateOf),
-        };
 
         // the mask shows white where it hides actors
-        var surface = mask ? MaskPicture(image.Mask) : image.Pixels;
-        File.WriteAllBytes(output, PngWriter.Encode(surface, mask ? Palettes.Ega : RoomRenderer.PaletteOf(room), zoom, zoom));
+        File.WriteAllBytes(output, PngWriter.Encode(mask ? room.Mask : room.Picture, zoom, zoom));
         Console.WriteLine($"wrote {output}");
 
-        ListRoom(room, StateOf);
-        return 0;
-    }
-
-    private static Surface8 MaskPicture(Surface8 mask)
-    {
-        var picture = new Surface8(mask.Width, mask.Height);
-        for (int i = 0; i < mask.Pixels.Length; i++)
-        {
-            picture.Pixels[i] = mask.Pixels[i] != 0 ? (byte)15 : (byte)0;
-        }
-
-        return picture;
-    }
-
-    private static void ListRoom(Room room, Func<int, int> stateOf)
-    {
         Console.WriteLine();
-        Console.WriteLine($"Room {room.Number}: {room.Width}x{room.Height}, {room.Data.Length} bytes, picture at {room.ImageOffset}");
+        Console.WriteLine($"Room {room.Number}: {room.Width}x{room.Height}, {room.Size} bytes");
         Console.WriteLine($"  sounds: {string.Join(' ', room.Sounds)}");
         Console.WriteLine($"  scripts: {string.Join(' ', room.Scripts)}");
-        Console.WriteLine($"  local scripts: {string.Join(' ', room.LocalScriptOffsets.Select(s => $"{s.Key}@{s.Value}"))}");
-        Console.WriteLine($"  exit script at {room.ExitScriptOffset} ({room.ExitScript.Length} bytes), entry script at {room.EntryScriptOffset} ({room.EntryScript.Length} bytes)");
-        Console.WriteLine($"  walkboxes: {room.WalkBoxes.Count}, matrix {room.WalkBoxes.Matrix.Length} bytes");
+        Console.WriteLine($"  local scripts: {string.Join(' ', room.LocalScripts.Select(s => $"{s.Key}@{s.Value}"))}");
+        Console.WriteLine($"  exit script at {room.ExitScript}, entry script at {room.EntryScript}");
+        Console.WriteLine($"  walkboxes: {room.WalkBoxes}");
         Console.WriteLine($"  objects: {room.Objects.Count}");
         foreach (var o in room.Objects)
         {
             string name = o.Name.Length > 0 ? $"\"{o.Name}\"" : "(no name)";
-            string verbs = string.Join(' ', o.Verbs.Select(v => v.Verb == RoomObject.FallbackVerb ? "*" : v.Verb.ToString()));
-            Console.WriteLine($"    {o.Number,4} {name,-20} state {stateOf(o.Number)}, at ({o.X},{o.Y}) {o.Width}x{o.Height}, walk to ({o.WalkX},{o.WalkY}), parent {o.Parent}, verbs {verbs}");
+            Console.WriteLine($"    {o.Number,4} {name,-20} state {o.State}, at ({o.X},{o.Y}) {o.Width}x{o.Height}, walk to ({o.WalkX},{o.WalkY}), parent {o.Parent}, verbs {string.Join(' ', o.Verbs.Select(VerbName))}");
         }
+
+        return 0;
     }
 }

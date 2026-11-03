@@ -17,6 +17,7 @@ public sealed class ScummEngine : Engine
     private GameWorld? _world;
     private DifficultyChooser? _chooser;
 
+    /// <summary>The engine for a detected release, on a host. Nothing is read until <see cref="Initialize"/>.</summary>
     public ScummEngine(IHost host, IGameContainer game, DetectedGame detected)
         : base(host, game, detected)
     {
@@ -55,7 +56,7 @@ public sealed class ScummEngine : Engine
     public int? BootParam { get; set; }
 
     /// <summary>The proficiency level dialog, while it is up.</summary>
-    public DifficultyChooser? Chooser => _chooser;
+    internal DifficultyChooser? Chooser => _chooser;
 
     /// <summary>The name save files start with (<c>loom-vga.s01</c>), or null for the release's own, as ScummVM names it. Set before <see cref="Initialize"/>.</summary>
     public string? SaveTarget { get; set; }
@@ -78,6 +79,11 @@ public sealed class ScummEngine : Engine
     /// <summary>The world being played, from <see cref="Initialize"/> on.</summary>
     public GameWorld World => _world ?? throw new InvalidOperationException("The engine is not initialized.");
 
+    /// <summary>
+    /// Opens the release, sets the display and the sound going, and boots the game. Throws
+    /// <see cref="NotSupportedException"/>, <see cref="FileNotFoundException"/> or
+    /// <see cref="InvalidDataException"/> as <see cref="ResourceLoader.Open"/> does.
+    /// </summary>
     public override void Initialize()
     {
         var loader = ResourceLoader.Open(Game);
@@ -142,6 +148,7 @@ public sealed class ScummEngine : Engine
         _world.Boot(_bootParam);
     }
 
+    /// <summary>Stops the sound.</summary>
     public override void Dispose()
     {
         Host.Audio.Stop();
@@ -162,6 +169,14 @@ public sealed class ScummEngine : Engine
         }
     }
 
+    /// <summary>
+    /// Plays one step of the game, whatever <paramref name="elapsed"/> says (this engine does not
+    /// read it): the input waiting, the step, the frame presented. The delay returned is the
+    /// step's length on the game's own clock (or a room transition frame's), so a host that calls
+    /// again after it plays at the original's speed, and one on a clock of its own, a recording,
+    /// at whatever speed it likes. <see cref="TickResult.Quit"/> once the game asks to quit.
+    /// </summary>
+    /// <param name="elapsed">Not read by this engine.</param>
     public override TickResult Tick(TimeSpan elapsed)
     {
         var world = World;

@@ -5,7 +5,7 @@ namespace Distaff.Scumm.Sound.Opl;
 /// mono 16-bit samples at the rate the emulator was created with. Mirrors the parts of ScummVM's
 /// <c>OPL::OPL</c> and <c>Audio::EmulatedChip</c> (audio/fmopl.h, audio/chip.h) the player uses.
 /// </summary>
-public interface IOpl
+internal interface IOpl
 {
     /// <summary>Resets the chip, as <c>OPL::reset</c> does: every register is written with zero.</summary>
     void Reset();

@@ -10,7 +10,7 @@ namespace Distaff.Scumm.Sound;
 /// (<c>LinearRateConverter</c>). Without a way to open tracks, or without the track, it is silent.
 /// The game thread starts and stops it while the host's audio thread reads it.
 /// </summary>
-public sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : IAudioSource, IDisposable
+internal sealed class CdPlayer(Func<int, ICdTrack?>? openTrack, int outputRate) : IAudioSource, IDisposable
 {
     /// <summary>CD frames a second.</summary>
     public const int FramesPerSecond = 75;

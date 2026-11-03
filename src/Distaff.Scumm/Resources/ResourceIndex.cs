@@ -4,7 +4,7 @@ using System.Text;
 namespace Distaff.Scumm.Resources;
 
 /// <summary>The resource types the index locates. Mirrors ScummVM's <c>rtRoom</c>, <c>rtCostume</c>, <c>rtScript</c> and <c>rtSound</c>.</summary>
-public enum ResourceType
+internal enum ResourceType
 {
     Room,
     Costume,
@@ -16,7 +16,7 @@ public enum ResourceType
 /// Where a resource lives: the room file that holds it and its offset in that file. Rooms
 /// themselves always start at offset 0 of their own file.
 /// </summary>
-public readonly record struct ResourceLocation(int Room, int Offset)
+internal readonly record struct ResourceLocation(int Room, int Offset)
 {
     /// <summary>Offset value meaning "no resource". Mirrors ScummVM's <c>0xFFFF</c> check before <c>RES_INVALID_OFFSET</c>.</summary>
     public const int Invalid = 0xFFFF;
@@ -37,7 +37,7 @@ public readonly record struct ResourceLocation(int Room, int Offset)
 /// some entries point at no real resource: rooms that were cut, whose files are not on the disks,
 /// and resources left over from them, whose offsets run past the end of their files.
 /// </remarks>
-public sealed class ResourceIndex
+internal sealed class ResourceIndex
 {
     /// <summary>First word of the index. Mirrors the magic check of <c>readIndexFile</c>.</summary>
     public const ushort Magic = 0x0100;

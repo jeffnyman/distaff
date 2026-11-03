@@ -24,7 +24,7 @@ namespace Distaff.Scumm.Sound;
 /// starts and stops are left out, as is the saved state (<c>saveLoadWithSerializer</c>,
 /// <c>restoreAfterLoad</c>).
 /// </remarks>
-public sealed class PlayerTowns : MusicPlayer
+internal sealed class PlayerTowns : MusicPlayer
 {
     private const int NumSoundMax = 200;
 

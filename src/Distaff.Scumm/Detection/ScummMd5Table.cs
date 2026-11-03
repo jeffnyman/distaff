@@ -8,7 +8,7 @@ namespace Distaff.Scumm.Detection;
 /// <param name="Size">Size of the detection file, or -1 when ScummVM does not check it.</param>
 /// <param name="Language">ISO language code, or null when the table does not say.</param>
 /// <param name="Platform">Original platform, or null when the table does not say.</param>
-public sealed record Md5Entry(
+internal sealed record Md5Entry(
     string Md5,
     string GameId,
     string Variant,

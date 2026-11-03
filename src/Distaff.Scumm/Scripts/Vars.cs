@@ -5,7 +5,7 @@ namespace Distaff.Scumm.Scripts;
 /// ScummVM's <c>ScummEngine::setupScummVars</c> and <c>ScummEngine_v5::setupScummVars</c> for a
 /// version 3 game. The other numbers are the scripts' own.
 /// </summary>
-public static class Vars
+internal static class Vars
 {
     public const int KeyPress = 0, Ego = 1, CameraPosX = 2, HaveMessage = 3, Room = 4, Override = 5,
         MachineSpeed = 6, Me = 7, NumActor = 8, CurrentLights = 9, CurrentDrive = 10, Timer1 = 11, Timer2 = 12,

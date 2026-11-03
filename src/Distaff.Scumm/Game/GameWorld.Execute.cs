@@ -10,7 +10,7 @@ namespace Distaff.Scumm.Game;
 /// <summary>The instructions the script engine hands over: the world's side of the <c>o5_</c>, <c>o4_</c> and <c>o3_</c> handlers.</summary>
 public sealed partial class GameWorld
 {
-    public int Execute(ScriptEngine engine, Instruction instruction, IReadOnlyList<int> arguments, IReadOnlyList<int[]> subArguments)
+    internal int Execute(ScriptEngine engine, Instruction instruction, IReadOnlyList<int> arguments, IReadOnlyList<int[]> subArguments)
     {
         int Arg(int i) => arguments[i];
 
@@ -347,7 +347,7 @@ public sealed partial class GameWorld
     /// <summary>Mirrors <c>Sound::startSound</c>: the sound is the last asked for, and waits in the queue until the step's end.</summary>
     private void StartSound(int sound)
     {
-        SoundsStarted.Add(sound);
+        _soundsStarted.Add(sound);
         Engine.Variables[Vars.LastSound] = sound;
         Sound.Start(sound);
     }
@@ -650,11 +650,11 @@ public sealed partial class GameWorld
     };
 
     /// <summary>Where an actor stands to use an object of the room, and which way it faces. Mirrors <c>getObjectXYPos</c> for version 3.</summary>
-    public (int X, int Y, int Direction)? ObjectWalkTo(int obj)
+    internal (int X, int Y, int Direction)? ObjectWalkTo(int obj)
         => CurrentRoom?.FindObject(obj) is { } o && ObjectPosition(obj) is { } at ? (at.X, at.Y, Actor.NewDirection(o.ActorDir & 3)) : null;
 
     /// <summary>Where an actor stands to use an object of the room.</summary>
-    public (int X, int Y)? ObjectPosition(int obj)
+    internal (int X, int Y)? ObjectPosition(int obj)
     {
         if (CurrentRoom?.FindObject(obj) is not { } o)
         {
@@ -666,7 +666,7 @@ public sealed partial class GameWorld
     }
 
     /// <summary>Where an actor or object is: an actor's position, a carried object's owner's, or an object's walk-to point. Mirrors <c>getObjectOrActorXY</c>.</summary>
-    public (int X, int Y)? ObjectOrActorPosition(int obj)
+    internal (int X, int Y)? ObjectOrActorPosition(int obj)
     {
         if (obj is > 0 and < ActorCount)
         {

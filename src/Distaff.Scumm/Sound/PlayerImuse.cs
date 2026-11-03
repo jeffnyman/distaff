@@ -13,7 +13,7 @@ namespace Distaff.Scumm.Sound;
 /// The game thread starts and stops sounds while the host's audio thread renders, so both go
 /// through one lock, as ScummVM's iMuse locks the mixer's mutex.
 /// </remarks>
-public sealed class PlayerImuse : MusicPlayer
+internal sealed class PlayerImuse : MusicPlayer
 {
     /// <summary>How often the MT-32 driver calls iMuse (<c>MidiDriver_Emulated</c>'s <c>_baseFreq</c>).</summary>
     public const int TimerFrequency = 250;

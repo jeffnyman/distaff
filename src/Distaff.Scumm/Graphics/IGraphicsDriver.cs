@@ -12,5 +12,6 @@ public interface IGraphicsDriver
     /// <summary>Presents a complete frame. The host must not keep a reference to it.</summary>
     void Present(RgbFrame frame);
 
+    /// <summary>Sets the window's title, where the host has one.</summary>
     void SetTitle(string title);
 }

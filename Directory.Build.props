@@ -9,7 +9,9 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <IsPackable>false</IsPackable>
-    <!-- the port is not documented member by member, so the missing-comment warning stays off -->
+    <!-- the packages carry XML documentation. The missing-comment warning is off here, and back on
+         for the libraries, whose public API is documented in full. (The SDK derives the
+         documentation file name before Directory.Build.targets is read, so this lives here.) -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
@@ -24,11 +26,11 @@
     <RepositoryUrl>https://github.com/jeffnyman/distaff</RepositoryUrl>
     <PackageProjectUrl>https://github.com/jeffnyman/distaff</PackageProjectUrl>
     <!-- dotnet pack -p:VersionSuffix=alpha.2 for the next prerelease; an empty suffix is a release -->
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.2.0</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>scumm;loom;lucasfilm;adventure;interpreter;scummvm;retro;games;fm-towns;mt-32</PackageTags>
-    <PackageReleaseNotes>First prerelease. Plays Loom's three English releases, the DOS EGA, the FM Towns and the DOS VGA CD, from the start to the end, with their sound: the EGA on the PC speaker, PCjr/Tandy, Game Blaster, AdLib or, with your own ROMs, an emulated MT-32; the FM Towns' FM and PCM chips and CD audio; the VGA CD's voices and music. Saves in ScummVM's format, loading both ways. Headless runs write screenshots, sound and video.</PackageReleaseNotes>
+    <PackageReleaseNotes>Second prerelease: the libraries' public API, chosen and documented, on the way to 1.0. Breaking for code written against 0.1.0-alpha, whose libraries made nearly all of the engine public. New: Loom, the front door (Loom.Open, then Play, Inspect or CreateEngine); GameInspector, for a room's picture and objects and a script disassembled; GameWorld's snapshots (GetActor, ActorsHere, RunningScripts, ShownVerbs) in place of the engine's own objects, with Audio, MusicVolume, SfxVolume, CameraX and Variables. Now internal: the engine's rooms, costumes, scripts, sound players, screens and resources, and in Distaff.Audio the FLAC and Vorbis decoders and Munt's settings. Every public member is documented, and the surface is kept in PublicAPI.*.txt. The player plays as before.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' == 'true'">

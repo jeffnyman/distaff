@@ -1,7 +1,7 @@
 namespace Distaff.Scumm.Graphics;
 
 /// <summary>An integer rectangle. Right and Bottom are exclusive.</summary>
-public readonly record struct Rect(int X, int Y, int Width, int Height)
+internal readonly record struct Rect(int X, int Y, int Width, int Height)
 {
     public int Left => X;
     public int Top => Y;

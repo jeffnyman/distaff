@@ -19,28 +19,28 @@ namespace Distaff.Scumm.Game;
 public sealed partial class GameWorld : IScriptHost, IActorWorld
 {
     /// <summary>Mirrors <c>_numActors</c> for version 3; actor 0 is not used.</summary>
-    public const int ActorCount = 13;
+    internal const int ActorCount = 13;
 
     /// <summary>Mirrors <c>_numInventory</c> of <c>ScummEngine_v4::readMAXS</c>.</summary>
-    public const int InventorySize = 80;
+    internal const int InventorySize = 80;
 
     /// <summary>Mirrors <c>_numVerbs</c>.</summary>
-    public const int VerbCount = 100;
+    internal const int VerbCount = 100;
 
     /// <summary>Mirrors <c>_numArray</c>: the string resources.</summary>
-    public const int StringCount = 50;
+    internal const int StringCount = 50;
 
     /// <summary>The screen's width; its height is the release's (<see cref="ScreenHeight"/>).</summary>
-    public const int ScreenWidth = 320;
+    internal const int ScreenWidth = 320;
 
     /// <summary>The bits of <c>VAR_CURRENT_LIGHTS</c>: the room lit, the flashlight on, actors in their colours (<c>LIGHTMODE_</c>).</summary>
-    public const int LightsRoomOn = 2, LightsFlashlightOn = 4, LightsActorColors = 8;
+    internal const int LightsRoomOn = 2, LightsFlashlightOn = 4, LightsActorColors = 8;
 
     /// <summary>The owner meaning "in its room" (<c>OF_OWNER_ROOM</c>).</summary>
-    public const int OwnerRoom = 0x0F;
+    internal const int OwnerRoom = 0x0F;
 
     /// <summary>The DOS timer's quarter-frame rate for versions 2 to 4: the PIT's 1193182 Hz over 5041 (<c>setTimerAndShakeFrequency</c>).</summary>
-    public const double TimerFrequency = 1193182.0 / 5041.0;
+    internal const double TimerFrequency = 1193182.0 / 5041.0;
 
     private readonly ResourceLoader _loader;
     private readonly byte[] _owners;
@@ -74,7 +74,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// <param name="sampleRate">The rate sound is made at.</param>
     /// <param name="cdTracks">Opens a track of the VGA CD's audio from the game's folder; without it the CD is silent.</param>
     /// <param name="mt32">Makes the MT-32 at a rate, for <see cref="SoundDevice.Mt32"/>.</param>
-    public GameWorld(ResourceLoader loader, int seed = 1, SoundDevice sound = SoundDevice.Speaker, int sampleRate = DefaultSampleRate, Func<int, ICdTrack?>? cdTracks = null, Func<int, IMidiDevice>? mt32 = null)
+    internal GameWorld(ResourceLoader loader, int seed = 1, SoundDevice sound = SoundDevice.Speaker, int sampleRate = DefaultSampleRate, Func<int, ICdTrack?>? cdTracks = null, Func<int, IMidiDevice>? mt32 = null)
     {
         _loader = loader;
         Screens = loader.FmTowns ? new VirtScreens(TownsScreenHeight, fmTowns: true) : new VirtScreens();
@@ -105,47 +105,47 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         ResetVariables();
     }
 
-    public ScriptEngine Engine { get; }
+    internal ScriptEngine Engine { get; }
 
-    public Actor[] Actors { get; }
+    internal Actor[] Actors { get; }
 
-    public VerbSlot[] Verbs { get; }
+    internal VerbSlot[] Verbs { get; }
 
-    public Camera Camera { get; } = new();
+    internal Camera Camera { get; } = new();
 
     /// <summary>The room on screen, or null for room 0, no room.</summary>
-    public Room? CurrentRoom { get; private set; }
+    internal Room? CurrentRoom { get; private set; }
 
     /// <summary>The room number on screen (<c>_currentRoom</c>); the resource can differ for pseudo-rooms.</summary>
     public int CurrentRoomNumber { get; private set; }
 
     /// <summary>The screen's bands: text, the room, verbs.</summary>
-    public VirtScreens Screens { get; }
+    internal VirtScreens Screens { get; }
 
     /// <summary>Where the room's view starts on the screen and how tall it is (<c>initScreens</c>): the text above it, the verbs below.</summary>
-    public int ViewTop => Screens.Main.Top;
+    internal int ViewTop => Screens.Main.Top;
 
-    public int ViewHeight => Screens.Main.Height;
+    internal int ViewHeight => Screens.Main.Height;
 
     /// <summary>What the room's colours are drawn as (<c>_roomPalette</c>), which <c>roomOps</c> changes.</summary>
-    public byte[] RoomPalette { get; } = new byte[256];
+    internal byte[] RoomPalette { get; } = new byte[256];
 
     // the room's picture as last decoded, and the colours it was decoded in
     private (Room Room, byte[] Palette, MaskedImage Image)? _background;
 
     /// <summary>What each colour on screen shows as (<c>_shadowPalette</c>, which <c>updatePalette</c> applies in version 3).</summary>
-    public byte[] ShadowPalette { get; } = new byte[256];
+    internal byte[] ShadowPalette { get; } = new byte[256];
 
     /// <summary>The cursor: whether it shows (<c>_cursor.state</c>) and whether the player can act (<c>_userPut</c>).</summary>
-    public int CursorState { get; private set; }
+    internal int CursorState { get; private set; }
 
-    public int UserPut { get; private set; }
+    internal int UserPut { get; private set; }
 
     /// <summary>The steps run so far.</summary>
     public int Steps { get; private set; }
 
     /// <summary>The game's frames run: the steps, but for those that show a screen effect.</summary>
-    public int Frames { get; private set; }
+    internal int Frames { get; private set; }
 
     /// <summary>The game time the steps so far have taken.</summary>
     public TimeSpan Time { get; private set; }
@@ -154,7 +154,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     public bool QuitRequested { get; private set; }
 
     /// <summary>The ticks the next frame waits (<c>VAR_TIMER_NEXT</c>, at least 1, longer while the FM Towns scrolls).</summary>
-    public int StepTicks => FrameTicks();
+    internal int StepTicks => FrameTicks();
 
     /// <summary>
     /// The time the next step takes: its ticks of 4 quarter-frames each (<c>waitForTimer(delta * 4)</c>),
@@ -168,10 +168,12 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     public IReadOnlyList<string> Unhandled => _unhandled;
 
     /// <summary>The sounds the scripts started, in order, for the sound system to come.</summary>
-    public List<int> SoundsStarted { get; } = [];
+    public IReadOnlyList<int> SoundsStarted => _soundsStarted;
+
+    private readonly List<int> _soundsStarted = [];
 
     /// <summary>The sounds the scripts start, stop and ask after, and the player that plays them.</summary>
-    public SoundSystem Sound { get; }
+    internal SoundSystem Sound { get; }
 
     /// <summary>Whether the game's copy protection is kept. Set before <see cref="Boot"/>.</summary>
     public bool CopyProtection
@@ -342,7 +344,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// actors, in the view's place, what was drawn over it, the bands above and below, and the text.
     /// Verbs are not drawn yet.
     /// </summary>
-    public Surface8 Screen()
+    internal Surface8 Screen()
     {
         var screen = Screens.Compose(CurrentRoom is { } room ? RoomPicture(room).Pixels : null, Camera.Left, Math.Min(ViewHeight, CurrentRoom?.Height ?? 0));
         DrawOldStyleBanner(screen);
@@ -399,7 +401,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// (the draw queue of <c>processDrawQue</c>). With the room's lights off it is black but for
     /// the flashlight, when that is on; the actors still show.
     /// </summary>
-    public MaskedImage RoomPicture(Room room)
+    internal MaskedImage RoomPicture(Room room)
     {
         // the room's own picture is decoded once for its colours, and drawn over in a copy
         if (_background is not { } cached || cached.Room != room || !cached.Palette.AsSpan().SequenceEqual(RoomPalette))
@@ -480,7 +482,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// with <c>_shadowPalRemap</c>); the FM Towns' are those of its picture layer, likewise, in
     /// 15-bit colour (<c>_16BitPalette</c>).
     /// </summary>
-    public Rgb[] DisplayPalette() => FmTowns
+    internal Rgb[] DisplayPalette() => FmTowns
         ? [.. Enumerable.Range(0, 256).Select(i => To15Bit(CurrentPalette[ShadowPalette[i]]))]
         : _loader.Version == 4
         ? [.. Enumerable.Range(0, 256).Select(i => CurrentPalette[ShadowPalette[i]])]
@@ -490,10 +492,10 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     public int Version => _loader.Version;
 
     /// <summary>Whether the game is the EGA release, its resources bundled the old way (<c>GF_OLD_BUNDLE</c>).</summary>
-    public bool OldBundle => _loader.Layout == ResourceLayout.V3Old;
+    internal bool OldBundle => _loader.Layout == ResourceLayout.V3Old;
 
     /// <summary>The VGA CD's 256 colours as the game has set them (<c>_currentPalette</c>): the room's palette, as the scripts change it.</summary>
-    public Rgb[] CurrentPalette { get; private set; } = new Rgb[256];
+    internal Rgb[] CurrentPalette { get; private set; } = new Rgb[256];
 
     /// <summary>The actors of the current room with a costume, from the back to the front. Mirrors the sort of <c>processActors</c>.</summary>
     private IEnumerable<Actor> SortedActors()
@@ -548,9 +550,9 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
     // IActorWorld
 
-    public WalkBoxes? Boxes => CurrentRoom?.WalkBoxes;
+    internal WalkBoxes? Boxes => CurrentRoom?.WalkBoxes;
 
-    public int BoxFlags(int box)
+    internal int BoxFlags(int box)
     {
         if (box < 0 || box == WalkBoxes.InvalidBox || _boxFlags.Length == 0 || box > _boxFlags.Length)
         {
@@ -560,7 +562,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         return _boxFlags[box == _boxFlags.Length ? box - 1 : box];
     }
 
-    public int BoxScale(int box, int x, int y)
+    internal int BoxScale(int box, int x, int y)
     {
         if (_loader.Version == 3 || Boxes is not { Count: > 0 } boxes || box < 0 || box == WalkBoxes.InvalidBox || box > boxes.Count)
         {
@@ -571,7 +573,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     }
 
     /// <summary>Changes a box's flags for as long as the room is on screen (<c>setBoxFlags</c>).</summary>
-    public void SetBoxFlags(int box, int flags)
+    internal void SetBoxFlags(int box, int flags)
     {
         if (box >= 0 && box <= _boxFlags.Length && _boxFlags.Length > 0)
         {
@@ -579,7 +581,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         }
     }
 
-    public Costumes.Costume? LoadCostume(int number)
+    internal Costumes.Costume? LoadCostume(int number)
     {
         if (number == 0)
         {
@@ -612,7 +614,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     /// colours reset, the new room loads, the camera centres on its left, its actors show, and
     /// the entry scripts run.
     /// </summary>
-    public void StartScene(int room)
+    internal void StartScene(int room)
     {
         StopTalk();
 
@@ -752,13 +754,13 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
     // IScriptHost: where scripts' code is
 
-    public ReadOnlyMemory<byte>? GlobalScript(int number)
+    internal ReadOnlyMemory<byte>? GlobalScript(int number)
         => _loader.Load(ResourceType.Script, number) is { } data ? data : null;
 
-    public (ReadOnlyMemory<byte> Code, int Offset)? LocalScript(int number)
+    internal (ReadOnlyMemory<byte> Code, int Offset)? LocalScript(int number)
         => CurrentRoom is { } room && room.LocalScriptOffsets.TryGetValue(number, out int offset) ? (room.Data, offset) : null;
 
-    public (ReadOnlyMemory<byte> Code, int Offset, ScriptKind Kind)? ObjectScript(int obj, int verb)
+    internal (ReadOnlyMemory<byte> Code, int Offset, ScriptKind Kind)? ObjectScript(int obj, int verb)
     {
         switch (WhereIsObject(obj))
         {
@@ -782,22 +784,22 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
 
     // objects
 
-    public int GetState(int obj) => obj > 0 && obj < _states.Length ? _states[obj] : 0;
+    internal int GetState(int obj) => obj > 0 && obj < _states.Length ? _states[obj] : 0;
 
-    public void PutState(int obj, int state) => _states[CheckObject(obj)] = (byte)state;
+    internal void PutState(int obj, int state) => _states[CheckObject(obj)] = (byte)state;
 
-    public int GetOwner(int obj) => obj > 0 && obj < _owners.Length ? _owners[obj] : 0;
+    internal int GetOwner(int obj) => obj > 0 && obj < _owners.Length ? _owners[obj] : 0;
 
-    public void PutOwner(int obj, int owner) => _owners[CheckObject(obj)] = (byte)owner;
+    internal void PutOwner(int obj, int owner) => _owners[CheckObject(obj)] = (byte)owner;
 
     /// <summary>
     /// Mirrors <c>getClass</c> for small-header games: classes 32 to 29 (untouchable, player,
     /// x-flip, y-flip) are kept as 24, 23, 19 and 18.
     /// </summary>
-    public bool GetClass(int obj, int cls) => (_classes[CheckObject(obj)] & (1 << (MapClass(cls) - 1))) != 0;
+    internal bool GetClass(int obj, int cls) => (_classes[CheckObject(obj)] & (1 << (MapClass(cls) - 1))) != 0;
 
     /// <summary>Mirrors <c>putClass</c>, with the actor flags it changes (<c>Actor::classChanged</c>).</summary>
-    public void PutClass(int obj, int cls, bool set)
+    internal void PutClass(int obj, int cls, bool set)
     {
         cls = MapClass(cls);
         _classes[CheckObject(obj)] = set ? _classes[obj] | (1 << (cls - 1)) : _classes[obj] & ~(1 << (cls - 1));
@@ -828,7 +830,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
         };
     }
 
-    public enum ObjectPlace
+    internal enum ObjectPlace
     {
         NotFound,
         Room,
@@ -836,7 +838,7 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     }
 
     /// <summary>Mirrors <c>whereIsObject</c>.</summary>
-    public ObjectPlace WhereIsObject(int obj)
+    internal ObjectPlace WhereIsObject(int obj)
     {
         if (obj < 1 || obj >= _owners.Length)
         {
@@ -852,13 +854,13 @@ public sealed partial class GameWorld : IScriptHost, IActorWorld
     }
 
     /// <summary>Where an object of the current room is, in pixels: where the room puts it, or where a script moved it.</summary>
-    public (int X, int Y) PositionOf(RoomObject obj) => _moved.TryGetValue(obj.Number, out var at) ? at : (obj.X, obj.Y);
+    internal (int X, int Y) PositionOf(RoomObject obj) => _moved.TryGetValue(obj.Number, out var at) ? at : (obj.X, obj.Y);
 
     /// <summary>
     /// The name of an actor, or of an object: the name a script gave it, or its own, carried or in
     /// the room. Mirrors <c>getObjOrActorName</c>.
     /// </summary>
-    public byte[]? NameOf(int number)
+    internal byte[]? NameOf(int number)
     {
         if (number > 0 && number < ActorCount)
         {

@@ -13,7 +13,7 @@ namespace Distaff.Scumm.Sound;
 /// speaker and PCjr block otherwise (<c>readSoundResourceSmallHeader</c> for <c>MDT_CMS</c>).
 /// ScummVM plays the chips at full volume, whatever the music and effects volumes.
 /// </remarks>
-public sealed class PlayerV2Cms : PlayerV2
+internal sealed class PlayerV2Cms : PlayerV2
 {
     private const int TicksPerSecond = 236;
 

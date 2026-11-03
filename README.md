@@ -138,6 +138,64 @@ With `DISTAFF_RECORD_VIDEO` naming a folder, the walkthrough tests record each r
 game at Practice into it, as `loom-ega.mp4`, `loom-fmtowns.mp4` and `loom-vga.mp4`: the EGA on
 the AdLib, the others with their CD audio, each about an hour and a quarter.
 
+### As a library
+
+The engine is a library on nuget.org too, and `Distaff.Audio` with it for the CD audio and the
+MT-32:
+
+```
+dotnet add package Distaff.Scumm --prerelease
+dotnet add package Distaff.Audio --prerelease
+```
+
+`Loom` is the front door. It opens a release from its folder (or one a level or two below it),
+plays it headless, looks inside it, or gives a host of your own the engine that plays it:
+
+```csharp
+using Distaff.Audio;
+using Distaff.Scumm;
+using Distaff.Scumm.Graphics;
+
+var game = Loom.Open(folder);
+Console.WriteLine(game);                       // Loom (VGA)
+
+var world = game.Play(cdTracks: CdTrackFiles.In(folder));
+world.Boot();
+for (int i = 0; i < 600; i++)
+{
+    world.Step();
+}
+
+File.WriteAllBytes("screen.png", PngWriter.Encode(world.Frame(), 2, 2));
+Console.WriteLine(string.Join(" / ", world.MessageLog));
+```
+
+A missing folder, a folder with no release, and a release Distaff does not play each throw their
+own exception (`DirectoryNotFoundException`, `FileNotFoundException`, `NotSupportedException`).
+Headless, the game is played with `Click`, `KeyDown` and `Step`, saved and loaded with `Save` and
+`Load`, and watched with `GetActor`, `ActorsHere`, `RunningScripts`, `ShownVerbs` and
+`Variables`; `Audio` is its sound, which an audio device may read from a thread of its own, and
+`VideoRecorder` records it. `Inspect()` draws a room with its objects and disassembles scripts, as
+the player's `--room` and `--script` do:
+
+```csharp
+var inspector = Loom.Open(folder).Inspect();
+foreach (int number in inspector.Rooms)
+{
+    var room = inspector.Room(number)!;
+    Console.WriteLine($"Room {number}: {room.Width}x{room.Height}, {room.Objects.Count} objects");
+}
+
+foreach (var line in inspector.Script(1)!.Lines)
+{
+    Console.WriteLine(line);                   // [0000] Var[60] = move(0)
+}
+```
+
+Every public member is documented, and the public surface is kept in each library's
+`PublicAPI.Unshipped.txt` (`PublicAPI.Shipped.txt` once released): a change to it fails the build
+until it is written there, so it shows in review.
+
 ## Building
 
 Distaff needs the [.NET 10 SDK](https://dotnet.microsoft.com/download).

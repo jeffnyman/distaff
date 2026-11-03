@@ -5,6 +5,7 @@ namespace Distaff.Scumm.Sound;
 /// <summary>Writes interleaved 16-bit PCM as a RIFF WAVE file, for tests and offline rendering.</summary>
 public static class WavWriter
 {
+    /// <summary>The samples, interleaved for the channels, as a WAVE file at the sample rate.</summary>
     public static byte[] Encode(ReadOnlySpan<short> samples, int sampleRate, int channels)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sampleRate, 0);

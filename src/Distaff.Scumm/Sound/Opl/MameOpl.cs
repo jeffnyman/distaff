@@ -13,7 +13,7 @@ namespace Distaff.Scumm.Sound.Opl;
 /// so they only latch their registers. The rhythm section's white noise comes from ScummVM's
 /// <c>Common::RandomSource</c>, which ScummVM seeds from the clock; here the seed is a parameter.
 /// </remarks>
-public sealed class MameOpl : IOpl
+internal sealed class MameOpl : IOpl
 {
     /// <summary>The noise generator's seed when none is given.</summary>
     public const uint DefaultRandomSeed = 1;

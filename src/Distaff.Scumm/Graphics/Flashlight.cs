@@ -5,7 +5,7 @@ namespace Distaff.Scumm.Graphics;
 /// Mirrors the copy and the version 1 to 3 corner masks of ScummVM's <c>drawFlashlight</c>, and
 /// the FM Towns' own.
 /// </summary>
-public static class Flashlight
+internal static class Flashlight
 {
     // a bit for each of the eight pixels nearest a corner, the leftmost in bit 7, one byte for
     // each of the eight rows nearest the top and bottom (townsCurveData)

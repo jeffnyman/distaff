@@ -61,6 +61,7 @@ public sealed class Mt32Emulator : EmulatedMidiDevice
         set => _synth.Random = value;
     }
 
+    /// <inheritdoc />
     public override void Send(uint message) => _synth.PlayMsg(message);
 
     /// <summary>
@@ -96,6 +97,7 @@ public sealed class Mt32Emulator : EmulatedMidiDevice
         _synth.WriteSysex((byte)channel, [0, 0, 4, (byte)range]);
     }
 
+    /// <inheritdoc />
     protected override void GenerateSamples(Span<short> interleavedStereo, int frames) => _synth.Render(interleavedStereo, frames);
 
     /// <summary>Sends the LCD messages and debug output to the log.</summary>

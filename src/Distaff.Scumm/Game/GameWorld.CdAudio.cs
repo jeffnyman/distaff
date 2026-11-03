@@ -32,7 +32,7 @@ public sealed partial class GameWorld
     private double _cdTimerCalls;
 
     /// <summary>The part of the CD playing: the track, and the start and length in CD frames (75 a second); null when stopped.</summary>
-    public (int Track, int Start, int Duration)? CdTrack { get; private set; }
+    internal (int Track, int Start, int Duration)? CdTrack { get; private set; }
 
     /// <summary>
     /// <c>SO_SAY_VOICE</c>: plays the voice and music from an offset for a length, both in units of

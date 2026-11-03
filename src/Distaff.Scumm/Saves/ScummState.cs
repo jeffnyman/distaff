@@ -14,7 +14,7 @@ namespace Distaff.Scumm.Saves;
 /// Many fields are ScummVM's own bookkeeping; those this interpreter does not keep are written as
 /// ScummVM would have them and ignored when read.
 /// </remarks>
-public sealed class ScummState
+internal sealed class ScummState
 {
     // the sizes ScummVM gives version 3 (ScummEngine_v4::readMAXS, allocateArrays, _numActors)
     public const int ActorCount = 13, SlotCount = 80, LocalVariables = 26, LocalObjectCount = 200, VerbCount = 100,

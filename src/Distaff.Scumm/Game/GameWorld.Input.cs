@@ -11,7 +11,7 @@ namespace Distaff.Scumm.Game;
 public sealed partial class GameWorld
 {
     /// <summary>The areas a click or key comes from. Mirrors <c>kVerbClickArea</c>, <c>kSceneClickArea</c> and <c>kKeyClickArea</c>.</summary>
-    public const int VerbClickArea = 1, SceneClickArea = 2, KeyClickArea = 4;
+    internal const int VerbClickArea = 1, SceneClickArea = 2, KeyClickArea = 4;
 
     /// <summary>Mirrors <c>MBS_LEFT_CLICK</c> and <c>MBS_RIGHT_CLICK</c>: a click as <c>_mouseAndKeyboardStat</c> holds it.</summary>
     private const int LeftClick = 0x8000, RightClick = 0x4000;
@@ -19,10 +19,11 @@ public sealed partial class GameWorld
     private int _input;
 
     /// <summary>The mouse on the screen.</summary>
-    public int MouseX { get; private set; } = 104;
+    internal int MouseX { get; private set; } = 104;
 
-    public int MouseY { get; private set; } = 56;
+    internal int MouseY { get; private set; } = 56;
 
+    /// <summary>Moves the mouse to a point of the screen, in its pixels.</summary>
     public void MoveMouse(int x, int y)
     {
         MouseX = Math.Clamp(x, 0, ScreenWidth - 1);
@@ -43,7 +44,7 @@ public sealed partial class GameWorld
     }
 
     /// <summary>A key, by the code the game reads (its character, or 315 on for the function keys), for the next step.</summary>
-    public void PressKey(int code) => _input = code;
+    internal void PressKey(int code) => _input = code;
 
     /// <summary>The mouse in the room: the view's left edge added, its top taken away, -1 outside the view (<c>_virtualMouse</c>).</summary>
     private (int X, int Y) VirtualMouse()

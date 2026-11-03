@@ -4,7 +4,7 @@ using System.Text;
 namespace Distaff.Scumm.Rooms;
 
 /// <summary>One entry of an object's verb table: the verb and where its script starts in the object's code block.</summary>
-public readonly record struct VerbEntry(byte Verb, int Offset);
+internal readonly record struct VerbEntry(byte Verb, int Offset);
 
 /// <summary>
 /// An object as its room defines it: the object code block (OBCD). Positions and sizes are in
@@ -20,7 +20,7 @@ public readonly record struct VerbEntry(byte Verb, int Offset);
 /// 32-bit size and the tag <c>OC</c>, and has the same fields 2 bytes further on. Offsets in the
 /// block count from its start in both.
 /// </remarks>
-public sealed class RoomObject
+internal sealed class RoomObject
 {
     /// <summary>The verb-table entry that matches any verb. Mirrors the <c>0xFF</c> check in <c>getVerbEntrypoint</c>.</summary>
     public const byte FallbackVerb = 0xFF;

@@ -1,7 +1,7 @@
 namespace Distaff.Scumm.Rooms;
 
 /// <summary>A point in room pixels. Mirrors ScummVM's <c>Common::Point</c> as the box code uses it.</summary>
-public readonly record struct Point(int X, int Y)
+internal readonly record struct Point(int X, int Y)
 {
     public int SquareDistance(Point other) => (X - other.X) * (X - other.X) + (Y - other.Y) * (Y - other.Y);
 }
@@ -12,7 +12,7 @@ public readonly record struct Point(int X, int Y)
 /// <c>getClosestPtOnBox</c>, <c>getGates</c>, <c>inBoxQuickReject</c> and <c>compareSlope</c> in
 /// <c>boxes.cpp</c>, integer arithmetic and all.
 /// </summary>
-public static class BoxGeometry
+internal static class BoxGeometry
 {
     /// <summary>The corners of a box: upper left, upper right, lower right, lower left.</summary>
     public static (Point UL, Point UR, Point LR, Point LL) Corners(WalkBox box)

@@ -14,7 +14,7 @@ public sealed record SaveInfo(string Name, int Version, TimeSpan PlayTime, DateT
 /// <c>loadInfos</c>, <c>Graphics::skipThumbnail</c> and <c>ScummEngine::saveState</c> and
 /// <c>loadState</c>. No thumbnail is written; ScummVM has not needed one since save version 75.
 /// </summary>
-public static class SaveFile
+internal static class SaveFile
 {
     /// <summary>The version ScummVM 2.7 writes and reads, and every ScummVM since reads: the default here.</summary>
     public const int CompatibleVersion = 108;

@@ -8,7 +8,10 @@ namespace Distaff.Audio.Mt32;
 /// <summary>What a ROM dump holds.</summary>
 public enum Mt32RomType
 {
+    /// <summary>The PCM ROM: the samples the partials play.</summary>
     Pcm,
+
+    /// <summary>The control ROM: the firmware, with its timbres and patches.</summary>
     Control,
 }
 
@@ -113,8 +116,10 @@ public sealed class Mt32RomImage
         Data = data;
     }
 
+    /// <summary>Which dump it is.</summary>
     public Mt32RomInfo Info { get; }
 
+    /// <summary>The dump's bytes.</summary>
     public byte[] Data { get; }
 
     /// <summary>Identifies a dump; null when it is not one libmt32emu knows.</summary>
@@ -200,8 +205,10 @@ public sealed class Mt32RomSet
         Pcm = pcm;
     }
 
+    /// <summary>The control ROM.</summary>
     public Mt32RomImage Control { get; }
 
+    /// <summary>The PCM ROM.</summary>
     public Mt32RomImage Pcm { get; }
 
     /// <summary>The module the ROMs are from, e.g. "CM-32L/LAPC-I Control v1.02".</summary>

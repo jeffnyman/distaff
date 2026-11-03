@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 namespace Distaff.Scumm.Graphics;
 
 /// <summary>A picture with its mask: one byte per pixel, 1 where the mask hides actors.</summary>
-public sealed record MaskedImage(Surface8 Pixels, Surface8 Mask);
+internal sealed record MaskedImage(Surface8 Pixels, Surface8 Mask);
 
 /// <summary>
 /// The picture format of the EGA release's rooms and objects: 8-pixel strips, each run-length
@@ -24,7 +24,7 @@ public sealed record MaskedImage(Surface8 Pixels, Surface8 Mask);
 /// repeats the next byte <c>length &amp; 0x7F</c> times; with bit 7 clear it is followed by that
 /// many bytes.</para>
 /// </remarks>
-public static class EgaBitmap
+internal static class EgaBitmap
 {
     /// <summary>
     /// Draws strips <paramref name="firstStrip"/> onwards of a picture into <paramref name="target"/>,

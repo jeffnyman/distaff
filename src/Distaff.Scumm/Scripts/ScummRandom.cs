@@ -8,7 +8,7 @@ namespace Distaff.Scumm.Scripts;
 /// the same seed (ScummVM's <c>--random-seed</c>), the two give the same numbers in the same order.
 /// The state is not saved, as ScummVM's is not.
 /// </summary>
-public sealed class ScummRandom
+internal sealed class ScummRandom
 {
     private uint _seed;
 

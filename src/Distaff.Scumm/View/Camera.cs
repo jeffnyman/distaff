@@ -1,7 +1,7 @@
 namespace Distaff.Scumm.View;
 
 /// <summary>Mirrors <c>kNormalCameraMode</c>, <c>kFollowActorCameraMode</c> and <c>kPanningCameraMode</c>.</summary>
-public enum CameraMode
+internal enum CameraMode
 {
     Normal = 1,
     FollowActor = 2,
@@ -15,7 +15,7 @@ public enum CameraMode
 /// <c>panCameraTo</c> in <c>camera.cpp</c>. The camera's limits, the variables
 /// <c>VAR_CAMERA_MIN_X</c> and <c>VAR_CAMERA_MAX_X</c>, are given to each call.
 /// </summary>
-public sealed class Camera
+internal sealed class Camera
 {
     /// <summary>The view's width in strips (<c>_gdi->_numStrips</c>).</summary>
     public const int Strips = 40;

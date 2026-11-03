@@ -4,9 +4,16 @@ namespace Distaff.Scumm.Sound;
 /// <summary>The sound devices the EGA release plays on (ScummVM's <c>MDT_PCSPK</c>, <c>MDT_PCJR</c> and <c>MDT_ADLIB</c>).</summary>
 public enum SoundDevice
 {
+    /// <summary>The PC speaker.</summary>
     Speaker,
+
+    /// <summary>The PCjr's or the Tandy's three voices.</summary>
     Pcjr,
+
+    /// <summary>The AdLib, the EGA's default.</summary>
     AdLib,
+
+    /// <summary>The Creative Music System (the Game Blaster).</summary>
     Cms,
 
     /// <summary>The Roland MT-32 or CM-32L of the EGA's Roland Upgrade, played by iMuse (<see cref="PlayerImuse"/>).</summary>
@@ -25,7 +32,7 @@ public enum SoundDevice
 /// FM Towns has a player of its own, which plays its music from the CD's tracks and its effects
 /// on an emulation of its PCM and FM chips (<see cref="PlayerTowns"/>).
 /// </summary>
-public sealed class SoundSystem : IDisposable
+internal sealed class SoundSystem : IDisposable
 {
     private readonly Func<int, byte[]?> _load;
     private readonly List<int> _queue = [];

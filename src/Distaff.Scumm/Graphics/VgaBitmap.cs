@@ -30,7 +30,7 @@ namespace Distaff.Scumm.Graphics;
 /// up by one or reads a new one, as the VGA CD's 14 to 18 do but with the bits in another order.</para>
 /// <para>The mask records the planes as bits: bit 0 for plane 1, bit 1 for plane 2, bit 2 for plane 3.</para>
 /// </remarks>
-public static class VgaBitmap
+internal static class VgaBitmap
 {
     /// <summary>The colour the transparent codecs leave undrawn: no <c>TRNS</c> block in version 4 rooms, so <c>setupRoomSubBlocks</c>' 255.</summary>
     public const byte TransparentColor = 255;

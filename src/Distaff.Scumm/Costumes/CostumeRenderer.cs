@@ -10,7 +10,7 @@ namespace Distaff.Scumm.Costumes;
 /// <c>paintCelByleRLE</c> by way of <c>paintCelByleRLECommon</c>, <c>skipCelLines</c> and
 /// <c>byleRLEDecode</c>: the scaling, clipping and drawing they share. Ported by way of Maniacal.
 /// </summary>
-public static class CostumeRenderer
+internal static class CostumeRenderer
 {
     /// <summary>Directions, as ScummVM numbers them for animations (<c>newDirToOldDir</c>).</summary>
     public const int Left = 0, Right = 1, Front = 2, Back = 3;

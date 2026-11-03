@@ -18,7 +18,7 @@ namespace Distaff.Scumm.Rooms;
 /// object image offsets, the object code offsets, the sound numbers, the script numbers, and the
 /// local scripts: a number and a word offset each, ended by a 0.
 /// </remarks>
-public sealed class Room
+internal sealed class Room
 {
     private const int HeaderSize = 29;
 
