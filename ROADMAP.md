@@ -1870,6 +1870,13 @@ the two ROM dumps the MT-32 run uses, a script, and what Windows wrote):
   the upload. The libraries' baseline is 1.0.1 since. The packages carry the player's icon from
   the next release on (`assets/icon.png`, the 128-pixel image of `distaff.ico`).
 
+## 1.0.2 prepared
+
+- A patch release for the packages' icon alone, so the three projects' packages show alike on
+  nuget.org: the player's own icon (`assets/icon.png`, the 128-pixel image of `distaff.ico`).
+  Nothing else has changed; the libraries are checked against 1.0.1 when packed, and their API
+  is the same.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above
