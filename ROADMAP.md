@@ -1876,6 +1876,8 @@ the two ROM dumps the MT-32 run uses, a script, and what Windows wrote):
   nuget.org: the player's own icon (`assets/icon.png`, the 128-pixel image of `distaff.ico`).
   Nothing else has changed; the libraries are checked against 1.0.1 when packed, and their API
   is the same.
+- Published (2026-11-03), `Distaff.Scumm` listed last this time; the libraries' baseline is
+  1.0.2 since.
 
 ## What is left
 
