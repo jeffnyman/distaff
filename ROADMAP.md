@@ -1861,6 +1861,12 @@ the two ROM dumps the MT-32 run uses, a script, and what Windows wrote):
   next release on; `NugetReadmeTests` fails on HTML in it, an image from a host nuget.org does
   not show, or a relative link.
 
+## 1.0.1 prepared
+
+- A patch release for the README on nuget.org alone: the packages carry `NUGET.md` (see "1.0.0
+  prepared"), and nothing else has changed. The libraries are checked against 1.0.0 when packed,
+  and their API is the same.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above
