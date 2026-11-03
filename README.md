@@ -249,8 +249,8 @@ what is left.
 - **Two things not yet compared with ScummVM's window:** the VGA CD's snap scroll banner (Ctrl+R),
   which Distaff shows as ScummVM's code reads but which one run of ScummVM did not show; and the
   frames after a load from inside the game, where a load from the launcher has been compared.
-- **Linux and macOS:** the player is built and tested there on every push, and runs headless on
-  Linux, but its window has not yet been played on either.
+- **macOS:** the player is built and tested there on every push, but has not yet been played on
+  a Mac. On Linux it has, window and all (Ubuntu 24.04, under WSL 2).
 - **English only:** the EGA, FM Towns and VGA CD releases in English. Other languages, the
   Amiga, Atari ST, Macintosh and PC Engine releases, and the FM Towns' Japanese text are not
   played.

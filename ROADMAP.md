@@ -1786,6 +1786,39 @@ on the VGA CD:
   a broken entry of the index): a `ScriptListing` now has an `Error` and no lines for one, as
   Maniacal's does.
 
+## Played on Linux
+
+The build workflow's runners have no game data, so the game itself had been played on Windows
+only. On Ubuntu 24.04 under WSL 2 (.NET 10.0.403), the repository cloned into the Linux
+filesystem from the Windows one, at d793e00 (building from the Windows checkout would put Linux
+paths into its `obj` folders):
+
+- It builds without a warning, and every test passes, 389, with the game data read from the
+  Windows drive.
+- The MT-32, iMuse and Roland tests (60) pass with the ROMs, there and on Windows. They had been
+  passing without checking in every run that day: they look for ROMs in `DISTAFF_MT32_ROMS` or a
+  `mt32-roms` folder beside the games, and the ROMs were in neither (in `F:\Apostle\_mt32-roms`).
+  Without ROMs they take 0.8 seconds; with them, 23.
+- The same headless run on each release (1500 steps, PRACTICE chosen), on Windows and on Linux,
+  writes the same screenshot and the same sound, byte for byte: the EGA on the AdLib, the FM
+  Towns with its CD audio from FLAC, the VGA CD with its track from Ogg Vorbis, and the EGA's
+  MT-32 music. The engine is as deterministic across systems as within one.
+- The EGA and the VGA CD copied into the Linux filesystem with every name in lower case
+  (`00.lfl`, `disk01.lec`, `track1.ogg`), where Distaff asks for `00.LFL` and `DISK01.LEC`: they
+  play the same, byte for byte, as `DirectoryGameContainer` and `CdTrackFiles` match names
+  without regard to case.
+- `dotnet tool install -g Distaff --prerelease` installs 0.2.0-alpha from nuget.org, with the
+  desktop platforms' SDL libraries; `distaff --version` says so, and it writes the same
+  screenshot. Packing there passes package validation against the published release.
+- The window, through WSLg, played by a person: the VGA CD with its voices and music, the
+  opening's F9 dialog answered, the full screen and back; the EGA with the MT-32's overture, a
+  save made with F5 and loaded in a new run. All as on Windows. SDL uses its X11 driver there,
+  and finds the 3840x2160 display, so the window opens at 960x600, centred.
+- WSLg itself, not Distaff: its windows came up as a blank, minimized taskbar entry that could not
+  be restored, a plain SDL window and `xmessage` alike, until `wsl --shutdown`; afterwards it
+  needed one before each run. X11 saw the windows normal and mapped all along. SDL's PipeWire
+  backend warns that WSL has no `client.conf` and goes on; the sound plays.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above
@@ -1830,7 +1863,7 @@ Larger features:
 Sharing Distaff:
 
 20. (Done: `dotnet publish -c Release -r win-x64` gives one `distaff.exe`; see "A release build".)
-21. A check that it runs on Linux and macOS: the window on each, and anything at all on macOS. (Building and the tests are CI's; the Linux player runs headless as on Windows; see "Continuous integration".)
+21. A check that it runs on macOS: the window, and anything at all. (Done for Linux: see "Played on Linux".)
 22. (Done: builds, tests and publishes on Windows, Linux and macOS; see "Continuous integration".)
 
 Toward 1.0:
