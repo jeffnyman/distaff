@@ -9,7 +9,7 @@
     <!-- the published release this one must not break: package validation compares the packed
          library with it, and a public member removed or changed since fails the pack. After each
          release, it becomes that release. -->
-    <PackageValidationBaselineVersion>1.0.0</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>1.0.1</PackageValidationBaselineVersion>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Distaff.Scumm.Tests" />

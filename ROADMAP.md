@@ -1866,6 +1866,9 @@ the two ROM dumps the MT-32 run uses, a script, and what Windows wrote):
 - A patch release for the README on nuget.org alone: the packages carry `NUGET.md` (see "1.0.0
   prepared"), and nothing else has changed. The libraries are checked against 1.0.0 when packed,
   and their API is the same.
+- Published (2026-11-03): `Distaff.Scumm` was listed first, the other two about half an hour after
+  the upload. The libraries' baseline is 1.0.1 since. The packages carry the player's icon from
+  the next release on (`assets/icon.png`, the 128-pixel image of `distaff.ico`).
 
 ## What is left
 
