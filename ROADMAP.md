@@ -1835,6 +1835,24 @@ the two ROM dumps the MT-32 run uses, a script, and what Windows wrote):
   EGA's MT-32 overture, the full screen and back, the F9 dialog, and a save made with F5 and
   loaded in a new run. All as on Windows.
 
+## 1.0.0 prepared
+
+- Version 1.0.0, no prerelease suffix. The release notes say what 1.0 promises (semantic
+  versioning, each release checked against the last published) and what it plays; the libraries'
+  API is 0.2.0-alpha's, unchanged, so there are no breaks to list. The README's install commands
+  no longer need `--prerelease`, its NuGet badge shows the stable version, and its library section
+  says what is promised.
+- What stood between 0.1.0-alpha and a 1.0, and how each was settled: the libraries' public API
+  chosen, documented and guarded (0.2.0-alpha; see "The libraries' public API"); `--version`; print
+  slots 2 and 3, which showed the VGA CD's message dialogs, and every walkthrough checked to leave
+  nothing unhandled (see "Debug messages and message dialogs"); the known limitations written down
+  in the README; and the player played on Linux and macOS, window and all (see "Played on Linux"
+  and "Played on macOS").
+- Not settled and not blocking, and named in the README: the VGA CD's snap scroll banner and the
+  frames after a load from inside the game, not yet compared with ScummVM's window (items 2 and
+  3); English releases only (19).
+- After publishing: the libraries' baseline moves to 1.0.0.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above
@@ -1882,7 +1900,7 @@ Sharing Distaff:
 21. (Done: played on Linux and on macOS, window and all; see "Played on Linux" and "Played on macOS".)
 22. (Done: builds, tests and publishes on Windows, Linux and macOS; see "Continuous integration".)
 
-Toward 1.0:
+Toward 1.0 (all done; see "1.0.0 prepared"):
 
 24. (Done: the libraries' public API chosen, documented and kept in `PublicAPI.*.txt`; see "The libraries' public API".) 0.2.0-alpha is out; the libraries are validated against it, and its API is in `PublicAPI.Shipped.txt`.
 25. (Done: `distaff --version`, as Maniacal's.)

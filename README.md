@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/jeffnyman/distaff/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/jeffnyman/distaff/build.yml?branch=main&style=for-the-badge&label=build" alt="Build"></a>
-  <a href="https://www.nuget.org/packages/Distaff"><img src="https://img.shields.io/nuget/vpre/Distaff?style=for-the-badge&label=nuget" alt="NuGet"></a>
+  <a href="https://www.nuget.org/packages/Distaff"><img src="https://img.shields.io/nuget/v/Distaff?style=for-the-badge&label=nuget" alt="NuGet"></a>
 </p>
 
 <p align="center">
@@ -93,7 +93,7 @@ the game (`Track1.flac` and on, or `.ogg`), as ScummVM keeps them.
 With the [.NET 10 runtime](https://dotnet.microsoft.com/download), install the player from NuGet:
 
 ```
-dotnet tool install -g Distaff --prerelease
+dotnet tool install -g Distaff
 distaff <game folder>
 ```
 
@@ -145,8 +145,8 @@ The engine is a library on nuget.org too, and `Distaff.Audio` with it for the CD
 MT-32:
 
 ```
-dotnet add package Distaff.Scumm --prerelease
-dotnet add package Distaff.Audio --prerelease
+dotnet add package Distaff.Scumm
+dotnet add package Distaff.Audio
 ```
 
 `Loom` is the front door. It opens a release from its folder (or one a level or two below it),
@@ -193,9 +193,12 @@ foreach (var line in inspector.Script(1)!.Lines)
 }
 ```
 
-Every public member is documented, and the public surface is kept in each library's
-`PublicAPI.Unshipped.txt` (`PublicAPI.Shipped.txt` once released): a change to it fails the build
-until it is written there, so it shows in review.
+Every public member is documented, and the public API is promised under semantic versioning:
+a change that would break code written against it waits for a new major version. Each library's
+surface is kept in `PublicAPI.Shipped.txt`, what is new since the last release in
+`PublicAPI.Unshipped.txt`, and a change to it fails the build until it is written there; packing
+compares each library with the last release on nuget.org and fails on a member removed or
+changed.
 
 ## Building
 
@@ -218,7 +221,7 @@ all three, and packs (`.github/workflows/build.yml`).
 
 `dotnet pack -c Release -o artifacts/packages` packs the NuGet packages: the `Distaff` tool, and
 the libraries `Distaff.Scumm` (the engine) and `Distaff.Audio` (the CD audio decoders and the
-MT-32 emulator). A tag such as `v0.1.0-alpha` publishes them to nuget.org
+MT-32 emulator). A tag such as `v1.0.0` publishes them to nuget.org
 (`.github/workflows/publish.yml`), the tag without its "v" their version.
 
 ## How it is checked

@@ -26,11 +26,11 @@
     <RepositoryUrl>https://github.com/jeffnyman/distaff</RepositoryUrl>
     <PackageProjectUrl>https://github.com/jeffnyman/distaff</PackageProjectUrl>
     <!-- dotnet pack -p:VersionSuffix=alpha.2 for the next prerelease; an empty suffix is a release -->
-    <VersionPrefix>0.2.0</VersionPrefix>
-    <VersionSuffix>alpha</VersionSuffix>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>scumm;loom;lucasfilm;adventure;interpreter;scummvm;retro;games;fm-towns;mt-32</PackageTags>
-    <PackageReleaseNotes>Second prerelease: the libraries' public API, chosen and documented, on the way to 1.0. Breaking for code written against 0.1.0-alpha, whose libraries made nearly all of the engine public. New: Loom, the front door (Loom.Open, then Play, Inspect or CreateEngine); GameInspector, for a room's picture and objects and a script disassembled; GameWorld's snapshots (GetActor, ActorsHere, RunningScripts, ShownVerbs) in place of the engine's own objects, with Audio, MusicVolume, SfxVolume, CameraX and Variables. Now internal: the engine's rooms, costumes, scripts, sound players, screens and resources, and in Distaff.Audio the FLAC and Vorbis decoders and Munt's settings. Every public member is documented, and the surface is kept in PublicAPI.*.txt. Fixed: the VGA CD's message dialogs (printString in slot 3) show, as ScummVM's original interface shows them: the opening ends on "Press F9 to toggle text on screen ON/OFF", waiting for a key, and F9 says whether the text appears. A script the inspector cannot decode gives its ScriptListing an Error. New in the player: --version.</PackageReleaseNotes>
+    <PackageReleaseNotes>First stable release. The libraries' public API is promised from here under semantic versioning: a breaking change waits for a new major version, and each release is checked against the last one published. Nothing in it has changed since 0.2.0-alpha. Plays Loom's three English releases, the DOS EGA, the FM Towns and the DOS VGA CD, from the start to the end, with their sound (the EGA on the PC speaker, PCjr/Tandy, Game Blaster, AdLib or, from your own ROMs, an emulated MT-32; the FM Towns' FM and PCM chips and CD audio; the VGA CD's voices and music), saves that load in ScummVM and ScummVM's that load here, and gives the same output, to the byte, on Windows, Linux and macOS, where it has been played in its window. What it does not do is in the README under Known limitations.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
