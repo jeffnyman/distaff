@@ -136,7 +136,8 @@ public sealed partial class GameWorld
 
     /// <summary>
     /// Prints a message in a text slot. Mirrors <c>printString</c>: slot 0 is speech, slot 1 is
-    /// drawn at once, slots 2 and 3 are debug and dialog messages.
+    /// drawn at once, slot 2 a debug message (<c>debugMessage</c>), slot 3 a message dialog
+    /// (<c>showMessageDialog</c>).
     /// </summary>
     private void PrintString(int slot, byte[] message)
     {
@@ -149,10 +150,47 @@ public sealed partial class GameWorld
                 _messageLog.Add(Plain(ConvertMessage(message)));
                 DrawString(1, message);
                 break;
+            case 2:
+                DebugMessage(message);
+                break;
             default:
-                _unhandled.Add($"printString({slot}, \"{Plain(message)}\")");
+                ShowMessageDialog(message);
                 break;
         }
+    }
+
+    /// <summary>
+    /// A debug message (<c>debugMessage</c>): ScummVM writes it to its debug log in debug mode and
+    /// otherwise does nothing with it, as here, unless it is the code that plays a digital voice
+    /// (0xFF 10), which no Loom release sends. The VGA CD prints a few: "assigning-drafts" when it
+    /// sets the drafts up, others in scripts the game never runs.
+    /// </summary>
+    private void DebugMessage(byte[] message)
+    {
+        var converted = ConvertMessage(message);
+        if (converted is [0xFF, 10, ..])
+        {
+            _unhandled.Add($"printString(2, talkSound)");
+        }
+    }
+
+    /// <summary>
+    /// A message dialog (<c>showMessageDialog</c>, the original interface's): the message in a
+    /// banner, in slot 3's colour (4 when it has none), until a key or a click; the key's code
+    /// then goes to the scripts' key variable, 0 for a click. The VGA CD's F9 shows whether its
+    /// text appears ("Text WILL appear on the screen."). ScummVM waits inside the instruction;
+    /// here the banner holds the game from the next step, so the rest of the script's turn runs
+    /// first, before the key is in the variable (the VGA CD's dialogs end their turn after it).
+    /// </summary>
+    private void ShowMessageDialog(byte[] message)
+    {
+        var slot = TextSlots[3];
+        if (slot.Color == 0)
+        {
+            slot.Color = 4;
+        }
+
+        ShowOldStyleBanner(Plain(message), slot.Color, -1, key => Engine.Variables[Vars.KeyPress] = key?.Ascii ?? 0);
     }
 
     /// <summary>Mirrors <c>actorTalk</c>.</summary>

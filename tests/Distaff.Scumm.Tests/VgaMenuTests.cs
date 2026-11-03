@@ -358,11 +358,11 @@ public class VgaMenuTests
         return world;
     }
 
-    /// <summary>The proficiency screen, PRACTICE, and the opening skipped with Escape, to Bobbin on the cliff in control.</summary>
+    /// <summary>The proficiency screen, PRACTICE, and the opening skipped with Escape and its message about the F9 key answered, to Bobbin on the cliff in control.</summary>
     private static Walkthrough Skip(GameWorld world)
     {
         world.Boot();
-        return new Walkthrough(world).Wait(300).ClickAt(160, 95).Wait(100).Key(Key.Escape, (char)27).Ready(8000);
+        return new Walkthrough(world).Wait(300).ClickAt(160, 95).Wait(100).Key(Key.Escape, (char)27).Answer(Walkthrough.VgaTextKeyMessage, 8000).Ready(8000);
     }
 
     /// <summary>From the cliff to the sanctuary, the distaff taken (see <see cref="VgaGameLoopTests"/>).</summary>

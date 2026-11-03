@@ -181,6 +181,9 @@ internal static class Program
                     break;
                 case "-h" or "--help":
                     return Usage();
+                case "--version":
+                    Console.WriteLine($"distaff {Version()}");
+                    return 0;
                 default:
                     if (gamePath is not null || args[i].StartsWith('-'))
                     {
@@ -275,9 +278,21 @@ internal static class Program
     /// </summary>
     private static readonly string[] Difficulties = ["practice", "standard", "expert"];
 
+    /// <summary>The player's version, as its package is numbered: <c>0.2.0-alpha</c>, without the commit the build adds after a plus.</summary>
+    private static string Version()
+    {
+        string version = typeof(Program).Assembly
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+            .FirstOrDefault()?.InformationalVersion ?? "unknown";
+        int plus = version.IndexOf('+');
+        return plus < 0 ? version : version[..plus];
+    }
+
     private static int Usage()
     {
-        Console.Error.WriteLine("usage: distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--difficulty practice|standard|expert] [--sound speaker|pcjr|cms|adlib|mt32] [--mt32-roms folder] [--mt32-model mt32|cm32l] [--load file] [--saves folder] [--target name]");
+        Console.Error.WriteLine("usage: distaff --version");
+        Console.Error.WriteLine("       distaff <game folder> [--scale N] [--fullscreen] [--for seconds] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--difficulty practice|standard|expert] [--sound speaker|pcjr|cms|adlib|mt32] [--mt32-roms folder] [--mt32-model mt32|cm32l] [--load file] [--saves folder] [--target name]");
         Console.Error.WriteLine("       distaff <game folder> --room N [--objects none|initial|all] [--mask] [--zoom N] [--output file.png]");
         Console.Error.WriteLine("       distaff <game folder> --script N | --room-scripts N");
         Console.Error.WriteLine("       distaff <game folder> --run [steps] [--difficulty practice|standard|expert] [--click step:x,y]... [--key step:K]... [--load file] [--save step:file]... [--sound speaker|pcjr|cms|adlib|mt32] [--mt32-roms folder] [--mt32-model mt32|cm32l] [--wav file.wav] [--video file.mp4] [--ffmpeg path] [--trace-actor N] [--copy-protection] [--no-smooth-scroll] [--semi-smooth-scroll] [--text-speed 0-9] [--no-subtitles] [--music-volume 0-256] [--sfx-volume 0-256] [--random-seed N] [--screenshot file.png] [--zoom N]");
@@ -448,7 +463,7 @@ internal static class Program
         Console.WriteLine($"sounds started: {string.Join(' ', world.SoundsStarted)}");
         Console.WriteLine($"verbs on: {string.Join(' ', world.ShownVerbs().Select(v => $"{v.Number}@({v.Left},{v.Top})-({v.Right},{v.Bottom})"))}");
         Console.WriteLine($"running scripts: {string.Join(' ', world.RunningScripts().Select(s => $"{s.Number}({s.Kind}{(s.Waiting ? $" wait {s.Delay}" : "")})"))}");
-        foreach (var group in world.Unhandled.GroupBy(u => u[(u.IndexOf(']') + 2)..].Split('(')[0]))
+        foreach (var group in world.Unhandled.GroupBy(u => (u.IndexOf(']') is >= 0 and var end ? u[(end + 2)..] : u).Split('(')[0]))
         {
             Console.WriteLine($"unhandled {group.Key}: {group.Count()}, first {group.First()}");
         }
@@ -512,6 +527,11 @@ internal static class Program
 
     private static void Print(ScriptListing script)
     {
+        if (script.Error is { } error)
+        {
+            Console.WriteLine($"  (not disassembled: {error})");
+        }
+
         foreach (var line in script.Lines)
         {
             Console.WriteLine($"  {line}");

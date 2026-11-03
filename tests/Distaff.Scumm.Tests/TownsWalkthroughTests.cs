@@ -937,21 +937,34 @@ public class TownsWalkthroughTests
     /// The whole game at the Standard and Expert levels: the same route, section by section, each
     /// from the save the one before made. At Expert the distaff has no staff or notes, but the game
     /// still teaches and takes the same drafts, and the level stays in its variable to the end.
+    /// No section leaves an instruction unhandled.
     /// </summary>
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
     public void Plays_to_the_end(int level)
     {
+        // every world the sections play, for what they leave unhandled
+        var worlds = new List<GameWorld>();
+        Walkthrough.Watch = worlds.Add;
         Played? played = null;
-        foreach (var section in Sections)
+        try
         {
-            played = Play(played, section, level);
-            if (played is null)
+            foreach (var section in Sections)
             {
-                return;
+                played = Play(played, section, level);
+                if (played is null)
+                {
+                    return;
+                }
             }
         }
+        finally
+        {
+            Walkthrough.Watch = null;
+        }
+
+        Assert.All(worlds, w => Assert.Empty(w.Unhandled));
 
         var said = Said(played!);
         Assert.Equal("The End", said[^1]);

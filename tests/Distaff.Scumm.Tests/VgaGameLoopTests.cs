@@ -52,7 +52,8 @@ public class VgaGameLoopTests
     /// PRACTICE starts the opening: the first line is spoken from the CD (track 1, from the offset
     /// the script gives in 7.5-frame units less the 22650 frames before Loom's audio, for its length
     /// and 5 frames more), and the scripts wait on the music timer the CD timer counts. The opening
-    /// plays through to Bobbin on the cliff, with the player in control.
+    /// plays through to Bobbin on the cliff, a message dialog about the F9 key answered, with the
+    /// player in control.
     /// </summary>
     [Fact]
     public void Practice_plays_the_opening_to_bobbin_on_the_cliff()
@@ -67,8 +68,17 @@ public class VgaGameLoopTests
         world.Click(160, 95);
         (int, int, int)? firstVoice = null;
         var rooms = new List<int>();
+        bool answered = false;
         for (int i = 0; i < 3000; i++)
         {
+            // the opening ends on a message dialog about the F9 key, which waits for a key
+            if (world.BannerText == Walkthrough.VgaTextKeyMessage)
+            {
+                world.KeyDown(Input.Key.Space, Input.KeyModifiers.None, ' ');
+                world.Step();
+                answered = true;
+            }
+
             world.StepFrame();
             firstVoice ??= world.CdTrack;
             if (rooms.Count == 0 || rooms[^1] != world.CurrentRoomNumber)
@@ -79,6 +89,7 @@ public class VgaGameLoopTests
 
         Assert.Equal((1, 22, 185), firstVoice);
         Assert.Equal([69, 2, 53, 2], rooms);
+        Assert.True(answered);
         Assert.Equal(1, world.Engine.Variables[Vars.Ego]);
         Assert.True(world.Engine.IsScriptRunning(6));
         Assert.Equal(BobbinOnTheCliff, Hash(world));
@@ -242,11 +253,11 @@ public class VgaGameLoopTests
     /// <summary>The notes the distaff plays, 3 for c d e (variable 122 on the EGA).</summary>
     private const int Known = 172;
 
-    /// <summary>The proficiency screen, PRACTICE, and the opening skipped with Escape, to Bobbin on the cliff in control.</summary>
+    /// <summary>The proficiency screen, PRACTICE, and the opening skipped with Escape and its message about the F9 key answered, to Bobbin on the cliff in control.</summary>
     private static Walkthrough Skip(GameWorld world)
     {
         world.Boot();
-        return new Walkthrough(world).Wait(300).ClickAt(160, 95).Wait(100).Key(Input.Key.Escape, (char)27).Ready(8000);
+        return new Walkthrough(world).Wait(300).ClickAt(160, 95).Wait(100).Key(Input.Key.Escape, (char)27).Answer(Walkthrough.VgaTextKeyMessage, 8000).Ready(8000);
     }
 
     private static void Run(GameWorld world, int steps)

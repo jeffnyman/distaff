@@ -547,6 +547,8 @@ Distaff.Scumm.Inspection.ScriptLine.Text.init -> void
 Distaff.Scumm.Inspection.ScriptListing
 Distaff.Scumm.Inspection.ScriptListing.<Clone>$() -> Distaff.Scumm.Inspection.ScriptListing!
 Distaff.Scumm.Inspection.ScriptListing.Equals(Distaff.Scumm.Inspection.ScriptListing? other) -> bool
+Distaff.Scumm.Inspection.ScriptListing.Error.get -> string?
+Distaff.Scumm.Inspection.ScriptListing.Error.init -> void
 Distaff.Scumm.Inspection.ScriptListing.Lines.get -> System.Collections.Generic.IReadOnlyList<Distaff.Scumm.Inspection.ScriptLine>!
 Distaff.Scumm.Inspection.ScriptListing.Lines.init -> void
 Distaff.Scumm.Inspection.ScriptListing.Room.get -> int?

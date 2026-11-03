@@ -270,8 +270,8 @@ public class VgaWalkthroughTests
     /// <summary>
     /// The opening played through instead of skipped: Practice chosen, the credits over the island at
     /// dawn, then the Elders' messenger, a nymph, rouses Bobbin (room 53) in the VGA CD's own
-    /// words. Control comes back with Bobbin on
-    /// the cliff (room 2), where the way through starts.
+    /// words. On the cliff (room 2) a message dialog tells of the F9 key, and once it is answered
+    /// control comes back with Bobbin there, where the way through starts.
     /// </summary>
     [Fact]
     public void The_opening_plays_to_the_end()
@@ -285,7 +285,7 @@ public class VgaWalkthroughTests
         var w = new Walkthrough(world);
         world.Boot();
         w.Wait(300).ClickAt(w.LevelButton.X, w.LevelButton.Y);
-        w.InRoom(53, 20000).InRoom(2, 20000).Ready(20000);
+        w.InRoom(53, 20000).InRoom(2, 20000).Answer(Walkthrough.VgaTextKeyMessage, 20000).Ready(20000);
 
         var said = world.MessageLog;
         Assert.Contains("LucasArts Entertainment Company", said);
@@ -625,8 +625,9 @@ public class VgaWalkthroughTests
 
     private static void TheElders(Walkthrough w)
     {
-        // the proficiency screen prints on, so it is waited out; the level, then Escape skips the opening
-        w.Wait(300).ClickAt(w.LevelButton.X, w.LevelButton.Y).Wait(100).Key(Key.Escape, (char)27).Ready(8000);
+        // the proficiency screen prints on, so it is waited out; the level, then Escape skips the
+        // opening, which ends on a message dialog about the F9 key, waiting for a key
+        w.Wait(300).ClickAt(w.LevelButton.X, w.LevelButton.Y).Wait(100).Key(Key.Escape, (char)27).Answer(Walkthrough.VgaTextKeyMessage, 8000).Ready(8000);
         w.Use(Leaf);
         w.Use(CliffToVillage).InRoom(3).Ready();
         w.Use(VillageToTents).InRoom(5).Ready();
@@ -895,21 +896,34 @@ public class VgaWalkthroughTests
     /// The whole game at the Standard and Expert levels: the same route, section by section, each
     /// from the save the one before made. At Expert the distaff has no staff or notes, but the game
     /// still teaches and takes the same drafts, and the level stays in its variable to the end.
+    /// No section leaves an instruction unhandled.
     /// </summary>
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
     public void Plays_to_the_end(int level)
     {
+        // every world the sections play, for what they leave unhandled
+        var worlds = new List<GameWorld>();
+        Walkthrough.Watch = worlds.Add;
         Played? played = null;
-        foreach (var section in Sections)
+        try
         {
-            played = Play(played, section, level);
-            if (played is null)
+            foreach (var section in Sections)
             {
-                return;
+                played = Play(played, section, level);
+                if (played is null)
+                {
+                    return;
+                }
             }
         }
+        finally
+        {
+            Walkthrough.Watch = null;
+        }
+
+        Assert.All(worlds, w => Assert.Empty(w.Unhandled));
 
         var said = Said(played!);
         Assert.Equal("The End", said[^1]);

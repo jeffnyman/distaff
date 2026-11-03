@@ -159,7 +159,7 @@ public class VgaSaveTests
     private const int CliffToVillage = 78, Leaf = 79, VillageToTents = 86, TentsToPath = 126, PathToSanctuary = 177;
     private const int SanctuaryDoor = 179, Distaff = 196;
 
-    /// <summary>The proficiency screen, PRACTICE, and the opening skipped with Escape, to Bobbin on the cliff in control.</summary>
+    /// <summary>The proficiency screen, PRACTICE, and the opening skipped with Escape and its message about the F9 key answered, to Bobbin on the cliff in control.</summary>
     /// <summary>
     /// The sound state of a VGA CD save is ScummVM's iMuse's (the release plays its MIDI device),
     /// which Distaff does not have: whatever the device, ScummVM's saves load and play on, the
@@ -191,7 +191,7 @@ public class VgaSaveTests
     private static Walkthrough Skip(GameWorld world)
     {
         world.Boot();
-        return new Walkthrough(world).Wait(300).ClickAt(160, 95).Wait(100).Key(Input.Key.Escape, (char)27).Ready(8000);
+        return new Walkthrough(world).Wait(300).ClickAt(160, 95).Wait(100).Key(Input.Key.Escape, (char)27).Answer(Walkthrough.VgaTextKeyMessage, 8000).Ready(8000);
     }
 
     /// <summary>From the cliff to the sanctuary, the distaff taken.</summary>

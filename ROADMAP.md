@@ -1753,6 +1753,37 @@ chooses one, as Maniacal's is chosen:
   package user would, and a console app outside the repository, restoring the packed packages,
   ran the README's example.
 
+## Debug messages and message dialogs
+
+`printString`'s slots 2 and 3, which a script prints to for actors 253 and 252, were left
+unhandled. A scan of every script of the three releases, through the inspector, found them only
+on the VGA CD:
+
+- Slot 2 is `debugMessage`: ScummVM writes it to its debug log in debug mode and otherwise does
+  nothing, but for the code that plays a digital voice (0xFF 10), which no Loom release sends.
+  The VGA CD prints "assigning-drafts" as it sets the drafts up, and four others in scripts it
+  never runs. Distaff does nothing with them either.
+- Slot 3 is `showMessageDialog`: with the original interface, the message in a banner until a
+  key or a click (`showOldStyleBannerAndPause`, which for Loom VGA is `showBannerAndPause`), and
+  the key's code in `VAR_KEYPRESS` after, 0 for a click. The VGA CD shows three: its opening, played
+  or skipped, ends on "Press F9 to toggle text on screen ON/OFF", waiting for a key; F9 (key
+  323, script 5) flips the game's own text flag (variable 60) and says "Text WILL appear on the
+  screen." or "Text WILL NOT ..."; and script 1 has "You must have the LOOM Talkie CD to play this
+  game.", which does not come. Distaff had dropped them, so the opening ran straight on to Bobbin
+  in control and F9 said nothing.
+- ScummVM waits inside the print instruction; Distaff's banner holds the game from the next step,
+  so the rest of the script's turn runs before the key is in the variable. The F9 dialog's turn
+  ends after it (`stopObjectCode`), and the opening's breaks.
+- The walkthrough answers the opening's dialog as a player does (`Walkthrough.Answer`), and so do
+  the VGA CD tests that play the opening. `Plays_to_the_end` now checks every world of every
+  section leaves nothing unhandled, for all three releases at Standard and Expert.
+- The run report grouped what was unhandled by what follows a script offset's bracket; a line
+  with none, as `printString`'s, was cut to "rintString", hiding slot 3's under slot 2's. It
+  groups by the whole line when there is no bracket.
+- The scan also found that the inspector threw on a script it cannot decode (the EGA's script 0,
+  a broken entry of the index): a `ScriptListing` now has an `Error` and no lines for one, as
+  Maniacal's does.
+
 ## What is left
 
 Everything still open, one item a line, kept up to date as items are done. The sections above
@@ -1803,6 +1834,6 @@ Sharing Distaff:
 Toward 1.0:
 
 24. (Done: the libraries' public API chosen, documented and kept in `PublicAPI.*.txt`; see "The libraries' public API".) After 0.2.0 is out: package validation against it, and the API files' Unshipped moved to Shipped.
-25. `--version` for the player, as Maniacal's has.
-26. Print slots 2 and 3 handled as ScummVM does (`debugMessage`, `showMessageDialog`), so a whole walkthrough leaves nothing unhandled; the VGA CD's `printString(2, "assigning-drafts")` is the only one now, and ScummVM does nothing with it outside its debug mode. Then a test that each walkthrough ends with nothing unhandled.
-27. The README to name items 2 and 3 above as known limitations.
+25. (Done: `distaff --version`, as Maniacal's.)
+26. (Done: print slots 2 and 3 as ScummVM has them, and every whole walkthrough checked to leave nothing unhandled; see "Debug messages and message dialogs".)
+27. (Done: the README's "Known limitations" names items 2, 3, 19 and 21.)

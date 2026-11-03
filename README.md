@@ -114,6 +114,7 @@ Or download the player for your system, one file with nothing to install, from t
 | `--no-smooth-scroll`, `--semi-smooth-scroll` | The FM Towns' scrolling: off, or ScummVM's semi-smooth option. |
 | `--load file`, `--saves folder`, `--target name` | Starts from a save; where saves are kept; the name they take (`loom-ega`, `loom-fm`, `loom-vga`, as ScummVM names them). |
 | `--random-seed N` | The random numbers' seed, from the clock otherwise. |
+| `--version` | Prints the player's version. |
 
 In the game, F5 opens the save screen or the VGA CD's menu, the space bar pauses, Escape skips a
 cutscene, and Ctrl+C or Alt+X quits. On starting, Distaff says which release the folder holds and
@@ -242,6 +243,17 @@ Tests that need the game data look for `loom-ega`, `loom-fmtowns` and `loom-vga`
 out); the MT-32 tests look for ROMs in `DISTAFF_MT32_ROMS` or `games/mt32-roms`. A test whose data
 is absent passes without checking. [ROADMAP.md](ROADMAP.md) records the work, phase by phase, and
 what is left.
+
+## Known limitations
+
+- **Two things not yet compared with ScummVM's window:** the VGA CD's snap scroll banner (Ctrl+R),
+  which Distaff shows as ScummVM's code reads but which one run of ScummVM did not show; and the
+  frames after a load from inside the game, where a load from the launcher has been compared.
+- **Linux and macOS:** the player is built and tested there on every push, and runs headless on
+  Linux, but its window has not yet been played on either.
+- **English only:** the EGA, FM Towns and VGA CD releases in English. Other languages, the
+  Amiga, Atari ST, Macintosh and PC Engine releases, and the FM Towns' Japanese text are not
+  played.
 
 ## Project layout
 

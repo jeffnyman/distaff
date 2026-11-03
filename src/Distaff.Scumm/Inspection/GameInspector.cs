@@ -140,6 +140,12 @@ public sealed record ScriptListing
 
     /// <summary>The bytes of a script of its own that no path reaches.</summary>
     public int Unreached { get; init; }
+
+    /// <summary>
+    /// Why the script could not be disassembled, when it could not: an instruction ScummVM does
+    /// not know, as the index's broken entries hold. Its <see cref="Lines"/> are then empty.
+    /// </summary>
+    public string? Error { get; init; }
 }
 
 /// <summary>
@@ -221,14 +227,15 @@ public sealed class GameInspector
             return null;
         }
 
-        var lines = Decode(code, [0]);
+        var (lines, error) = Decode(code, [0]);
         return new ScriptListing
         {
             Title = $"Script {number}",
             Size = code.Length,
             Room = _loader.Index.Locate(ResourceType.Script, number).Room,
             Lines = lines,
-            Unreached = code.Length - lines.Sum(l => l.Length),
+            Unreached = error is null ? code.Length - lines.Sum(l => l.Length) : 0,
+            Error = error,
         };
     }
 
@@ -248,7 +255,8 @@ public sealed class GameInspector
         {
             if (offset != 0)
             {
-                listings.Add(new ScriptListing { Title = $"{title}, at {offset} in room {number}", Lines = Decode(room.Data, [offset]) });
+                var (lines, error) = Decode(room.Data, [offset]);
+                listings.Add(new ScriptListing { Title = $"{title}, at {offset} in room {number}", Lines = lines, Error = error });
             }
         }
 
@@ -261,11 +269,13 @@ public sealed class GameInspector
 
         foreach (var obj in room.Objects.Where(o => o.Verbs.Count > 0))
         {
+            var (lines, error) = Decode(obj.Code, obj.Verbs.Select(v => v.Offset));
             listings.Add(new ScriptListing
             {
                 Title = $"Object {obj.Number}{(obj.Name.Length > 0 ? $" \"{obj.Name}\"" : "")}",
                 Verbs = Verbs(obj),
-                Lines = Decode(obj.Code, obj.Verbs.Select(v => v.Offset)),
+                Lines = lines,
+                Error = error,
             });
         }
 
@@ -301,8 +311,17 @@ public sealed class GameInspector
 
     private static List<ObjectVerb> Verbs(RoomObject obj) => [.. obj.Verbs.Select(v => new ObjectVerb(v.Verb, v.Offset))];
 
-    private List<ScriptLine> Decode(ReadOnlyMemory<byte> code, IEnumerable<int> entries)
-        => [.. new ScriptDecoder(_loader.Version, _loader.FmTowns).DecodeReachable(code, entries).Values.Select(i => new ScriptLine(i.Offset, i.Length, i.Text))];
+    private (List<ScriptLine> Lines, string? Error) Decode(ReadOnlyMemory<byte> code, IEnumerable<int> entries)
+    {
+        try
+        {
+            return ([.. new ScriptDecoder(_loader.Version, _loader.FmTowns).DecodeReachable(code, entries).Values.Select(i => new ScriptLine(i.Offset, i.Length, i.Text))], null);
+        }
+        catch (InvalidDataException ex)
+        {
+            return ([], ex.Message);
+        }
+    }
 
     private static RgbFrame MaskPicture(Surface8 mask)
     {

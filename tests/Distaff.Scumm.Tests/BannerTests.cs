@@ -100,7 +100,7 @@ public class BannerTests
         // PRACTICE, and the opening skipped, to Bobbin on the cliff
         var world = new GameWorld(ResourceLoader.Open(new DirectoryGameContainer(path)));
         world.Boot();
-        new Walkthrough(world).Wait(300).ClickAt(160, 95).Wait(100).Key(Key.Escape, (char)27).Ready(8000);
+        new Walkthrough(world).Wait(300).ClickAt(160, 95).Wait(100).Key(Key.Escape, (char)27).Answer(Walkthrough.VgaTextKeyMessage, 8000).Ready(8000);
         Assert.Equal(2, world.CurrentRoomNumber);
 
         world.KeyDown(Key.F8, KeyModifiers.None, '\0');
@@ -185,6 +185,60 @@ public class BannerTests
         Assert.Same(random, engine.World.Engine.Random);
         host.Continue(engine, 5);
         Assert.Equal(69, engine.World.CurrentRoomNumber);
+    }
+
+    /// <summary>
+    /// The VGA CD's message dialogs (<c>printString</c> in slot 3, <c>showMessageDialog</c>): a
+    /// banner until a key, whose code then goes to the scripts' key variable, and the game goes
+    /// on. The opening played through ends on one, "Press F9 to toggle text on screen ON/OFF";
+    /// F9 then turns the text off and on (script 5, variable 60) and says so in another.
+    /// </summary>
+    [Fact]
+    public void The_vga_cds_text_key_says_so_in_a_message_dialog()
+    {
+        if (Playing(GameFolders.Vga) is not { } world)
+        {
+            return;
+        }
+
+        var w = new Walkthrough(world).Until(() => world.BannerText is not null, 8000, "the opening's message");
+        Assert.Equal(Walkthrough.VgaTextKeyMessage, world.BannerText);
+        Assert.Equal(2, world.CurrentRoomNumber);
+        world.KeyDown(Key.Space, KeyModifiers.None, ' ');
+        world.Step();
+        Assert.Null(world.BannerText);
+        Assert.Equal(' ', world.Engine.Variables[Vars.KeyPress]);
+
+        // keys reach the scripts once the opening hands Bobbin over
+        w.Ready();
+        for (int press = 0; press < 2; press++)
+        {
+            // the scripts' own flag, set off (1) by them to begin with: the key flips it and says which way
+            int textOff = world.Engine.Variables[60];
+            string said = textOff != 0 ? "Text WILL appear on the screen." : "Text WILL NOT appear on the screen.";
+            world.KeyDown(Key.F9, KeyModifiers.None, (char)323);
+            for (int i = 0; i < 5 && world.BannerText is null; i++)
+            {
+                world.Step();
+            }
+
+            Assert.Equal(said, world.BannerText);
+            Assert.Equal(textOff == 0 ? 1 : 0, world.Engine.Variables[60]);
+            int frames = world.Frames;
+            for (int i = 0; i < 10; i++)
+            {
+                world.Step();
+            }
+
+            Assert.Equal(frames, world.Frames);
+            world.KeyDown(Key.Space, KeyModifiers.None, ' ');
+            world.Step();
+            Assert.Null(world.BannerText);
+            Assert.Equal(' ', world.Engine.Variables[Vars.KeyPress]);
+        }
+
+        Assert.Empty(world.Unhandled);
+        world.StepFrame();
     }
 
     /// <summary>A release booted at Practice and played into the opening.</summary>

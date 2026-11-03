@@ -279,6 +279,24 @@ internal sealed class Walkthrough(GameWorld world)
         return this;
     }
 
+    /// <summary>
+    /// The message dialog the VGA CD's opening ends on, skipped or not (script 44, <c>printString</c>
+    /// in slot 3), waiting for a key before Bobbin is the player's.
+    /// </summary>
+    public const string VgaTextKeyMessage = "Press F9 to toggle text on screen ON/OFF";
+
+    /// <summary>Waits for a banner with these words, and answers it with the space bar, as a player reads it and goes on.</summary>
+    public Walkthrough Answer(string banner, int max = Patience)
+    {
+        Until(() => World.BannerText is not null, max, $"the banner \"{banner}\"");
+        if (World.BannerText != banner)
+        {
+            throw new InvalidOperationException($"The banner says \"{World.BannerText}\", not \"{banner}\".");
+        }
+
+        return Key(Input.Key.Space, ' ');
+    }
+
     /// <summary>Where on the screen an object of the room is, the camera brought to it first.</summary>
     public (int X, int Y) OnScreen(int obj)
     {
