@@ -31,11 +31,14 @@
     <!-- nuget.org renders a package's README as Markdown alone, without the HTML the GitHub one
          uses: the packages carry NUGET.md, the same in Markdown, with links that work there -->
     <PackageReadmeFile>NUGET.md</PackageReadmeFile>
+    <!-- the player's own icon, its 128-pixel image, for the packages' listing on nuget.org -->
+    <PackageIcon>icon.png</PackageIcon>
     <PackageTags>scumm;loom;lucasfilm;adventure;interpreter;scummvm;retro;games;fm-towns;mt-32</PackageTags>
     <PackageReleaseNotes>The README on nuget.org, fixed: nuget.org renders a package's README as Markdown alone, and 1.0.0's, the one on GitHub, lost its title, badges and author there with the HTML it uses. The packages now carry the same README in Markdown, with links that work on nuget.org. Nothing else has changed: the player and the libraries are 1.0.0's, and so is the public API.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)NUGET.md" Pack="true" PackagePath="/" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)assets/icon.png" Pack="true" PackagePath="/" Visible="false" />
   </ItemGroup>
 </Project>

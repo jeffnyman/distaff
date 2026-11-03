@@ -265,7 +265,7 @@ what is left.
 | `src/Distaff.Player` | The `distaff` player: the SDL window and the headless tools. |
 | `tests/Distaff.Scumm.Tests` | Unit tests, and the tests that play the real game data. |
 | `tools` | Generators that port tables from ScummVM's source, and the reference tools built from it. |
-| `assets` | Images: the title, the screenshots above, and the licence's badge. |
+| `assets` | Images: the title, the screenshots above, the licence's badge, and the packages' icon. |
 
 The host contract (the engine base class, the graphics, input and audio drivers, and a headless
 host) comes from [Daventry](https://github.com/jeffnyman/daventry), the AGI and SCI interpreter,
