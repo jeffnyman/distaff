@@ -1851,7 +1851,15 @@ the two ROM dumps the MT-32 run uses, a script, and what Windows wrote):
 - Not settled and not blocking, and named in the README: the VGA CD's snap scroll banner and the
   frames after a load from inside the game, not yet compared with ScummVM's window (items 2 and
   3); English releases only (19).
-- After publishing: the libraries' baseline moves to 1.0.0.
+- Published (2026-11-03): the packages were listed about 15 minutes after the upload, nuget.org's
+  validation taking its time. The libraries' baseline is 1.0.0 since.
+- nuget.org renders a package's README as Markdown alone, and drops the HTML GitHub's README
+  uses: the title block, the badges, the author. 1.0.0 carries the GitHub README, so its page
+  shows those parts broken, and a published version's README stays as it was uploaded. The
+  packages now carry `NUGET.md`, the same in Markdown with links that work on nuget.org (and a
+  366-pixel title, `assets/distaff-title-small.png`, as Markdown cannot size an image), from the
+  next release on; `NugetReadmeTests` fails on HTML in it, an image from a host nuget.org does
+  not show, or a relative link.
 
 ## What is left
 
