@@ -58,7 +58,7 @@ jobs:
       - name: Publish
         run: dotnet publish src/Distaff.Player -c Release -r ${{ matrix.rid }} -o publish
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: distaff-${{ matrix.rid }}
           path: publish/
