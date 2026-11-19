@@ -42,6 +42,49 @@ releases compared and how Distaff is checked are on
 - **A headless mode** that plays from scripted clicks and keys and writes screenshots, sound and
   video.
 
+## Installing
+
+The player is a dotnet tool, and the engine a library, both on nuget.org. The player is installed
+and run from a terminal (PowerShell or Windows Terminal on Windows, Terminal on macOS) with .NET's
+own `dotnet` command.
+
+### The player
+
+1. Install the .NET 10 SDK, once, from [dotnet.microsoft.com](https://dotnet.microsoft.com/download/dotnet/10.0)
+   (the SDK, not just the runtime: installing a tool needs the SDK). From a terminal instead:
+   `winget install Microsoft.DotNet.SDK.10` on Windows, `brew install --cask dotnet-sdk` on macOS
+   with Homebrew; on Linux, see
+   [Install .NET on Linux](https://learn.microsoft.com/dotnet/core/install/linux) for your
+   distribution. `dotnet --version` should then print 10 or later.
+2. Install the player:
+
+   ```
+   dotnet tool install -g Distaff
+   ```
+
+3. Play, pointing it at the folder that holds a release's files (see Game data, below):
+
+   ```
+   distaff <game folder>
+   ```
+
+If the terminal says `distaff` is not found, open a new one: the first tool installed adds
+.NET's tools folder (`%USERPROFILE%\.dotnet\tools`, `~/.dotnet/tools`) to the path, and a
+terminal already open does not see that. On macOS and Linux with zsh, if a new terminal still
+does not find it, `dotnet tool install` printed the line to add to `~/.zprofile`.
+
+`dotnet tool update -g Distaff` moves to the latest release, and `dotnet tool uninstall -g
+Distaff` removes it. `distaff --help` lists the options.
+
+### The library
+
+The engine, and `Distaff.Audio` with it for the CD audio and the MT-32:
+
+```
+dotnet add package Distaff.Scumm
+dotnet add package Distaff.Audio
+```
+
 ## Game data
 
 Distaff ships no game data: point it at a folder holding one of the releases, as it came on its
@@ -54,14 +97,9 @@ the game (`Track1.flac` and on, or `.ogg`), as ScummVM keeps them.
 | FM Towns, English | `00.LFL` | `c5d10e190d4b4d59114b824f2fdbd00e` | `Track1` to `Track16` |
 | DOS VGA CD, English | `000.LFL` | `5d88b9d6a88e6f8e90cded9d01b7f082` | `Track1` |
 
-## The player
+## Running
 
-With the [.NET 10 runtime](https://dotnet.microsoft.com/download):
-
-```
-dotnet tool install -g Distaff
-distaff <game folder>
-```
+`distaff <game folder>` plays the release in a window. Its options:
 
 | Option | What it does |
 |---|---|
@@ -92,15 +130,7 @@ distaff <game folder> --run 2000 --click 100:160,92 --key 200:esc --screenshot e
 [ffmpeg](https://ffmpeg.org)). `--room N` draws a room as a PNG and lists its objects, and
 `--script N` and `--room-scripts N` disassemble scripts.
 
-## The library
-
-The engine is a library, `Distaff.Scumm`, and `Distaff.Audio` with it for the CD audio and the
-MT-32:
-
-```
-dotnet add package Distaff.Scumm
-dotnet add package Distaff.Audio
-```
+## Using the library
 
 `Loom` is the front door. It opens a release from its folder (or one a level or two below it),
 plays it headless, looks inside it, or gives a host of your own the engine that plays it:
